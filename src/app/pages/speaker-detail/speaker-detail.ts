@@ -1,7 +1,7 @@
 import { NgOptimizedImage } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { InAppBrowser } from '@awesome-cordova-plugins/in-app-browser/ngx';
+import { Browser } from '@capacitor/browser';
 import {
   ActionSheetController,
   IonBackButton,
@@ -35,6 +35,7 @@ import { ConferenceService } from '../../providers/conference.service';
   selector: 'page-speaker-detail',
   templateUrl: 'speaker-detail.html',
   styleUrls: ['./speaker-detail.scss'],
+  standalone: true,
   imports: [
     IonFab,
     IonFabButton,
@@ -52,15 +53,14 @@ import { ConferenceService } from '../../providers/conference.service';
     IonLabel,
     NgOptimizedImage,
   ],
-  providers: [InAppBrowser, ActionSheetController],
+  providers: [ActionSheetController],
 })
 export class SpeakerDetailPage {
-  speaker: Speaker;
+  speaker!: Speaker;
 
   private confService = inject(ConferenceService);
   private route = inject(ActivatedRoute);
   private actionSheetCtrl = inject(ActionSheetController);
-  private inAppBrowser = inject(InAppBrowser);
 
   constructor() {
     addIcons({
@@ -74,39 +74,34 @@ export class SpeakerDetailPage {
     });
   }
 
-  ionViewWillEnter() {
+  ionViewWillEnter(): void {
     this.confService.load().subscribe((data) => {
       const speakerId = this.route.snapshot.paramMap.get('speakerId');
-      if (data && data.speakers) {
-        for (const speaker of data.speakers) {
-          if (speaker && speaker.id === speakerId) {
-            this.speaker = speaker;
-            break;
-          }
-        }
-      }
+      if (!speakerId || !data?.speakers) return;
+      const found = data.speakers.find((s) => s?.id === speakerId);
+      if (found) this.speaker = found;
     });
   }
 
-  openExternalUrl(url: string) {
-    this.inAppBrowser.create(url, '_blank');
+  // Link esterni http/https con Capacitor Browser
+  async openExternalUrl(url: string): Promise<void> {
+    await Browser.open({ url });
   }
 
-  async openSpeakerShare(speaker: any) {
+  async openSpeakerShare(speaker: any): Promise<void> {
     const actionSheet = await this.actionSheetCtrl.create({
       header: 'Share ' + speaker.name,
       buttons: [
         {
           text: 'Copy Link',
           handler: () => {
-            if (
-              (window as any).cordova &&
-              (window as any).cordova.plugins.clipboard
-            ) {
-              (window as any).cordova.plugins.clipboard.copy(
+            const anyWindow = window as any;
+            if (anyWindow.cordova?.plugins?.clipboard) {
+              anyWindow.cordova.plugins.clipboard.copy(
                 'https://twitter.com/' + speaker.twitter
               );
             }
+            // non ritorno nulla -> void (fix TS)
           },
         },
         {
@@ -122,7 +117,7 @@ export class SpeakerDetailPage {
     await actionSheet.present();
   }
 
-  async openContact(speaker: Speaker) {
+  async openContact(speaker: Speaker): Promise<void> {
     const mode = 'ios';
 
     const actionSheet = await this.actionSheetCtrl.create({
@@ -130,16 +125,17 @@ export class SpeakerDetailPage {
       buttons: [
         {
           text: `Email ( ${speaker.email} )`,
-          icon: mode !== 'ios' ? 'mail' : null,
+          icon: mode !== 'ios' ? 'mail' : undefined,
           handler: () => {
-            window.open('mailto:' + speaker.email);
+            // evita di restituire Window: usa "void" (fix TS)
+            void window.open(`mailto:${speaker.email}`, '_self');
           },
         },
         {
           text: `Call ( ${speaker.phone} )`,
-          icon: mode !== 'ios' ? 'call' : null,
+          icon: mode !== 'ios' ? 'call' : undefined,
           handler: () => {
-            window.open('tel:' + speaker.phone);
+            void window.open(`tel:${speaker.phone}`, '_self');
           },
         },
         {
