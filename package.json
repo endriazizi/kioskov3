@@ -1,0 +1,39 @@
+{
+  "name": "pwa-admin",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Admin PWA (prenotazioni tavoli)",
+  "scripts": {
+    "start": "ionic serve",
+    "start:ionic": "ionic serve",
+    "start:ng": "ng serve",
+    "build": "ng build",
+    "test": "ng test",
+    "lint": "ng lint"
+  },
+  "dependencies": {
+    "@angular/animations": "^20.0.0",
+    "@angular/common": "^20.0.0",
+    "@angular/compiler": "^20.0.0",
+    "@angular/core": "^20.0.0",
+    "@angular/forms": "^20.0.0",
+    "@angular/platform-browser": "^20.0.0",
+    "@angular/platform-browser-dynamic": "^20.0.0",
+    "@angular/router": "^20.0.0",
+    "@ionic/angular": "^8.0.0",
+    "ionicons": "^7.0.0",
+    "rxjs": "~7.8.0",
+    "socket.io-client": "^4.7.5",
+    "tslib": "^2.6.2",
+    "zone.js": "~0.15.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^20.0.0",
+    "@angular/cli": "^20.0.0",
+    "@angular/compiler-cli": "^20.0.0",
+    "@angular/language-service": "^20.0.0",
+    "@ionic/angular-toolkit": "^12.0.0",
+    "@ionic/cli": "^7.2.0",
+    "typescript": "~5.5.0"
+  }
+}

@@ -1,0 +1,19 @@
+.infiorata-page {
+  --background: var(--ion-background-color);
+
+  /* assicura che l'area scrollabile riempia il content */
+  ion-content::part(scroll) {
+    height: 100%;
+  }
+
+  .ext-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .loading-msg {
+    padding: 16px;
+  }
+}

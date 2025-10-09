@@ -1,0 +1,30 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Turismo Castelraimondo</ion-title>
+
+    <ion-buttons slot="end">
+      <ion-button color="danger" (click)="goBack()">
+        <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+        Torna indietro
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen class="turismo-page">
+  <!-- Browser/PWA: iframe con URL “sanitized” e SANDBOX -->
+  <iframe
+    *ngIf="isBrowser"
+    class="ext-frame"
+    [src]="safeUrl"
+    sandbox="allow-scripts allow-same-origin allow-forms"
+    referrerpolicy="no-referrer"
+    allow="geolocation 'none'; microphone 'none'; camera 'none'; payment 'none'"
+    title="Castelraimondo Turismo"
+  ></iframe>
+
+  <!-- App mobile: testo/loader mentre apri eventualmente un browser in-app -->
+  <p *ngIf="!isBrowser" class="loading-msg">
+    Caricamento Turismo...
+  </p>
+</ion-content>

@@ -1,0 +1,370 @@
+{
+  "schedule": [
+    {
+      "date": "",
+      "groups": [
+        {
+          "time": "Ottobre 2025",
+          "sessions": [
+            {
+              "name": "Motocalvalcata a cura del Moto Club Castelraimondo",
+              "location": "Piazza Dante",
+              "description": "Mobile devices and browsers are now advanced enough that developers can build native-quality mobile apps using open web technologies like HTML5, Javascript, and CSS. In this talk, we’ll provide background on why and how we created Ionic, the design decisions made as we integrated Ionic with Angular, and the performance considerations for mobile platforms that our team had to overcome. We’ll also review new and upcoming Ionic features, and talk about the hidden powers and benefits of combining mobile app development and Angular.",
+              "speakerNames": [
+                "Ted Turtle"
+              ],
+              "timeStart": "Domenica 12 ore 9.30",
+              "timeEnd": "",
+              "tracks": [
+                "Ionic"
+              ],
+              "id": "2"
+            },
+            {
+              "name": "26^ Cerimonia di Commemorazione del Sommergibilista Dino Buglioni",
+              "location": "Castel Santa Maria",
+              "description": "Mobile devices and browsers are now advanced enough that developers can build native-quality mobile apps using open web technologies like HTML5, Javascript, and CSS. In this talk, we’ll provide background on why and how we created Ionic, the design decisions made as we integrated Ionic with Angular, and the performance considerations for mobile platforms that our team had to overcome. We’ll also review new and upcoming Ionic features, and talk about the hidden powers and benefits of combining mobile app development and Angular.",
+              "speakerNames": [
+                "Rachel Rabbit"
+              ],
+              "timeStart": "Domenica 12 ore 10.30",
+              "timeEnd": "10:00 am",
+              "tracks": [
+                "Tooling"
+              ],
+              "id": "3"
+            },
+            {
+              "name": "PittaRosso Pink Parade a cura della A.S.D. Basket Castelraimondo",
+              "location": "Piazza Dante",
+              "description": "Mobile devices and browsers are now advanced enough that developers can build native-quality mobile apps using open web technologies like HTML5, Javascript, and CSS. In this talk, we’ll provide background on why and how we created Ionic, the design decisions made as we integrated Ionic with Angular, and the performance considerations for mobile platforms that our team had to overcome. We’ll also review new and upcoming Ionic features, and talk about the hidden powers and benefits of combining mobile app development and Angular.",
+              "speakerNames": [
+                "Ted Turtle"
+              ],
+              "timeStart": "Domenica 19 ore 9.30",
+              "timeEnd": "",
+              "tracks": [
+                "Ionic"
+              ],
+              "id": "2"
+            },
+            {
+              "name": "Festa della Castagna , a cura della Società Operaia di Mutuo Soccorso di Crispiero e della Libera Associazione Pro Crispiero",
+              "location": "Frazione di Crispiero",
+              "description": "Mobile devices and browsers are now advanced enough that developers can build native-quality mobile apps using open web technologies like HTML5, Javascript, and CSS. In this talk, we’ll provide background on why and how we created Ionic, the design decisions made as we integrated Ionic with Angular, and the performance considerations for mobile platforms that our team had to overcome. We’ll also review new and upcoming Ionic features, and talk about the hidden powers and benefits of combining mobile app development and Angular.",
+              "speakerNames": [
+                "Ted Turtle"
+              ],
+              "timeStart": "Domenica 19, intera giornata",
+              "timeEnd": "",
+              "tracks": [
+                "Ionic"
+              ],
+              "id": "2"
+            }
+          ]
+        }
+       
+      ]
+    }
+  ],
+  "speakers": [
+    {
+      "name": "Ago's - Ristorante Pizzeria",
+      "logo": "/assets/img/speakers/agos_banner.png",
+      "profilePic": "/assets/img/speakers/agos_pizza_avatar.png",
+      "instagram": "ionicframework",
+      "facebook": "ionicfacebook",
+      "about_1": "Ago's Castelraimondo. 🍝 Ristorante di Pesce e Carne. 🍕 Pizzeria al Taglio ed al Piatto.",
+      "about": "<b>Ago’s Ristorante Pizzeria di Elia e Mara</b> è il luogo ideale per chi ama i sapori autentici e le atmosfere accoglienti.\n\n🍕 Proponiamo pizza al piatto e al taglio, fragrante e preparata con ingredienti freschissimi.\n\n🐟 Specialità di pesce cucinate con cura per esaltare i profumi del mare.\n\n🥩 Piatti di carne selezionata per gusti decisi e genuini.\n\nOgni ricetta è realizzata con attenzione ai dettagli, perché crediamo che la qualità sia la base di ogni buon piatto.\n\nChe sia una pizza classica o una specialità della nostra cucina, ogni assaggio sarà un’esperienza da ricordare.\n\nPerfetto per una cena romantica, una serata tra amici o un pranzo in famiglia, da Ago’s troverai sempre il gusto giusto per te.\n\nIl tutto servito in un ambiente accogliente, con uno staff giovane, dinamico e cordiale, pronto a farti sentire come a casa.\n\nAgo’s non è solo un ristorante: è un luogo dove condividere sapori, sorrisi e momenti speciali.\n\n❤️ Say hello on social media!",
+      "title": "Software Engineer",
+      "location": "Everywhere",
+      "email": "burt@example.com",
+      "category": "Pizzeria - Ristorante",
+      "description": "",
+      "address": "Corso Italia, 37, 62022 Castelraimondo MC",
+      "phone": "+39 0737 640318",
+      "openingHours": "orario continuato dalle 10:00 alle 23:00",
+      "id": "1"
+    },
+    {
+      "name": "Ludwig",
+      "logo": "/assets/img/speakers/ludwig_banner.png",
+      "profilePic": "/assets/img/speakers/ludwig_pizza_avatar.png",
+      "instagram": "ionicframework",
+      "twitter": "ionicframework",
+      "about": "Dal 1999 Ludwig si trova lungo il corso principale del paese,\n\nIn un ambiente caldo, accogliente e recentemente rinnovato.\n\n🍽️ La cucina di Ludwig si ispira ai piatti tradizionali marchigiani: crescia, affettati e formaggi dei Monti Sibillini, vincisgrassi e olive all'ascolana.\n\n🥩 Selezioniamo con cura produttori locali per le carni dei nostri succulenti hamburger.\n\n✨ Da sottolineare gli esclusivi e originali fritti interamente artigianali: dal celebre cubo di vincisgrasso fritto al cubo all'amatriciana o al riso cacio e pepe, disponibili solo da Ludwig.\n\n🔥 Per chi desidera qualcosa di ancora più insolito, ma preparato con la massima cura, proponiamo una selezione di ricette dal nostro BBQ e specialità bavaresi e messicane.\n\n🌱 Grazie alla stagionalità dei prodotti non mancano mai proposte fuori menu.\n\n🍷 La lista dei vini e delle birre offre un'accurata selezione di etichette, in prevalenza marchigiane, perfette dall'aperitivo al dopo cena.",
+      "title": "Software Engineer",
+      "location": "Everywhere",
+      "email": "ludwigstrasse.instagram@gmail.com",
+      "category": "Pub - Ristorante",
+      "description": "",
+      "address": "Corso Italia 65, Castelraimondo",
+      "phone": "+39 351 7010611",
+      "openingHours": "pranzo 12:00-15:30 - cena 12:00-22:30",
+      "sito": "https://ludwigstrasse.plateform.app",
+      "id": "2"
+    },
+    {
+      "name": "Bar L'eclissi",
+      "logo": "/assets/img/speakers/eclissi_banner.png",
+      "profilePic": "/assets/img/speakers/eclissi_pizza_avatar.png",
+      "instagram": "ionicframework",
+      "twitter": "ionicframework",
+      "about": "Bar L'Eclissi è il punto di riferimento della nostra cittadina dal 2003,\n\nDove la convivialità e l'atmosfera informale creano un ambiente accogliente per tutti.\n\n☕ Offriamo una vasta gamma di servizi: dalla colazione, con una selezione di prodotti locali, ai pranzi veloci e agli aperitivi, fino ai dopocena.\n\n🍽️ La nostra professionalità si unisce alla passione per il buon cibo e il buon bere, rendendoci una scelta ideale per tutte le età.\n\n😎 Unisciti a noi per un momento di relax!",
+      "title": "Software Engineer",
+      "location": "Everywhere",
+      "email": "donald@example.com",
+      "category": "Bar - Caffetteria",
+      "description": "",
+      "address": "Piazza Dante Alighieri, 5, 62022 Castelraimondo",
+      "phone": "+39 0737 642131",
+      "openingHours": "pranzo 12:00-15:30 - cena 12:00-22:30",
+      "sito": "feed",
+      "id": "3"
+    },
+    {
+      "name": "Gelateria Carnevali",
+      "logo": "/assets/img/speakers/carnevali_banner.png",
+      "profilePic": "/assets/img/speakers/carnevali_pizza_avatar.png",
+      "instagram": "ionicframework",
+      "twitter": "ionicframework",
+      "about": "🍨 Carnevali è una gelateria che ha saputo conquistare fama e successo oltre i confini della piccola Castelraimondo e della realtà di provincia, grazie agli sforzi e all’impegno quotidiano di persone semplici ma vere, che hanno creduto giorno dopo giorno in questa attività dando tutta la loro vita.\n\n🏛️ Storica Gelateria · Cioccolateria · Bar Castelraimondo\n\nDal 1958 la famiglia Carnevali delizia i palati di miriadi di clienti a Castelraimondo con un gelato artigianale unico nella zona, noto anche oltre la provincia di Macerata per qualità, gusto e freschezza.\n\n🍫 Gelateria, cioccolateria e produzione artigianale di altri dolci rendono Carnevali un luogo speciale per gli amanti del dolce. Primi in provincia ad acquistare e utilizzare un pastorizzatore, la gelateria ha saputo affinare negli anni la produzione, introducendo gusti nuovi e originali. Tra i prodotti ci sono affogati, cocktail, frullati, brioche, frappè e molto altro.\n\n🏆 Premi e Riconoscimenti\n\n- Affogato al liquore, al caffè, al cioccolato\n- 1973: Premio per la coppa originale “Fior di Loto”\n- 1971: Riconoscimento da parte di Stock per la creazione di una coppa gelato\n- Aquila d’Oro per i 40 anni di attività nel settore turistico e commerciale (Fenacom)\n\n📖 Storia\n\nLa famiglia Carnevali intraprende quest’avventura nel maggio del 1958, quando decide di scommettere su questa attività nonostante i sacrifici. Allievi del maestro Walter Lini di Firenze, i Carnevali acquisiscono le tecniche e i segreti del gelato artigianale. Lo stesso Lini più volte ha espresso soddisfazione per la qualità del gelato Carnevali.\n\n🍦 Cosa facciamo\n\nLa gelateria Carnevali è specializzata nella produzione di gelati artigianali all’interno del proprio laboratorio. Tra le specialità: gelato ai fichi, bacio, mandorlato, nocciola, panna cotta e zuppa inglese. Inoltre, affogati, frappè, frullati e cioccolato artigianale. Offre anche cocktail alcolici e analcolici, oltre a una sala da tè con svariate tipologie e aromi.\n\n⭐ Qualità inconfondibile\n\nLa filosofia Carnevali è semplice: qualità sempre al primo posto. Dalla selezione degli ingredienti — come le nocciole del Piemonte, genuine e di prima scelta — fino alla lavorazione accurata, tutto punta a garantire l’eccellenza.\n\n👨‍🍳 La preparazione del gelato\n\nLa lavorazione prevede fasi precise: realizzazione e raffreddamento del composto a 5°C, riposo, mantecatura, dosaggio e dolcificazione. Carnevali offre anche gelati senza zucchero e gelati per celiaci, mantenendo sempre lo stesso standard di qualità.",
+      "category": "Gelateria Artigianale - Bar - Caffetteria",
+      "location": "Everywhere",
+      "address": "Corso Italia, 57, 62022 Castelraimondo MC",
+      "email": "eva@example.com",
+      "phone": "+39 0737 641155",
+      "openingHours": "pranzo 12:00-15:30 - cena 12:00-22:30",
+      "sito": "https://www.gelateriacarnevali.com",
+      "id": "4"
+    },
+    {
+      "name": "Tabaccheria Cerqueti",
+      "logo": "/assets/img/speakers/tabaccheria_cerqueti_banner.png",
+      "profilePic": "/assets/img/speakers/tabaccheria_cerqueti_avatar.png",
+      "instagram": "ionicframework",
+      "twitter": "ionicframework",
+      "about": "🚬 La Tabaccheria Cerqueti è presente nel nostro paese da ben tre generazioni, gestita con passione e dedizione prima da Rolando, poi da Brunella ed infine da me.\n\n📍 La mia attività è cresciuta negli anni nel centro di Castelraimondo, diventando un punto di riferimento per ogni esigenza quotidiana.\n\n📰 Da noi trovate non solo tabacchi, giochi e giornali, ma anche servizi utili e sempre aggiornati.\n\n🙏 Ringrazio ogni cliente che mi permette di lavorare con il sorriso. Insieme ai miei indispensabili collaboratori siamo pronti ad accogliervi e soddisfare ogni esigenza.\n\n❤️ GRAZIE!",
+      "title": "Software Engineer",
+      "category": "Edicola Tabaccheria",
+      "location": "Everywhere",
+      "address": "Corso Italia, 84, 62022 Castelraimondo",
+      "email": "eva@example.com",
+      "phone": "+39 0737 641436",
+      "openingHours": "Dal lunedì al martedì 07:15–13, 15:30–20 | domenica 08:30–13:00",
+      "id": "5"
+    },
+    {
+      "name": "Ristorante Nuovo Mondo",
+      "logo": "/assets/img/speakers/nuovomondo_banner.png",
+      "profilePic": "/assets/img/speakers/nuovomondo_pizza_avatar.png",
+      "instagram": "ionicframework",
+      "twitter": "ionicframework",
+      "about": "🌊 Ristorante Nuovo Mondo ti aspetta a Castelraimondo, in Viale Europa 12, in una nuova ed accogliente location.\n\n🏛️ Ristorante di Pesce · Cucina di Mare · Castelraimondo\n\nGusta il sapore del mare in ogni piatto! Scopri il nostro menù stagionale di pesce fresco; offriamo un'ampia scelta di antipasti caldi e freddi, primi, secondi e dolci fatti in casa.\n\n🍤 Specialità\n\n- Frittura mista di pesce croccante e leggera\n- Antipasti caldi e freddi di mare\n- Primi di pesce\n- Secondi di pescato\n- Dolci fatti in casa\n\n✨ Atmosfera & Servizio\n\nNei piatti troverai tradizione, modernità e accuratezza nella scelta della materia prima. Atmosfera accogliente e servizio caloroso: questo è il nostro impegno.\n\n🎉 Occasioni\n\nVieni a trovarci per una serata speciale, un evento importante o semplicemente per un pranzo in famiglia o con gli amici.\n\n⏰ Orari & Asporto\n\nSiamo aperti pranzo e cena.\nServizio d'asporto sempre disponibile.\nMercoledì chiuso.\n\n📍 Indirizzo\n\nViale Europa 12, Castelraimondo (MC)\n\n📞 Prenotazioni\n\n0737 640099\n\n👉 Prenota ora e goditi un'esperienza unica!",
+      "title": "Software Engineer",
+      "category": "Ristorante",
+      "location": "Everywhere",
+      "address": "Viale Europa, 12, 14, 62022 Castelraimondo",
+      "email": "eva@example.com",
+      "phone": "+39 0737 640099",
+      "openingHours": "Dalle 12:30 alle 14:30 e dalle 19:30 alle 22:00 - Mercoledì chiuso",
+      "id": "6"
+    },
+    {
+      "name": "Gelateria Centrale",
+      "logo": "/assets/img/speakers/centrale_banner.png",
+      "profilePic": "/assets/img/speakers/centrale_pizza_avatar.png",
+      "instagram": "ionicframework",
+      "twitter": "ionicframework",
+      "about": "☕ Nel cuore di Castelraimondo, il Gran Caffè Centrale è un punto di riferimento per chi cerca gusto, qualità e accoglienza.\n\n🍰 Dalla colazione alla pausa dolce del pomeriggio, ogni momento è quello giusto per fermarsi a gustare un caffè eccellente o un gelato artigianale preparato con ingredienti selezionati.\n\n🥐 Il locale unisce tradizione e modernità, offrendo anche una selezione di pasticceria fresca, aperitivi curati e proposte stagionali.\n\n🏡 Un luogo ideale per ritrovarsi, rilassarsi e lasciarsi coccolare dal sapore autentico di un’eccellenza del territorio.",
+      "title": "Software Engineer",
+      "category": "Gelateria Artigianale - Bar - Caffetteria",
+      "location": "Everywhere",
+      "address": "Corso Italia, 21, 62022 Castelraimondo",
+      "email": "eva@example.com",
+      "phone": "+39 348 382 4257",
+      "openingHours": "16:30, 21:00",
+      "id": "7"
+    },
+    {
+      "name": "Pizza El Pedro",
+      "logo": "/assets/img/speakers/pizza_banner.png",
+      "profilePic": "/assets/img/speakers/pizza_pizza_avatar.png",
+      "instagram": "ionicframework",
+      "twitter": "ionicframework",
+      "about": "🍕 Pizza El Pedro nasce 34 anni fa, gestita con discreto successo sino al 2022.\n\n👉 Da quell’anno è iniziata la nuova gestione che ha portato un rinnovamento generale: locali sempre più moderni e confortevoli e, soprattutto, una pizza innovativa per soddisfare le esigenze e i gusti dei clienti.\n\n🌿 Utilizziamo materie prime di qualità e, ove possibile, di provenienza locale per valorizzare e sostenere il territorio.\n\n🔬 Grazie ai frequenti aggiornamenti, alle ricerche e sperimentazioni, è nato un prodotto dalle eccellenti qualità organolettiche che si traducono in una straordinaria facilità di digestione e un’ineguagliabile sensazione al palato.",
+      "title": "Developer Advocate",
+      "category": "Pizzeria al Taglio",
+      "location": "Everywhere",
+      "address": "Corso Italia, 146, 62022 Castelraimondo",
+      "email": "eva@example.com",
+      "phone": "+39 +39 348 3824257",
+      "openingHours": "16:30 - 21:00",
+      "id": "8"
+    },
+    {
+      "name": "CONAD CITY",
+      "logo": "/assets/img/speakers/conad_banner.png",
+      "profilePic": "/assets/img/speakers/conad_pizza_avatar.png",
+      "instagram": "ionicframework",
+      "twitter": "ionicframework",
+      "about": "🏬 Qualità, convenienza e territorio.\n\nSiamo il tuo supermercato di fiducia a Castelraimondo: ogni giorno selezioniamo prodotti freschi e di marca Conad, puntando su qualità e convenienza, con un’attenzione particolare ai prodotti del territorio.\n\n🛒 Offriamo anche la spesa a domicilio: portiamo noi la spesa fino a casa tua.\n\n---\n\n⏰ Orari\n\nLunedì–Sabato: 8:30–20:00\nDomenica: chiuso\n(Orari continuati per venire incontro a chi lavora.)\n\n---\n\n🛍️ Cosa trovi da noi\n\n• Reparti freschi e assortimento completo per la spesa di tutti i giorni.\n• Ampia scelta di prodotti a marchio Conad: qualità garantita a prezzi accessibili.\n• Prodotti locali per valorizzare i sapori del territorio.\n• Servizi comodi: consegna a domicilio, accesso senza barriere, pagamenti digitali (Carta Insieme, Conad Card, Conad Pay).\n\n---\n\n💡 Perché sceglierci\n\n• Qualità e prezzi ragionevoli, con promozioni ricorrenti.\n• Personale attento e disponibile, orientato al servizio.\n• Pulizia e ordine in negozio per una spesa rapida e piacevole.\n\n(Questi aspetti sono spesso evidenziati dagli articoli locali e dalle recensioni online sul punto vendita di Castelraimondo)\n\n---\n\n💬 Dicono di noi (dal web)\n\n«Prezzi ragionevoli, tanti prodotti di qualità e personale al servizio del cliente»",
+      "title": "Software Engineer",
+      "category": "Supermercato",
+      "location": "Everywhere",
+      "address": "Via Enrico Mattei, 57, 62022 Castelraimondo MC",
+      "email": "eva@example.com",
+      "phone": "+39 0737 641418",
+      "openingHours": "08:30 - 20:00",
+      "id": "10"
+    },
+    {
+      "name": "Pizzera La Lanterna",
+      "logo": "/assets/img/speakers/lanterna_banner.png",
+      "profilePic": "/assets/img/speakers/lanterna_pizza_avatar.png",
+      "instagram": "ionicframework",
+      "twitter": "ionicframework",
+      "about": "🍕 La Lanterna, da oltre 16 anni, mette al primo posto la qualità e la soddisfazione dei propri clienti.\n\nLa Pizzeria Ristorante è gestita a conduzione familiare da Hajri Azizi, capofamiglia e titolare, insieme alla moglie Vera e ai figli Nadia ed Endri.\n\n🏠 Il locale è composto da una sala principale e da una caratteristica taverna con soffitto a volta, che regala un’atmosfera accogliente e conviviale, dove la regina del menù è la pizza.\n\n🔥 La pizza è preparata rigorosamente con forno a legna: sana, leggera, croccante, friabile e molto digeribile grazie alla lievitazione naturale con lievito madre e all'utilizzo di ingredienti freschi e genuini.\n\n🍝 Oltre alla pizza si possono gustare primi, secondi piatti e dolci della tradizione culinaria italiana.\n\n✨ Assaporare, ascoltare, riconoscere, apprezzare: l’arte della meditazione culinaria trova nel Ristorante Pizzeria La Lanterna uno dei suoi templi d’eccellenza. Qui il rito della pizza e della cucina sana è officiato ogni giorno nella splendida atmosfera interna e nelle accoglienti sale dalla famiglia Azizi.\n\n🤝 Punto d’incontro per un’élite locale e internazionale, La Lanterna offre il contesto ideale per una pizza, un pranzo, una cena o uno stuzzichino (aperitivo, happy hour, ecc.), accompagnato da un’accoglienza familiare e un servizio personalizzato.",
+      "title": "Software Engineer",
+      "category": "Pizzeri Ristorante",
+      "location": "Everywhere",
+      "address": "Largo della Libertà 4, 62022 Castelraimondo MC",
+      "email": "eva@example.com",
+      "phone": "+39 0737 642142",
+      "openingHours": "18:30 - 02:00",
+      "id": "11"
+    }
+  ],
+  "map": [
+        {
+      "name": "Cassero 2.0",
+      "lat": 43.20750943329837,
+      "lng": 13.056386381979054,
+      "center": true,
+      "icon": "assets/speakers/agos_pizza_avatar.png"
+    },
+    {
+      "name": "Gelateria Carnevali",
+      "lat": 43.208258901029225,
+      "lng": 13.057053668820435,
+      "center": true,
+      "icon": "assets/icon/gelato.png"
+    },
+
+        {
+      "name": "Ago's - Ristorante Pizzera",
+      "lat": 43.2135979488039,
+      "lng": 13.056150574360537,
+      "center": true,
+      "icon": "assets/icon/gelato.png"
+    },
+
+        {
+      "name": "Ristorante Nuovo Mondo",
+      "lat": 43.20807811012026,
+      "lng": 13.055913065880656,
+      "center": true,
+      "icon": "assets/icon/gelato.png"
+    },
+
+        {
+      "name": "Pizza El Pedro",
+      "lat": 43.20549770868139,
+      "lng": 13.055414176691704,
+      "center": true,
+      "icon": "assets/icon/gelato.png"
+    },
+
+        {
+      "name": "Bar L'eclissi",
+      "lat": 43.20738421252214,
+      "lng": 13.056011296569654,
+      "center": true,
+      "icon": "assets/icon/gelato.png"
+    },
+
+        {
+      "name": "Pizzera La Lanterna",
+      "lat": 43.207702291397084,
+      "lng": 13.056773081225085,
+      "center": true,
+      "icon": "assets/icon/gelato.png"
+    },
+
+        {
+      "name": "Gelateria Centrale",
+      "lat": 43.37351172474246,
+      "lng": 13.077083281020434,
+      "center": true,
+      "icon": "assets/icon/gelato.png"
+    },
+
+        { 
+      "name": "CONAD CITY",
+      "lat": 43.39258357350975,
+      "lng": 13.076877149874912,
+      "center": true,
+      "icon": "assets/icon/gelato.png"
+    },
+
+        {
+      "name": "Ludwig",
+      "lat": 43.20822997528104,
+      "lng": 13.057122065054134,
+      "center": true,
+      "icon": "assets/icon/gelato.png"
+    },
+
+        {
+      "name": "Tabaccheria Cerqueti",
+      "lat": 43.20794607059282,
+      "lng": 13.056678711914214,
+      "center": true,
+      "icon": "assets/icon/gelato.png"
+    }
+
+  ],
+  "tracks": [
+    {
+      "name": "TagEsempio1",
+      "icon": "logo-angular"
+    },
+    {
+      "name": "Documentation",
+      "icon": "document"
+    },
+    {
+      "name": "Food",
+      "icon": "restaurant"
+    },
+    {
+      "name": "TagEsempio2",
+      "icon": "logo-ionic"
+    },
+    {
+      "name": "Tooling",
+      "icon": "hammer"
+    },
+    {
+      "name": "Design",
+      "icon": "color-palette"
+    },
+    {
+      "name": "Services",
+      "icon": "cog"
+    },
+    {
+      "name": "Workshop",
+      "icon": "construct"
+    },
+    {
+      "name": "Communication",
+      "icon": "call"
+    },
+    {
+      "name": "Navigation",
+      "icon": "compass"
+    }
+  ]
+}

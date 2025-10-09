@@ -1,0 +1,369 @@
+/* =========================
+   VARIABILI REGOLABILI
+   ========================= */
+:root{
+  --pbc-footer-h: 56px;   /* altezza footer PBC */
+  --cta-video-lift: -30px;  /* ↓ più piccolo = bottoni più vicini al footer */
+  --cta-gap: 14px;        /* spazio tra Audio ON e INIZIA ORA */
+}
+
+/* =========================
+   HEADER logo centrato
+   ========================= */
+.toolbar-logo {
+  position: relative;
+}
+.toolbar-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  pointer-events: none;
+}
+.toolbar-center img {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* =========================
+   LAYOUT KIOSK
+   ========================= */
+.kiosk{ --overflow:hidden; }
+.viewport{
+  height:100%;
+  display:grid;
+  grid-template-rows:auto 1fr; /* info | slides */
+  row-gap: 2px; /* 🔧 molto più vicino */
+}
+
+/* =========================
+   INFO KIOSK
+   ========================= */
+.info-kiosk{
+  text-align:center;
+  background:#f4f4f4;
+  padding:clamp(10px,1.6vh,18px) 10px; /* 🔧 leggermente meno padding */
+  color:#222; font-weight:600;
+  border-radius:8px;
+  margin: 6px 12px 0; /* 🔧 tolto il margin-bottom che creava “buco” */
+}
+.info-kiosk .clock{ font-size:clamp(2rem,4.5vw,3rem); font-weight:800; margin-bottom:4px; }
+.info-kiosk .date{  font-size:clamp(1.1rem,2.2vw,1.6rem); margin-bottom:4px; }
+.info-kiosk .weather{ font-size:clamp(1rem,2vw,1.4rem); font-style:italic; }
+
+ion-toolbar{ --background:transparent; }
+
+/* =========================
+   FOOTER PBC SEMPRE VISIBILE
+   ========================= */
+.pbc-footer{
+  --background:transparent;
+  --border-color:transparent;
+  min-height:var(--pbc-footer-h);
+  z-index:1000;
+}
+.pbc-footer .pbc-wrap{
+  width:100%;
+  display:flex; justify-content:center; align-items:center;
+  gap:18px;
+  padding:6px 0 8px;
+}
+.pbc-footer .brand-logo{
+  height:clamp(22px,4vh,36px);
+  width:auto; opacity:.95;
+  filter:drop-shadow(0 3px 10px rgba(0,0,0,.25));
+}
+
+/* =========================
+   SLIDES (solo swipe orizzontale)
+   ========================= */
+.slide-container{
+  height:100%;
+  display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:100%;
+  overflow-x:auto; overflow-y:hidden;
+  scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x;
+}
+.slide{
+  position:relative; height:100%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  scroll-snap-align:center; scroll-snap-stop:always;
+  padding:1px 12px 8px; /* 🔧 meno padding top */
+  gap:10px; /* 🔧 leggermente ridotto */
+  text-align:center;
+}
+
+/* =========================
+   SLIDE 1: CAROSELLO A3
+   ========================= */
+.slide-ads{ gap:10px; }
+.ads-carousel{
+  position:relative;
+  width:min(96%, 980px);
+  height:min(70vh, 680px);
+  margin:0 auto;
+  display:grid; place-items:center;
+}
+.ads-track{
+  width:100%; height:100%;
+  display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:100%;
+  overflow:auto;
+  scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;
+  gap:0;
+}
+.ads-item{
+  width:100%; height:100%;
+  display:grid; place-items:center;
+  scroll-snap-align:center;
+  padding:8px;
+}
+.ads-item img{
+  width:100%; height:100%;
+  object-fit:contain;
+  background:#fff;
+  border-radius:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+  user-select:none; -webkit-user-drag:none;
+  cursor:pointer;
+}
+.ads-dots{
+  position:absolute;
+  bottom:12px;
+  left:50%; transform:translateX(-50%);
+  display:flex; gap:6px;
+}
+.ads-dots .dot{
+  width:9px; height:9px; border-radius:999px;
+  background:rgba(255,255,255,.45); outline:1px solid rgba(0,0,0,.25);
+}
+.ads-dots .dot.active{ background:rgba(255,255,255,.95); }
+
+/* =========================
+   SLIDE 2: LOGO + TESTO + LOGHI (card)
+   ========================= */
+.slide-info{
+  align-items:stretch;
+}
+.info-card{
+  width:min(96%, 980px);
+  margin:0 auto;
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.12);
+  padding:16px 16px 14px; /* 🔧 un filo meno alta */
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+}
+.slide-image{
+  max-width:80%; max-height:20vh; margin:6px 0 0; pointer-events:none;
+}
+.slide-title{ margin:8px 0 0; }
+.slide-title.tight{ margin-top:8px; }
+
+/* testo giustificato */
+.slide-text{
+  padding:0 18px;
+  color:var(--ion-color-step-600,#60646b);
+  font-size:15px;
+  line-height:1.55;
+  text-align:justify;
+}
+.slide-text b{ color:var(--ion-text-color,#000); }
+
+.partners-logos{
+  margin-top:8px;
+  width:100%;
+  display:grid;
+  place-items:center;
+}
+.partners-logos img{
+  width:min(92%, 760px);
+  height:auto;
+  object-fit:contain;
+}
+
+/* =========================
+   SLIDE 3: VIDEO + CTA
+   ========================= */
+.slide-video{
+  position:relative;
+  overflow:hidden;
+  display:grid; place-items:center;
+}
+.hero-video{
+  position:relative;
+  width:100%; height:100%;
+  max-width:100%; max-height:100%;
+  object-fit:contain; object-position:center;
+  background:#000; z-index:0;
+}
+
+/* overlay */
+.video-chrome, .video-cta{ position:absolute; z-index:3; }
+.video-chrome{
+  top:max(10px, env(safe-area-inset-top));
+  left:10px;
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));
+}
+
+/* CTA vicina al footer */
+/* DOPO (ancorato davvero vicino al footer) */
+.video-cta{
+  bottom: calc(
+    max(8px, env(safe-area-inset-bottom)) +  /* safe area iOS se c'è */
+    var(--cta-video-lift)                    /* puoi metterlo anche negativo tipo -4px */
+  );
+  left: 50%;
+  transform: translateX(-50%);
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cta-gap);
+  text-shadow: 0 2px 8px rgba(0,0,0,.45);
+}
+
+/* nascondi UI quando la slide video non è attiva */
+.slide-video:not(.active) .hero-video,
+.slide-video:not(.active) .video-cta,
+.slide-video:not(.active) .video-chrome{ display:none; }
+
+/* schermi bassi */
+@media (max-height:640px){
+  :root{ --cta-video-lift: -30px; }
+  .slide-text{ padding:0 12px; }
+}
+
+/* =========================
+   MODAL IMMAGINE FULL-SCREEN
+   ========================= */
+.image-modal::part(content){
+  --height:100%; --width:100%; --border-radius:0; background:#000;
+}
+.image-modal .image-modal-wrapper{
+  width:100vw; height:100vh; display:grid; place-items:center; background:#000;
+}
+.image-modal img{ width:100%; height:100%; object-fit:contain; }
+
+/* =========================
+   MODAL ASSISTENZA / WHATSAPP
+   ========================= */
+.support-modal::part(content) {
+  --height: auto;
+  --width: min(92vw, 420px);
+  --border-radius: 14px;
+  padding: 16px;
+}
+.support-modal-wrap {
+  display: grid;
+  gap: 12px;
+  text-align: center;
+}
+.support-modal-wrap h3 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.support-qr {
+  width: 220px;
+  height: 220px;
+  margin: 0 auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.15);
+  background: #fff;
+}
+.support-note {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.support-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* =========================
+   OVERRIDE IPHONE 14 PRO MAX (430×932, portrait)
+   ========================= */
+@supports (padding: max(0px)){
+  @media (device-width:430px) and (device-height:932px) and (orientation:portrait){
+    :root{
+      --cta-video-lift: -10px;
+      --cta-gap: 10px;
+    }
+  }
+}
+
+/* Toast verde */
+.toast-green::part(container) {
+  --background: #22c55e;  /* verde */
+  --color: #ffffff;       /* testo bianco */
+  border-radius: 12px;
+}
+.toast-green::part(button) { color: #ffffff; font-weight: 700; }
+
+/* ==== Nascondi le scrollbar ma mantieni lo swipe ==== */
+
+ion-content.kiosk::-webkit-scrollbar { display: none !important; }
+ion-content.kiosk { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+
+.slide-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.slide-container::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+.ads-track {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior: contain;
+}
+.ads-track::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+/* Toolbar host */
+.toolbar-logo {
+  --background: transparent;
+  --min-height: 72px;
+  position: relative;
+}
+
+/* Container che occupa tutta la toolbar */
+.toolbar-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Immagine ridimensionata senza crop */
+.toolbar-container img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: 100%;
+  object-fit: contain;
+}

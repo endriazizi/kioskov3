@@ -1,0 +1,30 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Picchio News</ion-title>
+
+    <ion-buttons slot="end">
+      <ion-button color="danger" (click)="goBack()">
+        <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+        Torna indietro
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen class="pn-page">
+  <!-- Browser/PWA: iframe SANDBOX per bloccare uscite (popup/top-navigation) -->
+  <iframe
+    *ngIf="isBrowser"
+    class="ext-frame"
+    [src]="safeUrl"
+    sandbox="allow-scripts allow-same-origin allow-forms"
+    referrerpolicy="no-referrer"
+    allow="geolocation 'none'; microphone 'none'; camera 'none'; payment 'none'"
+    title="Picchio News"
+  ></iframe>
+
+  <!-- App mobile: placeholder/loader; qui potresti aprire un in-app browser se vuoi -->
+  <p *ngIf="!isBrowser" class="loading-msg">
+    Caricamento Picchio News...
+  </p>
+</ion-content>

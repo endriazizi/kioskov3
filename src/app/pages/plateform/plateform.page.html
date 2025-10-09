@@ -1,0 +1,51 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Plateform</ion-title>
+    <ion-buttons slot="end">
+      <ion-button color="danger" (click)="goBack()">
+        <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+        Torna indietro
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <!-- WEB: preferisci iframe se possibile -->
+  <ng-container *ngIf="isBrowser; else deviceTpl">
+    <!-- ELFSIGHT WIDGET: Bar L'eclissi -->
+    @if (canIframeFeed) {
+      <div class="ion-padding">
+        <!-- your Elfsight embed goes here -->
+        <div
+          class="elfsight-app-fe37c329-97cf-45a9-acba-b156affa6f1d"
+          data-elfsight-app-lazy
+        ></div>
+        <div class="elfsight-app-xxx"></div>
+      </div>
+    }
+
+    <!-- 3A) Instagram POST embeddato -->
+    <div
+      *ngIf="embedHtml"
+      [innerHTML]="embedHtml"
+      style="max-width: 540px; margin: 0 auto"
+    ></div>
+
+    <!-- 3B) Sito iframabile -->
+    <!-- FIX: iframe attivo con sandbox per impedire popups/top-navigation -->
+    <iframe
+      *ngIf="!embedHtml && canIframe"
+      [src]="safeUrl"
+      style="width: 100%; height: 100%; border: none"
+      title="Ludwig site"
+      sandbox="allow-scripts allow-forms allow-same-origin"
+      referrerpolicy="strict-origin-when-cross-origin"
+    ></iframe>
+  </ng-container>
+
+  <!-- DEVICE: ThemeableBrowser già aperto in TS -->
+  <ng-template #deviceTpl>
+    <p>Caricamento Plateform...</p>
+  </ng-template>
+</ion-content>

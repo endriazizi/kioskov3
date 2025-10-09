@@ -1,0 +1,155 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="toolbar-logo">
+    <div class="toolbar-container">
+      <img src="assets/img/logo_comune.png" alt="Comune di Castelraimondo" />
+    </div>
+
+    <ion-buttons slot="end">
+      <ion-button color="primary" (click)="startApp()" [hidden]="!showSkip">Skip</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<!-- NB: #pageContent serve al fix offsetHeight (gestito nel TS) -->
+<ion-content #pageContent fullscreen="true" class="kiosk">
+  <div class="viewport">
+    <!-- Info -->
+    <div class="info-kiosk">
+      <div class="clock">🕒 {{ currentTime }}</div>
+      <div class="date">📅 {{ currentDate }}</div>
+      <div class="weather" *ngIf="weather">
+        🌤️ {{ weather.name }} - {{ weather.weather[0].description }} ({{ weather.main.temp }}°C)
+      </div>
+    </div>
+
+    <!-- Slides (solo swipe orizzontale) -->
+    <div class="slide-container">
+      <!-- SLIDE 1: Carosello A3 -->
+      <section #firstSlide class="slide slide-ads">
+        <div class="ads-carousel">
+          <div
+            #adsTrack
+            class="ads-track"
+            (scroll)="onAdsScroll()"
+            (pointerdown)="pauseAdsCarousel(true); $event.stopPropagation()"
+            (pointerup)="resumeAdsCarousel()"
+            (touchstart)="$event.stopPropagation()"
+            (touchend)="resumeAdsCarousel()"
+          >
+            <figure class="ads-item" *ngFor="let img of adsImages; let i = index" (click)="openImageFull(img)">
+              <img [src]="img" (error)="removeBrokenAd(i)" alt="Promozione" loading="eager" />
+            </figure>
+          </div>
+
+          <div class="ads-dots" *ngIf="adsImages.length > 1">
+            <span
+              *ngFor="let _ of adsImages; let i = index"
+              class="dot"
+              [class.active]="i === adsIndex"
+              (click)="goToAd(i)">
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 2: Info -->
+      <section class="slide slide-info">
+        <div class="info-card">
+          <img src="assets/img/ica-slidebox-img-1.png" class="slide-image" alt="Logo" />
+
+          <h2 class="slide-title tight">Welcome to <b>CASTELRAIMONDO</b></h2>
+
+          <p class="slide-text">
+            Centro commerciale Naturale "<b>Il Cassero 2.0</b>" è il progetto di
+            riqualificazione e valorizzazione territoriale realizzato da un' aggregazione di 10 imprese locali che, con
+            una comunione di intenti, hanno dato vita ad una serie di interventi volti al potenziamento del decoro delle
+            proprie attività e ad un intervento condiviso, che si è tradotto in un totem multimediale per la promozione
+            delle imprese e del territorio di Castelraimondo. Un progetto che premia la sinergia e il fare sistema.
+          </p>
+
+          <div class="partners-logos">
+            <img src="assets/img/loghi_enti.png" alt="Enti e Partner" loading="lazy" />
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 3: Video + CTA in basso -->
+      <section #videoSection class="slide slide-video" [class.active]="isVideoActive">
+        <video
+          #slideVideo
+          class="hero-video"
+          preload="none"
+          [muted]="muted"
+          playsinline
+          [attr.poster]="'assets/img/video-poster.jpg'"
+          [attr.webkit-playsinline]="true"
+          (error)="onVideoError($event)">
+          <!-- src impostata da TS quando la slide è attiva -->
+        </video>
+
+        <!-- Hamburger -->
+        <div class="video-chrome">
+          <ion-button fill="clear" size="large" (click)="toggleMenu()" aria-label="Apri menu">
+            <ion-icon [ios]="'menu-outline'" [md]="'menu-outline'"></ion-icon>
+          </ion-button>
+        </div>
+
+        <!-- CTA -->
+        <div class="video-cta">
+          <ion-button size="large" (click)="unmuteAndPlay()" *ngIf="showUnmuteBtn">🔊 Audio ON</ion-button>
+          <ion-button
+            class="cta"
+            size="large"
+            color="primary"
+            routerLink="/app/tabs/schedule"
+            routerDirection="root">
+            INIZIA ORA
+          </ion-button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Modal immagine full-screen -->
+  <ion-modal
+    [isOpen]="isImageModalOpen"
+    (didDismiss)="closeImageFull()"
+    class="image-modal"
+    backdropDismiss="true">
+    <ng-template>
+      <div class="image-modal-wrapper" (click)="closeImageFull()">
+        <img [src]="modalImageSrc" alt="Anteprima" />
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal Assistenza / WhatsApp -->
+  <ion-modal
+    [isOpen]="supportModalOpen"
+    (didDismiss)="supportModalOpen = false"
+    class="support-modal"
+    backdropDismiss="true">
+    <ng-template>
+      <div class="support-modal-wrap" (click)="$event.stopPropagation()">
+        <h3>Assistenza</h3>
+        <img [src]="supportQrSrc" alt="QR WhatsApp" class="support-qr" />
+        <p class="support-note">
+          Scansiona il QR con lo smartphone per aprire WhatsApp<br />
+          oppure usa il numero <b>+39 389 986 8381</b>.
+        </p>
+        <div class="support-actions">
+          <ion-button size="small" (click)="copyWhatsAppLink()">Copia link</ion-button>
+          <ion-button size="small" fill="outline" (click)="supportModalOpen = false">Chiudi</ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+</ion-content>
+
+<!-- Footer PBC + Endri -->
+<ion-footer class="pbc-footer">
+  <div class="pbc-wrap">
+    <img src="assets/img/pbc.png"   alt="PBC - Grafica sito"  class="brand-logo" />
+    <img src="assets/img/endri.png" alt="Endri - Grafica sito" class="brand-logo" />
+  </div>
+</ion-footer>

@@ -1,0 +1,23 @@
+// :host, ion-content { display:block; width:100%; height:100%; }
+// iframe { display:block; width:100%; height:100%; }
+
+
+.cm-page {
+  --background: var(--ion-background-color);
+
+  /* fa sì che l'area scrollabile riempia l'intero content */
+  ion-content::part(scroll) {
+    height: 100%;
+  }
+
+  .ext-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .loading-msg {
+    padding: 16px;
+  }
+}
