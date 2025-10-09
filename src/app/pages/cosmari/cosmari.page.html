@@ -1,0 +1,47 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>
+      <ion-icon name="recycle-outline" style="vertical-align:middle;margin-right:6px"></ion-icon>
+      Cosmari – Castelraimondo
+    </ion-title>
+
+    <ion-buttons slot="end">
+      <ion-button color="danger" (click)="goBack()">
+        <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
+        Torna indietro
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen class="cosmari-page">
+  <!-- PWA/Browser -->
+  <ng-container *ngIf="isBrowser; else deviceTpl">
+    <ng-container *ngIf="canIframe; else blockedTpl">
+      <iframe
+        #frame
+        class="ext-frame"
+        [src]="safeUrl"
+        sandbox="allow-scripts allow-same-origin allow-forms"
+        referrerpolicy="no-referrer"
+        allow="geolocation 'none'; microphone 'none'; camera 'none'; payment 'none'"
+        title="Cosmari Castelraimondo"
+        (load)="onIframeLoad()"
+      ></iframe>
+    </ng-container>
+
+    <ng-template #blockedTpl>
+      <div class="blocked">
+        <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
+        <h3>Il sito non consente l’apertura dentro l’app</h3>
+        <p>Aprilo in una nuova scheda.</p>
+        <ion-button expand="block" (click)="openExternal()">Apri in nuova scheda</ion-button>
+      </div>
+    </ng-template>
+  </ng-container>
+
+  <!-- Device ibrido -->
+  <ng-template #deviceTpl>
+    <p class="loading-msg">Caricamento Cosmari...</p>
+  </ng-template>
+</ion-content>

@@ -9,6 +9,8 @@ import { Router, RouterLink, RouterLinkActive } from "@angular/router";
 import { SwUpdate } from "@angular/service-worker";
 import { addIcons } from "ionicons";
 
+
+
 import { SplashScreen } from "@capacitor/splash-screen";
 import { StatusBar } from "@capacitor/status-bar";
 
@@ -50,7 +52,9 @@ import {
   informationCircleSharp,
   newspaper,
   newspaperOutline,
-  newspaperSharp,
+  leaf,
+  leafOutline
+  
 } from "ionicons/icons";
 import { UserService } from "./providers/user.service";
 
@@ -98,6 +102,7 @@ export class AppComponent implements OnInit {
     { title: "Vivere Camerino", url: "/app/tabs/vivere-camerino", icon: "newspaper" },
     { title: "Cronache Maceratesi", url: "/app/tabs/cronache-maceratesi", icon: "newspaper" },
     { title: "Picchio News", url: "/app/tabs/picchio-news", icon: "newspaper" },
+    { title: "Cosmari", url: "/app/tabs/cosmari", icon: "leaf" }
   ];
   loggedIn = false;
   dark = false;
@@ -124,7 +129,7 @@ export class AppComponent implements OnInit {
       newspaper,
       newspaperOutline,
       informationCircleSharp,
-      newspaperSharp,
+      leaf,leafOutline
     });
   }
 

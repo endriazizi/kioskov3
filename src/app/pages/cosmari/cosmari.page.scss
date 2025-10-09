@@ -1,0 +1,28 @@
+.cosmari-page {
+  --background: var(--ion-background-color);
+
+  ion-content::part(scroll) {
+    height: 100%;
+  }
+
+  .cookie-hint {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    color: var(--ion-color-step-600, #60646b);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .ext-frame {
+    display: block;
+    width: 100%;
+    height: calc(100% - 44px); /* lascia spazio al hint; regola se vuoi */
+    border: none;
+  }
+
+  .loading-msg {
+    padding: 16px;
+  }
+}

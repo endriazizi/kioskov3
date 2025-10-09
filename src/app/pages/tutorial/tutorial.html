@@ -46,8 +46,7 @@
               *ngFor="let _ of adsImages; let i = index"
               class="dot"
               [class.active]="i === adsIndex"
-              (click)="goToAd(i)">
-            </span>
+              (click)="goToAd(i)"></span>
           </div>
         </div>
       </section>
@@ -94,7 +93,7 @@
           </ion-button>
         </div>
 
-        <!-- CTA -->
+        <!-- CTA (ancorata sopra il footer) -->
         <div class="video-cta">
           <ion-button size="large" (click)="unmuteAndPlay()" *ngIf="showUnmuteBtn">🔊 Audio ON</ion-button>
           <ion-button
@@ -146,10 +145,12 @@
   </ion-modal>
 </ion-content>
 
-<!-- Footer PBC + Endri -->
+<!-- Footer PBC + Endri in CARD -->
 <ion-footer class="pbc-footer">
-  <div class="pbc-wrap">
-    <img src="assets/img/pbc.png"   alt="PBC - Grafica sito"  class="brand-logo" />
-    <img src="assets/img/endri.png" alt="Endri - Grafica sito" class="brand-logo" />
-  </div>
+  <ion-card class="pbc-card" mode="md">
+    <ion-card-content class="pbc-wrap">
+      <img src="assets/img/pbc.png"   alt="PBC - Grafica sito"  class="brand-logo" />
+      <img src="assets/img/endri.png" alt="Endri - Grafica sito" class="brand-logo" />
+    </ion-card-content>
+  </ion-card>
 </ion-footer>

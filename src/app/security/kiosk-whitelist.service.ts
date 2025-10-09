@@ -22,6 +22,7 @@ export class KioskWhitelistService {
     'cronachemaceratesi.it',
     'picchionews.it',
     'comune.castelraimondo.mc.it',
+    'cosmariambiente.it',
 
     // Instagram widget providers (runtime)
     'elfsightcdn.com',

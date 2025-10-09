@@ -105,7 +105,15 @@ export const TABS_ROUTES: Routes = [
     loadComponent: () =>
       import('../comune-castelraimondo/comune-castelraimondo.page')
         .then(m => m.ComuneCastelraimondoPage),
-  },
+  },   
+  
+
+
+      {
+        path: 'cosmari',
+        loadComponent: () =>
+          import('../cosmari/cosmari.page').then(m => m.CosmariPage),
+      },
       
       {
         path: '',

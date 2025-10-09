@@ -19,6 +19,8 @@ import {
   IonModal,
   MenuController,
   ToastController,
+  IonCard,            // 👈 aggiunto
+  IonCardContent      // 👈 aggiunto
 } from "@ionic/angular/standalone";
 import { IonContent as IonContentBase } from "@ionic/angular";
 import { Storage } from "@ionic/storage-angular";
@@ -43,6 +45,8 @@ import { CommonModule } from "@angular/common";
     IonContent,
     IonFooter,
     IonModal,
+    IonCard,          // 👈 aggiunto
+    IonCardContent    // 👈 aggiunto
   ],
 })
 export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
@@ -121,14 +125,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   supportWhatsappLink = "";
   supportQrSrc = "";
   private supportDelayTimer?: any;
-  // 🔁 rimosso l'intervallo ricorrente: lo mostriamo UNA SOLA VOLTA per ingresso.
   private lastSupportToast = 0;
-  private supportToastShown = false; // 🔑 flag: evita ripresentazione finché resti in pagina
+  private supportToastShown = false;
 
-  // ⏱️ Timings richiesti
-  private readonly SUPPORT_TOAST_DELAY_MS = 6_000;    // appare dopo 6s
-  private readonly SUPPORT_TOAST_DURATION_MS = 12_000; // resta 12s
-  // (manteniamo la costante di cooldown se ti serve altrove, ma non la usiamo qui)
+  private readonly SUPPORT_TOAST_DELAY_MS = 6_000;
+  private readonly SUPPORT_TOAST_DURATION_MS = 12_000;
   private readonly SUPPORT_TOAST_COOLDOWN_MS = 12_000;
 
   constructor() {
@@ -175,7 +176,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.menu.enable(true);
 
     this.clearSupportTimers();
-    this.supportToastShown = false; // 🔁 reimposta: se rientri nella pagina, potrà riapparire
+    this.supportToastShown = false;
   }
 
   // ============== Clock / Weather
@@ -330,13 +331,12 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private startSupportTimers() {
     this.clearSupportTimers();
 
-    // ⏱️ PRIMA COMPARSA: dopo 6s, UNA SOLA VOLTA per ciascun ingresso pagina
     if (this.supportToastShown) return;
     this.supportDelayTimer = setTimeout(async () => {
       if (!this.isFirstSlideActive || this.supportToastShown) return;
       await this.showSupportToast();
       this.lastSupportToast = Date.now();
-      this.supportToastShown = true; // ← blocca ripetizioni finché resti in pagina
+      this.supportToastShown = true;
     }, this.SUPPORT_TOAST_DELAY_MS);
   }
 
@@ -348,9 +348,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     const toast = await this.toastCtrl.create({
       message: "Se noti malfunzionamenti o errori nel totem, contattaci su WhatsApp: +39 389 986 8381",
       position: "bottom",
-      duration: this.SUPPORT_TOAST_DURATION_MS, // ✅ visibile 12s
-      cssClass: "toast-green",                  // ✅ classe custom (usata in global.scss)
-      color: "success",                         // ✅ fallback verde nativo Ionic
+      duration: this.SUPPORT_TOAST_DURATION_MS,
+      cssClass: "toast-green",
+      color: "success",
       buttons: [
         { text: "QR WhatsApp", handler: () => this.openWhatsAppSafe() },
         { text: "Chiudi", role: "cancel" },
@@ -364,7 +364,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     const msg = "Ciao, nel totem ho notato un problema. Potete verificare?";
     const link = `https://wa.me/393899868381?text=${encodeURIComponent(msg)}`;
     this.supportWhatsappLink = link;
-    // (puoi sostituire con PNG locale se vuoi evitare chiamate esterne)
     this.supportQrSrc =
       "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(link);
     this.supportModalOpen = true;
