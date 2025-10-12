@@ -23,6 +23,7 @@ export class KioskWhitelistService {
     'picchionews.it',
     'comune.castelraimondo.mc.it',
     'cosmariambiente.it',
+    'infioratadicastelraimondo.it',
 
     // Instagram widget providers (runtime)
     'elfsightcdn.com',

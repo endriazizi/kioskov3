@@ -12,7 +12,7 @@
 </ion-header>
 
 <ion-content fullscreen class="infiorata-page">
-  <!-- Browser/PWA: iframe con URL “sanitized” e SANDBOX per bloccare uscite -->
+  <!-- Browser/PWA: iframe con URL “sanitized” e SANDBOX -->
   <iframe
     *ngIf="isBrowser"
     class="ext-frame"
@@ -23,7 +23,7 @@
     title="Sito Infiorata"
   ></iframe>
 
-  <!-- App mobile: qui potresti aprire un in-app browser/ThemeableBrowser -->
+  <!-- App (Capacitor/Cordova): testo/loader mentre apro ThemeableBrowser -->
   <p *ngIf="!isBrowser" class="loading-msg">
     Caricamento Infiorata...
   </p>

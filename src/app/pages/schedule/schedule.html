@@ -23,21 +23,17 @@
     <ion-buttons slot="end">
       @if (!ios && !showSearchbar) {
       <ion-button (click)="showSearchbar = true">
-        <ion-icon slot="icon-only" name="search"></ion-icon>
-      </ion-button>
-      } @if (!showSearchbar) {
-      <ion-button (click)="presentFilter()">
-        @if (ios) {
-        <span>Filter</span>
-        } @else {
-        <span>
-          <ion-icon slot="icon-only" name="options"></ion-icon>
-        </span>
-        }
+        @if (ios) { <span>Search</span> } @else {
+        <ion-icon slot="icon-only" name="search"></ion-icon> }
       </ion-button>
       }
+      <ion-button (click)="presentFilter()">
+        @if (ios) { <span>Filter</span> } @else {
+        <span><ion-icon slot="icon-only" name="options"></ion-icon></span> }
+      </ion-button>
     </ion-buttons>
   </ion-toolbar>
+
   @if (!ios) {
   <ion-toolbar>
     <ion-segment [(ngModel)]="segment" (ionChange)="updateSchedule()">
@@ -75,7 +71,21 @@
         [attr.track]="session.tracks[0] | lowercase"
         [hidden]="session.hide"
       >
-        <ion-item routerLink="/app/tabs/schedule/session/{{session.id}}">
+        <!--
+          INTERVENTO: disattivo il click sulle card dell’elenco.
+          - NIENTE routerLink (rimosso)
+          - Forzo la rimozione della freccia: [detail]="false"
+          - Impedisco qualsiasi tap: (click) con preventDefault + stopPropagation
+          - Mantengo lo sliding e le opzioni a destra (Favorite/Remove)
+          Per riattivare in futuro, sostituisci questo <ion-item> con:
+            <ion-item [routerLink]="['/app/tabs/schedule/session', session.id]">
+        -->
+        <ion-item
+          class="session-row"
+          [detail]="false"
+          [button]="false"
+          (click)="$event.preventDefault(); $event.stopPropagation(); false"
+        >
           <ion-label>
             <h3>{{session.name}}</h3>
             <p>
@@ -84,6 +94,7 @@
             </p>
           </ion-label>
         </ion-item>
+
         <ion-item-options>
           @if (segment === 'all') {
           <ion-item-option

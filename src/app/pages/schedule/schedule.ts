@@ -42,8 +42,7 @@ import {
   IonToolbar,
   LoadingController,
   ModalController,
-  ToastController,
-} from '@ionic/angular/standalone';
+  ToastController, IonItem } from '@ionic/angular/standalone';
 import { Group, Session } from '../../interfaces/conference.interfaces';
 import { ConferenceService } from '../../providers/conference.service';
 import { UserService } from '../../providers/user.service';
@@ -53,7 +52,7 @@ import { ScheduleFilterPage } from '../schedule-filter/schedule-filter';
     selector: 'page-schedule',
     templateUrl: 'schedule.html',
     styleUrls: ['./schedule.scss'],
-    imports: [
+    imports: [IonItem, 
         IonHeader,
         IonToolbar,
         IonButtons,
@@ -79,6 +78,7 @@ import { ScheduleFilterPage } from '../schedule-filter/schedule-filter';
         IonItemOptions,
         IonLabel,
         IonMenuButton,
+        IonItem
     ],
     providers: [
         ModalController,

@@ -11,8 +11,7 @@ import {
   IonLabel,
   IonList,
   IonText,
-  IonToolbar,
-} from '@ionic/angular/standalone';
+  IonToolbar, IonTitle, IonPopover, IonDatetime } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   cloudDownload,
@@ -30,7 +29,7 @@ import { UserService } from '../../providers/user.service';
     selector: 'page-session-detail',
     styleUrls: ['./session-detail.scss'],
     templateUrl: 'session-detail.html',
-    imports: [
+    imports: [IonDatetime, IonPopover, IonTitle, 
         IonHeader,
         IonToolbar,
         IonButtons,

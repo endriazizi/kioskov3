@@ -90,7 +90,7 @@ export class AppComponent implements OnInit {
   private toastCtrl = inject(ToastController);
   private menu = inject(MenuController);
   private platform = inject(Platform);
-    // { title: "Infiorata", url: "/app/tabs/infiorata", icon: "information-circle" },
+
         // { title: "About", url: "/app/tabs/about", icon: "information-circle" },
   appPages = [
     { title: "Eventi", url: "/app/tabs/schedule", icon: "calendar" },
@@ -99,6 +99,7 @@ export class AppComponent implements OnInit {
 
 
     { title: "Turismo", url: "/app/tabs/turismo", icon: "information-circle" },
+        { title: "Infiorata", url: "/app/tabs/infiorata", icon: "information-circle" },
     { title: "Vivere Camerino", url: "/app/tabs/vivere-camerino", icon: "newspaper" },
     { title: "Cronache Maceratesi", url: "/app/tabs/cronache-maceratesi", icon: "newspaper" },
     { title: "Picchio News", url: "/app/tabs/picchio-news", icon: "newspaper" },
