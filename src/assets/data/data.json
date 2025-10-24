@@ -85,6 +85,7 @@
       "address": "Corso Italia, 37, 62022 Castelraimondo MC",
       "phone": "+39 0737 640318",
       "openingHours": "orario continuato dalle 10:00 alle 23:00",
+      "foto": [],
       "id": "1"
     },
     {
@@ -103,6 +104,7 @@
       "phone": "+39 351 7010611",
       "openingHours": "pranzo 12:00-15:30 - cena 12:00-22:30",
       "sito": "https://ludwigstrasse.plateform.app",
+      "foto": ["assets/poster/a3_10.jpg","assets/poster/a3_11.jpg"],
       "id": "2"
     },
     {
@@ -120,6 +122,7 @@
       "address": "Piazza Dante Alighieri, 5, 62022 Castelraimondo",
       "phone": "+39 0737 642131",
       "openingHours": "pranzo 12:00-15:30 - cena 12:00-22:30",
+      "foto": [],
       "sito": "feed",
       "id": "3"
     },
@@ -137,6 +140,7 @@
       "phone": "+39 0737 641155",
       "openingHours": "pranzo 12:00-15:30 - cena 12:00-22:30",
       "sito": "https://www.gelateriacarnevali.com",
+      "foto": [],
       "id": "4"
     },
     {
@@ -153,6 +157,7 @@
       "email": "eva@example.com",
       "phone": "+39 0737 641436",
       "openingHours": "Dal lunedì al martedì 07:15–13, 15:30–20 | domenica 08:30–13:00",
+      "foto": [],
       "id": "5"
     },
     {
@@ -169,6 +174,7 @@
       "email": "eva@example.com",
       "phone": "+39 0737 640099",
       "openingHours": "Dalle 12:30 alle 14:30 e dalle 19:30 alle 22:00 - Mercoledì chiuso",
+      "foto": [],
       "id": "6"
     },
     {
@@ -185,6 +191,8 @@
       "email": "eva@example.com",
       "phone": "+39 348 382 4257",
       "openingHours": "16:30, 21:00",
+       "sito": "https://grancaffegelateriacentralecastelraimondo.my.canva.site",
+       "foto": [],
       "id": "7"
     },
     {
@@ -201,6 +209,7 @@
       "email": "eva@example.com",
       "phone": "+39 +39 348 3824257",
       "openingHours": "16:30 - 21:00",
+      "foto": [],
       "id": "8"
     },
     {
@@ -217,6 +226,7 @@
       "email": "eva@example.com",
       "phone": "+39 0737 641418",
       "openingHours": "08:30 - 20:00",
+      "foto": [],
       "id": "10"
     },
     {
@@ -233,6 +243,7 @@
       "email": "eva@example.com",
       "phone": "+39 0737 642142",
       "openingHours": "18:30 - 02:00",
+      "foto": [],
       "id": "11"
     }
   ],

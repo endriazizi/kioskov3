@@ -58,6 +58,9 @@ import { ConferenceService } from '../../providers/conference.service';
 export class SpeakerDetailPage {
   speaker!: Speaker;
 
+  // === SLIDER FOTO: stato pallini ===
+  currentSlide = 0;
+
   private confService = inject(ConferenceService);
   private route = inject(ActivatedRoute);
   private actionSheetCtrl = inject(ActionSheetController);
@@ -80,6 +83,8 @@ export class SpeakerDetailPage {
       if (!speakerId || !data?.speakers) return;
       const found = data.speakers.find((s) => s?.id === speakerId);
       if (found) this.speaker = found;
+      // reset indice slider quando entro
+      this.currentSlide = 0;
     });
   }
 
@@ -101,7 +106,6 @@ export class SpeakerDetailPage {
                 'https://twitter.com/' + speaker.twitter
               );
             }
-            // non ritorno nulla -> void (fix TS)
           },
         },
         {
@@ -127,7 +131,6 @@ export class SpeakerDetailPage {
           text: `Email ( ${speaker.email} )`,
           icon: mode !== 'ios' ? 'mail' : undefined,
           handler: () => {
-            // evita di restituire Window: usa "void" (fix TS)
             void window.open(`mailto:${speaker.email}`, '_self');
           },
         },
@@ -146,5 +149,14 @@ export class SpeakerDetailPage {
     });
 
     await actionSheet.present();
+  }
+
+  // === SLIDER FOTO: aggiornamento indice attivo via scroll ===
+  onSlidesScroll(container: HTMLElement): void {
+    const w = container.clientWidth || 1;
+    const idx = Math.round(container.scrollLeft / w);
+    if (idx !== this.currentSlide) {
+      this.currentSlide = idx;
+    }
   }
 }

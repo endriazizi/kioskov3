@@ -10,6 +10,7 @@ export interface Speaker {
   email: string;
   phone: string;
   sito:  string;
+  foto: string;
 
   category: string;
   description: string;

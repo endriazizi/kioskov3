@@ -75,15 +75,16 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   // ============== Slide 1: Carosello A3
   @ViewChild("adsTrack", { static: false }) adsTrack!: ElementRef<HTMLDivElement>;
   adsImages: string[] = [
-    "assets/poster/a3_01.jpg",
-    "assets/poster/a3_02.jpg",
-    "assets/poster/a3_03.jpg",
-    "assets/poster/a3_04.jpg",
-    "assets/poster/a3_05.jpg",
-    "assets/poster/a3_06.jpg",
-    "assets/poster/a3_07.jpg",
-    "assets/poster/a3_08.jpg",
-    "assets/poster/a3_09.jpg",
+    // "assets/poster/a3_01.jpg",
+    // "assets/poster/a3_02.jpg",
+    // "assets/poster/a3_03.jpg",
+    // "assets/poster/a3_04.jpg",
+    // "assets/poster/a3_05.jpg",
+    // "assets/poster/a3_06.jpg",
+    // "assets/poster/a3_07.jpg",
+    // "assets/poster/a3_08.jpg",
+    // "assets/poster/a3_09.jpg",
+    "assets/poster/a3_11.jpg",
   ];
   adsIndex = 0;
   private readonly ADS_DURATION_MS = 10_000;
