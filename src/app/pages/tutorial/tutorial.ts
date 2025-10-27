@@ -85,6 +85,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     // "assets/poster/a3_08.jpg",
     // "assets/poster/a3_09.jpg",
     "assets/poster/a3_11.jpg",
+      "assets/poster/a3_12.jpg",
   ];
   adsIndex = 0;
   private readonly ADS_DURATION_MS = 10_000;
