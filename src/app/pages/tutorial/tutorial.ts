@@ -82,8 +82,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     // "assets/poster/a3_05.jpg",
     // "assets/poster/a3_06.jpg",
     // "assets/poster/a3_07.jpg",
-    // "assets/poster/a3_08.jpg",
-    // "assets/poster/a3_09.jpg",
+    //  "assets/poster/a3_08.jpg",
+    //  "assets/poster/a3_09.jpg",
     "assets/poster/a3_11.jpg",
       "assets/poster/a3_12.jpg",
   ];

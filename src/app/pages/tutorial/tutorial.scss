@@ -90,7 +90,7 @@ ion-toolbar{ --background:transparent; }
   position:relative; height:100%; min-height:0;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   scroll-snap-align:center; scroll-snap-stop:always;
-  padding:1px 12px 8px;
+  padding:0 12px 8px;            /* top 0 per ridurre gap superiore */
   gap:10px;
   text-align:center;
 }
@@ -103,6 +103,8 @@ ion-toolbar{ --background:transparent; }
   place-items:center;
   gap:10px;
 }
+
+/* wrapper del carosello */
 .ads-carousel{
   position:relative;
   width:min(96%, 980px);
@@ -111,6 +113,8 @@ ion-toolbar{ --background:transparent; }
   margin:0 auto;
   display:grid; place-items:center;
 }
+
+/* track a scorrimento orizzontale */
 .ads-track{
   width:100%; height:100%;
   display:grid;
@@ -120,22 +124,36 @@ ion-toolbar{ --background:transparent; }
   scroll-snap-type:x mandatory;
   -webkit-overflow-scrolling:touch;
   gap:0;
+  align-items:stretch;      /* ogni item occupa tutta l’altezza utile */
 }
+
+/* ogni slide immagine */
 .ads-item{
+  /* 🔑 azzera i margini di default di <figure> che creavano “vuoti” */
+  margin: 0;
+
   width:100%; height:100%;
-  display:grid; place-items:center;
+  display:grid; place-items:center;   /* centra anche verticalmente */
   scroll-snap-align:center;
-  padding:8px;
+  padding: clamp(8px, 2vh, 14px);     /* bordo bianco simmetrico */
+  box-sizing: border-box;
 }
+
+/* immagine poster */
 .ads-item img{
+  display:block;                  /* elimina gap di linea */
   width:100%; height:100%;
-  object-fit:contain;
+  max-width:100%; max-height:100%;
+  object-fit:contain;             /* nessun crop, letterboxing */
+  object-position:center;         /* centrata sempre */
   background:#fff;
   border-radius:12px;
   box-shadow:0 8px 24px rgba(0,0,0,.18);
   user-select:none; -webkit-user-drag:none;
   cursor:pointer;
 }
+
+/* indicatori */
 .ads-dots{
   position:absolute;
   bottom:12px;
