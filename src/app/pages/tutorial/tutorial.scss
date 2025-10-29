@@ -4,6 +4,12 @@
 :root{
   --pbc-footer-h: 56px;      /* altezza footer (se serve) */
   --cta-gap: 14px;           /* spazio tra Audio ON e INIZIA ORA */
+
+  /* Mobile: limite “percentuale”, già ok su iPhone */
+  --ads-max-size: 82svh;
+
+  /* Fallback se il TS non ha ancora scritto il valore dinamico */
+  --kiosk-ui-top: 240px;
 }
 
 /* =========================
@@ -60,7 +66,6 @@ ion-toolbar{ --background:transparent; }
   gap:18px;
   padding:6px 0 8px;
 
-  /* effetto card */
   background:#fff;
   border-radius:14px 14px 0 0;
   box-shadow: 0 -10px 24px rgba(0,0,0,.10);
@@ -84,13 +89,13 @@ ion-toolbar{ --background:transparent; }
   overflow-x:auto; overflow-y:hidden;
   scroll-snap-type:x mandatory;
   -webkit-overflow-scrolling:touch;
-  touch-action:pan-x;             /* orizzontale sul contenitore */
+  touch-action:pan-x;
 }
 .slide{
   position:relative; height:100%; min-height:0;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   scroll-snap-align:center; scroll-snap-stop:always;
-  padding:0 12px 8px;            /* top 0 per ridurre gap superiore */
+  padding:1px 12px 8px;
   gap:10px;
   text-align:center;
 }
@@ -103,8 +108,6 @@ ion-toolbar{ --background:transparent; }
   place-items:center;
   gap:10px;
 }
-
-/* wrapper del carosello */
 .ads-carousel{
   position:relative;
   width:min(96%, 980px);
@@ -113,8 +116,6 @@ ion-toolbar{ --background:transparent; }
   margin:0 auto;
   display:grid; place-items:center;
 }
-
-/* track a scorrimento orizzontale */
 .ads-track{
   width:100%; height:100%;
   display:grid;
@@ -124,36 +125,28 @@ ion-toolbar{ --background:transparent; }
   scroll-snap-type:x mandatory;
   -webkit-overflow-scrolling:touch;
   gap:0;
-  align-items:stretch;      /* ogni item occupa tutta l’altezza utile */
 }
-
-/* ogni slide immagine */
 .ads-item{
-  /* 🔑 azzera i margini di default di <figure> che creavano “vuoti” */
-  margin: 0;
-
   width:100%; height:100%;
-  display:grid; place-items:center;   /* centra anche verticalmente */
+  display:flex; align-items:center; justify-content:center; /* centratura */
   scroll-snap-align:center;
-  padding: clamp(8px, 2vh, 14px);     /* bordo bianco simmetrico */
-  box-sizing: border-box;
+  padding: clamp(6px, 1.5vh, 12px);
 }
-
-/* immagine poster */
 .ads-item img{
-  display:block;                  /* elimina gap di linea */
-  width:100%; height:100%;
-  max-width:100%; max-height:100%;
-  object-fit:contain;             /* nessun crop, letterboxing */
-  object-position:center;         /* centrata sempre */
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: var(--ads-max-size);
+
+  object-fit: contain;
+  object-position: center;
+
   background:#fff;
   border-radius:12px;
   box-shadow:0 8px 24px rgba(0,0,0,.18);
   user-select:none; -webkit-user-drag:none;
   cursor:pointer;
 }
-
-/* indicatori */
 .ads-dots{
   position:absolute;
   bottom:12px;
@@ -170,33 +163,30 @@ ion-toolbar{ --background:transparent; }
    SLIDE 2: INFO (SCORREVOLE in verticale)
    ========================= */
 .slide-info{
-  align-items:stretch;    /* la card si allarga in altezza */
-  min-height:0;           /* abilita lo scroll interno */
+  align-items:stretch;
+  min-height:0;
 }
 .info-card{
   width:min(96%, 980px);
   margin:0 auto;
 
-  /* layout card */
   background:#fff;
   border-radius:14px;
   box-shadow:0 10px 30px rgba(0,0,0,.12);
   padding:16px 16px 14px;
 
-  /* 🔑 SCROLL INTERNO verticale */
   max-height: 100%;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;         /* consenti scroll verticale qui */
+  touch-action: pan-y;
 
   display:flex; flex-direction:column; align-items:center; gap:10px;
-  min-height: 0;               /* per iOS/Safari */
+  min-height: 0;
 }
 .slide-image{ max-width:80%; max-height:20vh; margin:6px 0 0; pointer-events:none; }
 .slide-title{ margin:8px 0 0; }
 .slide-title.tight{ margin-top:8px; }
 
-/* testo giustificato */
 .slide-text{
   padding:0 18px;
   color:var(--ion-color-step-600,#60646b);
@@ -210,7 +200,7 @@ ion-toolbar{ --background:transparent; }
 .partners-logos img{ width:min(92%, 760px); height:auto; object-fit:contain; }
 
 /* =========================
-   SLIDE 3: VIDEO + CTA (ancorata in basso)
+   SLIDE 3: VIDEO + CTA
    ========================= */
 .slide-video{
   position:relative;
@@ -235,7 +225,7 @@ ion-toolbar{ --background:transparent; }
   transform: translateX(-50%);
   bottom: max(12px, env(safe-area-inset-bottom));
   display: flex;
-  flex-direction: column;            /* in colonna; metti row per affiancarli */
+  flex-direction: column;
   gap: var(--cta-gap);
   text-shadow: 0 2px 8px rgba(0,0,0,.45);
 }
@@ -282,9 +272,7 @@ ion-toolbar{ --background:transparent; }
 .support-note { margin: 4px 0 0; font-size: 0.9rem; line-height: 1.35; }
 .support-actions { display: flex; justify-content: center; gap: 10px; margin-top: 4px; }
 
-/* =========================
-   OVERRIDE IPHONE 14 PRO MAX
-   ========================= */
+/* iPhone 14 Pro Max tweak */
 @supports (padding: max(0px)){
   @media (device-width:430px) and (device-height:932px) and (orientation:portrait){
     :root{ --cta-gap: 10px; }
@@ -293,13 +281,13 @@ ion-toolbar{ --background:transparent; }
 
 /* Toast verde */
 .toast-green::part(container) {
-  --background: #22c55e;  /* verde */
+  --background: #22c55e;
   --color: #ffffff;
   border-radius: 12px;
 }
 .toast-green::part(button) { color: #ffffff; font-weight: 700; }
 
-/* ==== Nascondi le scrollbar ma mantieni lo swipe ==== */
+/* scrollbar invisibili, swipe attivo */
 ion-content.kiosk::-webkit-scrollbar { display: none !important; }
 ion-content.kiosk { scrollbar-width: none !important; -ms-overflow-style: none !important; }
 
@@ -321,7 +309,6 @@ ion-content.kiosk { scrollbar-width: none !important; -ms-overflow-style: none !
 }
 .ads-track::-webkit-scrollbar { width: 0; height: 0; background: transparent; }
 
-/* Toolbar host */
 .toolbar-logo { --background: transparent; --min-height: 72px; position: relative; }
 .toolbar-container {
   position: absolute; inset: 0;
@@ -331,4 +318,15 @@ ion-content.kiosk { scrollbar-width: none !important; -ms-overflow-style: none !
 .toolbar-container img {
   max-width: 100%; max-height: 100%;
   width: auto; height: 100%; object-fit: contain;
+}
+
+/* =========================
+   PROFILO “TOTEM” (monitor verticale grande)
+   Usa il valore DINAMICO → --kiosk-ui-top
+   ========================= */
+@media (orientation: portrait) and (min-width: 768px) and (min-height: 1200px){
+  :root{
+    --ads-max-size: calc(100svh - var(--kiosk-ui-top, 240px) - var(--pbc-footer-h) - 18px);
+  }
+  .ads-item{ padding: clamp(8px, 1.8vh, 16px); }
 }

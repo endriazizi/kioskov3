@@ -29,6 +29,8 @@ import { arrowForward, close, menuOutline } from "ionicons/icons";
 import { HttpClient } from "@angular/common/http";
 import { CommonModule } from "@angular/common";
 
+import { bindKioskUiTopAuto } from '../../shared/kiosk-ui-top';
+
 @Component({
   standalone: true,
   selector: "page-tutorial",
@@ -162,6 +164,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
         this.startVideo();
       }
     });
+
+      // Calcola e aggiorna :root{ --kiosk-ui-top: <px> } (toolbar + meteo)
+  bindKioskUiTopAuto();
   }
 
   ngOnDestroy() {
