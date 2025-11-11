@@ -1,0 +1,80 @@
+<!-- HERO con logo centrale + mini-menu -------------------------------->
+<div class="gc-hero" [style.--hero-img]="c.heroImage ? 'url(' + c.heroImage + ')' : 'none'">
+  <div class="gc-hero__overlay">
+    <div class="gc-hero__inner">
+
+      <!-- mini-menu: su mobile centrato sopra; su desktop in alto a destra -->
+      <nav class="gc-topnav" aria-label="Sezioni">
+        <button class="gc-topnav__link" type="button" (click)="scrollTo('storia')">
+          {{ c.navLabels.storia }}
+        </button>
+        <button class="gc-topnav__link" type="button" (click)="scrollTo('presente')">
+          {{ c.navLabels.presente }}
+        </button>
+        <button class="gc-topnav__link" type="button" (click)="scrollTo('servizi')">
+          {{ c.navLabels.servizi }}
+        </button>
+      </nav>
+
+      <!-- BRAND: logo grande centrato sopra a titolo e tagline -->
+      <div class="gc-brand gc-brand--center">
+        <img *ngIf="c.logoImage" class="gc-logo" [src]="c.logoImage" alt="Logo {{ c.siteName }}" />
+        <h1 class="gc-title">{{ c.siteName }}</h1>
+        <p class="gc-tagline">{{ c.tagline }}</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- LA STORIA --------------------------------------------------------->
+<section id="storia" class="gc-section">
+  <ion-grid class="gc-card">
+    <ion-row class="gc-row">
+      <ion-col size="12" sizeLg="6">
+        <div class="gc-photo-frame">
+          <img [src]="c.storyImage" alt="La storia - foto d'epoca" />
+        </div>
+      </ion-col>
+      <ion-col size="12" sizeLg="6" class="gc-story">
+        <h2 class="gc-headline">{{ c.storyHeadline }}</h2>
+        <div class="gc-richtext" [innerHTML]="c.storyHtml"></div>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+</section>
+
+<!-- IL PRESENTE (titolo come 'UNA STORIA INFINITA') ------------------->
+<section id="presente" class="gc-section">
+  <ion-card class="gc-card">
+    <ion-card-content>
+      <h2 class="gc-headline">{{ c.presentTitle }}</h2>
+      <div class="gc-richtext" [innerHTML]="c.presentHtml"></div>
+
+      <div class="gc-gallery">
+        <div class="gc-gallery__item" *ngFor="let img of c.presentImages; trackBy: trackByIndex">
+          <img [src]="img.src" [alt]="img.alt" loading="lazy" />
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+</section>
+
+<!-- I NOSTRI SERVIZI -------------------------------------------------->
+<section id="servizi" class="gc-section">
+  <ion-card class="gc-card">
+    <ion-card-content>
+      <div class="gc-services-head">
+        <h2 class="gc-headline">{{ c.servicesTitle }}</h2>
+        <h3 class="gc-subheadline">{{ c.servicesSubheadline }}</h3>
+      </div>
+
+      <div class="gc-creations" *ngIf="c.creationsImage">
+        <img [src]="c.creationsImage" alt="Alcune delle nostre creazioni" />
+      </div>
+
+      <!-- Il primo h4 ('Gelateria Artigianale') verrà reso come titolo rosso grande -->
+      <div class="gc-richtext gc-services" [innerHTML]="c.servicesHtml"></div>
+    </ion-card-content>
+  </ion-card>
+</section>

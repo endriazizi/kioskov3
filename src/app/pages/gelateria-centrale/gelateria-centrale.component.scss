@@ -1,0 +1,191 @@
+:host {
+  --gc-primary: #e84246;  /* rosso titolo */
+  --gc-ink: #2b2b2b;
+  --gc-paper: #fff5f7;
+
+  --gc-font-head: 'Playfair Display', ui-serif, Georgia, serif;
+  --gc-font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+
+/* HERO --------------------------------------------------------------- */
+.gc-hero {
+  background: var(--gc-paper);
+  background-image: var(--hero-img);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  min-height: 44vh;
+  display: grid;
+  place-items: center;
+  color: #000;
+
+  .gc-hero__overlay { width: 100%; background: rgba(255,245,247,.6); }
+  .gc-hero__inner {
+    max-width: 1100px; margin: 0 auto; padding: 20px 16px 26px;
+    position: relative;
+  }
+}
+
+/* MINI MENU ---------------------------------------------------------- */
+.gc-topnav {
+  position: absolute;
+  right: 16px;
+  top: 14px;
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+
+  .gc-topnav__link {
+    background: transparent;
+    border: 0;
+    padding: 6px 0;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #304254;
+    cursor: pointer;
+  }
+}
+
+/* BRAND (logo grande centrato) --------------------------------------- */
+.gc-brand {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 8px;
+  margin-top: 36px; /* aria sotto la topnav su desktop */
+}
+
+.gc-logo {
+  width: clamp(110px, 26vw, 170px);
+  height: auto;
+  border-radius: 999px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+}
+
+.gc-title {
+  font-family: var(--gc-font-head);
+  font-size: clamp(28px, 5vw, 44px);
+  margin: 0;
+  color: #000;
+}
+
+.gc-tagline { margin: 4px 0 0; opacity: .85; }
+
+/* Su mobile: nav centrata sopra, più spazio sotto */
+@media (max-width: 767.98px) {
+  .gc-topnav {
+    position: static;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  .gc-brand { margin-top: 8px; }
+}
+
+/* SECTIONS & CARD ---------------------------------------------------- */
+.gc-section {
+  padding: 18px 12px;
+  background: var(--gc-paper);
+}
+.gc-card {
+  max-width: 1100px; margin: 0 auto;
+  background: #fff; border-radius: 18px; overflow: hidden;
+  box-shadow: 0 10px 24px rgba(0,0,0,.06);
+}
+.gc-row { align-items: center; }
+
+/* Titolo rosso grande (stile 'Una storia infinita') */
+.gc-headline {
+  font-family: var(--gc-font-head);
+  font-size: clamp(32px, 6vw, 64px);
+  line-height: 0.95;
+  color: var(--gc-primary);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+}
+
+.gc-subheadline {
+  font-family: var(--gc-font-head);
+  font-size: clamp(18px, 3.2vw, 28px);
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  color: var(--gc-primary);
+  margin: 2px 0 8px;
+  opacity: .95;
+}
+
+.gc-richtext {
+  font-family: var(--gc-font-body);
+  color: var(--gc-ink);
+  line-height: 1.65;
+
+  p { margin: 0 0 10px; }
+  strong { font-weight: 700; }
+  em { opacity: .9; }
+}
+
+/* IMMAGINI ----------------------------------------------------------- */
+.gc-photo-frame {
+  background: #fff;
+  border: 6px solid #f3e6e8;
+  border-radius: 10px;
+  padding: 10px;
+  img { width: 100%; display: block; object-fit: cover; }
+}
+
+/* ↓↓↓ TIGHTER: meno spazio tra foto (La Storia) e titolo su mobile */
+@media (max-width: 767.98px) {
+  .gc-photo-frame { margin-bottom: 6px; }     /* prima 10+ px */
+  .gc-story .gc-headline { margin-top: 4px; } /* avvicina il titolo alla foto */
+}
+
+.gc-gallery {
+  display: grid; gap: 10px; margin-top: 14px;
+  grid-template-columns: repeat(2, 1fr);
+  @media (min-width: 768px){ grid-template-columns: repeat(3, 1fr); }
+  &__item {
+    aspect-ratio: 1/1;
+    border-radius: 12px; overflow: hidden; background: #fafafa;
+    img { width: 100%; height: 100%; object-fit: cover; display:block; }
+  }
+}
+
+/* SERVIZI - testata & banner “creazioni” ----------------------------- */
+.gc-services-head {
+  text-align: left;
+  @media (max-width: 767.98px){ text-align: center; }
+}
+
+.gc-creations {
+  margin: 8px 0 14px;
+  img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 14px;
+    box-shadow: 0 8px 18px rgba(0,0,0,.06);
+  }
+}
+
+/* SERVIZI - corpo testo --------------------------------------------- */
+.gc-services {
+  /* Tutti gli h4 leggibili */
+  h4 {
+    font-family: var(--gc-font-head);
+    font-size: clamp(18px, 2.8vw, 22px);
+    margin: 14px 0 6px;
+  }
+
+  /* Il PRIMO h4 = 'Gelateria Artigianale' con lo stesso stile del titolo rosso */
+  h4:first-of-type {
+    color: var(--gc-primary);
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    line-height: 0.98;
+    font-size: clamp(26px, 5.2vw, 42px); /* più grande */
+    margin: 8px 0 10px;
+  }
+
+  p { margin: 0 0 10px; }
+}

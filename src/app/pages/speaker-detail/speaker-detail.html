@@ -5,7 +5,7 @@
         <ion-back-button defaultHref="/app/tabs/speakers"></ion-back-button>
       </ion-buttons>
 
-      <!-- @if (speaker) {
+      @if (speaker) {
       <ion-buttons slot="end">
         <ion-button (click)="openContact(speaker)">
           <ion-icon slot="icon-only" [ios]="'call-outline'" [md]="'call-sharp'"></ion-icon>
@@ -14,13 +14,13 @@
           <ion-icon slot="icon-only" [ios]="'share-outline'" [md]="'share-sharp'"></ion-icon>
         </ion-button>
       </ion-buttons>
-      } -->
+      }
     </ion-toolbar>
   </ion-header>
 
   <div class="speaker-background">
     <img
-      [ngSrc]="speaker?.profilePic || 'assets/img/placeholder.jpg'"
+      [ngSrc]="speaker?.profilePic || 'assets/placeholder.jpg'"
       [alt]="speaker?.name || 'Speaker profile'"
       width="70"
       height="70"
@@ -29,73 +29,64 @@
     <h2 class="custom-title">{{ speaker?.name ?? 'Loading...' }}</h2>
   </div>
 
-  <div class="ion-padding speaker-detail">
-    <img [src]="speaker?.logo" style="max-height:150px; display:block; margin:auto;">
+  <!-- === CASO SPECIALE: GELATERIA CENTRALE ================================ -->
+  @if (speaker?.name === 'Gelateria Centrale') {
+    <app-gelateria-centrale
+      [name]="speaker?.name!"
+      [logo]="speaker?.logo!"
+      [profilePic]="speaker?.profilePic!"
+      [address]="speaker?.address!"
+      [phone]="speaker?.phone!"
+      [websiteUrl]="'https://grancaffegelateriacentralecastelraimondo.my.canva.site/i-nostri-servizi'">
+    </app-gelateria-centrale>
+  }
+  @else {
+    <!-- === CONTENUTO STANDARD (tutti gli altri) ========================== -->
+    <div class="ion-padding speaker-detail">
+      <img [src]="speaker?.logo" style="max-height:150px; display:block; margin:auto;">
 
-    @if (speaker?.name === 'Ludwig' || speaker?.name === 'Gelateria Carnevali') {
-      <div class="ion-padding">
-        <ion-button
-          expand="block"
-          color="primary"
-          [routerLink]="['/app/tabs/plateform', speaker?.sito]"
-        >
-          VISITA IL NOSTRO SITO!
-        </ion-button>
-      </div>
-    }
-
-    <!-- === SLIDER FOTO: INIZIO === -->
-    @if (speaker?.foto?.length) {
-      <div class="photo-slider">
-        <div #slides class="slides" (scroll)="onSlidesScroll(slides)">
-          @for (img of speaker!.foto; track $index) {
-            <div class="slide">
-              <img
-                [src]="img"
-                loading="lazy"
-                [alt]="speaker?.name + ' foto ' + ($index + 1)"
-              />
-            </div>
-          }
+      @if (speaker?.name === 'Ludwig' || speaker?.name === 'Gelateria Carnevali') {
+        <div class="ion-padding">
+          <ion-button
+            expand="block"
+            color="primary"
+            [routerLink]="['/app/tabs/plateform', speaker?.sito]"
+          >
+            VISITA IL NOSTRO SITO!
+          </ion-button>
         </div>
+      }
 
-        <div class="dots">
-          @for (_ of speaker!.foto; track $index) {
-            <span class="dot" [class.active]="$index === currentSlide"></span>
-          }
+      <!-- (qui restano la tua about, la social bar, ecc.) -->
+      <div class="about-text" [innerHTML]="speaker?.about || 'Loading biography...'"></div>
+
+      <hr />
+
+      @if (speaker) {
+        <div class="social-links">
+          <ion-chip color="twitter" button>
+            <ion-icon name="logo-twitter"></ion-icon>
+            <ion-label>Twitter</ion-label>
+          </ion-chip>
+
+          <ion-chip color="dark" button>
+            <ion-icon name="logo-facebook"></ion-icon>
+            <ion-label>Facebook</ion-label>
+          </ion-chip>
+
+          <ion-chip color="instagram" button>
+            <ion-icon name="logo-instagram"></ion-icon>
+            <ion-label>Instagram</ion-label>
+          </ion-chip>
         </div>
-      </div>
-    }
-    <!-- === SLIDER FOTO: FINE === -->
+      }
 
-    <div class="about-text" [innerHTML]="speaker?.about || 'Loading biography...'"></div>
+      <h2>{{ speaker?.category }}</h2>
+      <p>{{ speaker?.description }}</p>
 
-    <hr />
-
-    @if (speaker) {
-      <div class="social-links">
-        <ion-chip color="twitter" button>
-          <ion-icon name="logo-twitter"></ion-icon>
-          <ion-label>Twitter</ion-label>
-        </ion-chip>
-
-        <ion-chip color="dark" button>
-          <ion-icon name="logo-facebook"></ion-icon>
-          <ion-label>Facebook</ion-label>
-        </ion-chip>
-
-        <ion-chip color="instagram" button>
-          <ion-icon name="logo-instagram"></ion-icon>
-          <ion-label>Instagram</ion-label>
-        </ion-chip>
-      </div>
-    }
-
-    <h2>{{ speaker?.category }}</h2>
-    <p>{{ speaker?.description }}</p>
-
-    <ion-item><ion-label>📍 {{ speaker?.address }}</ion-label></ion-item>
-    <ion-item><ion-label>📞 {{ speaker?.phone }}</ion-label></ion-item>
-    <ion-item><ion-label>🕒 {{ speaker?.openingHours }}</ion-label></ion-item>
-  </div>
+      <ion-item><ion-label>📍 {{ speaker?.address }}</ion-label></ion-item>
+      <ion-item><ion-label>📞 {{ speaker?.phone }}</ion-label></ion-item>
+      <ion-item><ion-label>🕒 {{ speaker?.openingHours }}</ion-label></ion-item>
+    </div>
+  }
 </ion-content>

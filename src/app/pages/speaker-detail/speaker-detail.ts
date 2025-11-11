@@ -16,8 +16,7 @@ import {
   IonText,
   IonItem,
   IonFabButton,
-  IonFab,
-} from '@ionic/angular/standalone';
+  IonFab, IonCard } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   callOutline,
@@ -31,12 +30,14 @@ import {
 import { Speaker } from '../../interfaces/conference.interfaces';
 import { ConferenceService } from '../../providers/conference.service';
 
+import { GelateriaCentraleComponent } from '../gelateria-centrale/gelateria-centrale.component';
+
 @Component({
   selector: 'page-speaker-detail',
   templateUrl: 'speaker-detail.html',
   styleUrls: ['./speaker-detail.scss'],
   standalone: true,
-  imports: [
+  imports: [IonCard, 
     IonFab,
     IonFabButton,
     IonItem,
@@ -52,6 +53,7 @@ import { ConferenceService } from '../../providers/conference.service';
     IonChip,
     IonLabel,
     NgOptimizedImage,
+    GelateriaCentraleComponent
   ],
   providers: [ActionSheetController],
 })
