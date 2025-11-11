@@ -1,20 +1,21 @@
 /* =========================
-   VARIABILI REGOLABILI
+   VARIABILI
    ========================= */
 :root{
-  --pbc-footer-h: 56px;                 /* fallback se il footer non c'è */
-  --cta-gap: 14px;                      /* spazio tra Audio ON e INIZIA ORA */
+  --pbc-footer-h: 56px;
+  --cta-gap: 14px;
 
-  /* 🔑 nuove: impostate in runtime da kiosk-ui-top.ts */
-  --kiosk-ui-top: 0px;                  /* misurata (toolbar + meteo) */
+  /* runtime da kiosk-ui-top.ts */
+  --kiosk-ui-top: 0px;
   --kiosk-ui-bottom: var(--pbc-footer-h);
-  --ads-gap: 8px;                       /* piccolo respiro visivo */
+  --ads-gap: 8px;
   --ads-area-h: calc(100dvh - var(--kiosk-ui-top) - var(--kiosk-ui-bottom) - var(--ads-gap));
+
+  /* stesso grigio della card meteo */
+  --kiosk-card-bg: #f4f4f4;
 }
 
-/* =========================
-   HEADER logo centrato
-   ========================= */
+/* HEADER */
 .toolbar-logo { position: relative; }
 .toolbar-center {
   position: absolute; left: 50%; top: 50%;
@@ -23,25 +24,21 @@
 }
 .toolbar-center img { height: 28px; width: auto; object-fit: contain; }
 
-/* =========================
-   LAYOUT KIOSK
-   ========================= */
+/* LAYOUT KIOSK */
 .kiosk{ --overflow:hidden; }
 .viewport{
   height:100%;
   display:grid;
-  grid-template-rows:auto 1fr; /* info | slides */
+  grid-template-rows:auto 1fr;
   row-gap: 2px;
-  min-height: 0;               /* fondamentale per scroll figli */
+  min-height: 0;
 }
 ion-toolbar{ --background:transparent; }
 
-/* =========================
-   INFO KIOSK (clock/meteo)
-   ========================= */
+/* INFO (clock/meteo) */
 .info-kiosk{
   text-align:center;
-  background:#f4f4f4;
+  background:var(--kiosk-card-bg);
   padding:clamp(10px,1.6vh,18px) 10px;
   color:#222; font-weight:600;
   border-radius:8px;
@@ -51,9 +48,7 @@ ion-toolbar{ --background:transparent; }
 .info-kiosk .date{  font-size:clamp(1.1rem,2.2vw,1.6rem); margin-bottom:4px; }
 .info-kiosk .weather{ font-size:clamp(1rem,2vw,1.4rem); font-style:italic; }
 
-/* =========================
-   FOOTER (logos) in “card”
-   ========================= */
+/* FOOTER (card) */
 .pbc-footer{
   --background:transparent;
   --border-color:transparent;
@@ -65,8 +60,6 @@ ion-toolbar{ --background:transparent; }
   display:flex; justify-content:center; align-items:center;
   gap:18px;
   padding:6px 0 8px;
-
-  /* effetto card */
   background:#fff;
   border-radius:14px 14px 0 0;
   box-shadow: 0 -10px 24px rgba(0,0,0,.10);
@@ -78,10 +71,7 @@ ion-toolbar{ --background:transparent; }
   filter:drop-shadow(0 3px 10px rgba(0,0,0,.25));
 }
 
-/* =========================
-   SLIDES (swipe orizzontale)
-   ========================= */
-/* 🔑 usa l’altezza calibrata runtime */
+/* SLIDES */
 .slide-container{
   height: var(--ads-area-h);
   min-height: 0;
@@ -102,15 +92,8 @@ ion-toolbar{ --background:transparent; }
   text-align:center;
 }
 
-/* =========================
-   SLIDE 1: CAROSELLO A3 (centrato)
-   ========================= */
-.slide-ads{
-  display:grid;
-  place-items:center;
-  gap:10px;
-}
-/* 🔑 anche il contenitore del carosello rispetta l’altezza “utile” */
+/* SLIDE 1: CAROSELLO */
+.slide-ads{ display:grid; place-items:center; gap:10px; }
 .ads-carousel{
   position:relative;
   width:min(96%, 980px);
@@ -119,8 +102,6 @@ ion-toolbar{ --background:transparent; }
   margin:0 auto;
   display:grid; place-items:center;
 }
-
-/* track orizzontale con una pagina per poster */
 .ads-track{
   width:100%; height:100%;
   display:grid;
@@ -129,88 +110,92 @@ ion-toolbar{ --background:transparent; }
   overflow:auto;
   scroll-snap-type:x mandatory;
   -webkit-overflow-scrolling:touch;
-  gap:0;
 }
 
-/* ogni poster occupa tutto lo spazio disponibile e centra il contenuto */
+/* poster pieno e centrato; sfondo GRIGIO come card meteo */
 .ads-item{
   width:100%; height:100%;
   display:grid; place-items:center;
   scroll-snap-align:center;
-  padding:10px; /* respiro attorno al poster */
+  padding:10px;
+  border-radius:12px;
+  overflow:hidden;
+  background:var(--kiosk-card-bg);
 }
-
-/* ✨ la regola che fa la magia: il poster sta SEMPRE intero e centrato */
 .ads-item img{
-  max-width:100%;
-  max-height:100%;
-  width:auto;            /* lascia che sia l’altezza a guidare il fit */
-  height:100%;
-  object-fit: contain;   /* NESSUN CROP */
+  max-width:100%; max-height:100%;
+  width:auto; height:100%;
+  object-fit: contain;
   object-position:center;
   background:#fff;
-  border-radius:12px;
-  box-shadow:0 8px 24px rgba(0,0,0,.18);
+  display:block;
   user-select:none; -webkit-user-drag:none;
   cursor:pointer;
 }
+.ads-item video{
+  width:100%; height:100%;
+  object-fit: cover;      /* niente bande */
+  object-position:center;
+  background:var(--kiosk-card-bg);
+  display:block;
+}
 
-/* pallini navigazione del carosello */
+/* dots */
 .ads-dots{
   position:absolute;
   bottom:12px;
   left:50%; transform:translateX(-50%);
   display:flex; gap:6px;
+  z-index: 2;
 }
 .ads-dots .dot{
   width:9px; height:9px; border-radius:999px;
-  background:rgba(255,255,255,.45); outline:1px solid rgba(0,0,0,.25);
+  background:rgba(0,0,0,.15); outline:1px solid rgba(0,0,0,.25);
 }
-.ads-dots .dot.active{ background:rgba(255,255,255,.95); }
+.ads-dots .dot.active{ background:#fff; }
 
-/* =========================
-   SLIDE 2: INFO (SCORREVOLE in verticale)
-   ========================= */
-.slide-info{
-  align-items:stretch;
-  min-height:0;
+/* CTA audio (stile e posizione come slide-3) */
+.ads-cta{
+  position:absolute;
+  left:50%; transform:translateX(-50%);
+  bottom: calc(12px + 20px); /* sopra i dots */
+  z-index: 5;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,.45));
 }
+.ads-cta ion-button{
+  width:100%;
+  max-width:420px;
+  margin-inline:auto;
+}
+
+/* SLIDE 2: INFO */
+.slide-info{ align-items:stretch; min-height:0; }
 .info-card{
   width:min(96%, 980px);
   margin:0 auto;
-
   background:#fff;
   border-radius:14px;
   box-shadow:0 10px 30px rgba(0,0,0,.12);
   padding:16px 16px 14px;
-
   max-height: 100%;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-
   display:flex; flex-direction:column; align-items:center; gap:10px;
   min-height: 0;
 }
 .slide-image{ max-width:80%; max-height:20vh; margin:6px 0 0; pointer-events:none; }
 .slide-title{ margin:8px 0 0; }
 .slide-title.tight{ margin-top:8px; }
-
 .slide-text{
-  padding:0 18px;
-  color:var(--ion-color-step-600,#60646b);
-  font-size:15px;
-  line-height:1.55;
-  text-align:justify;
+  padding:0 18px; color:var(--ion-color-step-600,#60646b);
+  font-size:15px; line-height:1.55; text-align:justify;
 }
 .slide-text b{ color:var(--ion-text-color,#000); }
-
 .partners-logos{ margin-top:8px; width:100%; display:grid; place-items:center; }
 .partners-logos img{ width:min(92%, 760px); height:auto; object-fit:contain; }
 
-/* =========================
-   SLIDE 3: VIDEO + CTA
-   ========================= */
+/* SLIDE 3: VIDEO PRINCIPALE */
 .slide-video{
   position:relative;
   overflow:hidden;
@@ -233,8 +218,7 @@ ion-toolbar{ --background:transparent; }
   left: 50%;
   transform: translateX(-50%);
   bottom: max(12px, env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column;
   gap: var(--cta-gap);
   text-shadow: 0 2px 8px rgba(0,0,0,.45);
 }
@@ -252,9 +236,7 @@ ion-toolbar{ --background:transparent; }
   .slide-text{ padding:0 12px; }
 }
 
-/* =========================
-   MODAL IMMAGINE FULL-SCREEN
-   ========================= */
+/* MODAL immagine */
 .image-modal::part(content){
   --height:100%; --width:100%; --border-radius:0; background:#000;
 }
@@ -263,9 +245,7 @@ ion-toolbar{ --background:transparent; }
 }
 .image-modal img{ width:100%; height:100%; object-fit:contain; }
 
-/* =========================
-   MODAL ASSISTENZA / WHATSAPP
-   ========================= */
+/* MODAL Assistenza */
 .support-modal::part(content) {
   --height: auto;
   --width: min(92vw, 420px);
@@ -281,53 +261,28 @@ ion-toolbar{ --background:transparent; }
 .support-note { margin: 4px 0 0; font-size: 0.9rem; line-height: 1.35; }
 .support-actions { display: flex; justify-content: center; gap: 10px; margin-top: 4px; }
 
-/* =========================
-   OVERRIDE IPHONE 14 PRO MAX
-   ========================= */
+/* Accessibilità / platform fixes */
 @supports (padding: max(0px)){
   @media (device-width:430px) and (device-height:932px) and (orientation:portrait){
     :root{ --cta-gap: 10px; }
   }
 }
-
-/* Toast verde */
 .toast-green::part(container) {
-  --background: #22c55e;  /* verde */
+  --background: #22c55e;
   --color: #ffffff;
   border-radius: 12px;
 }
 .toast-green::part(button) { color: #ffffff; font-weight: 700; }
 
-/* ==== Nascondi le scrollbar ma mantieni lo swipe ==== */
+/* nascondi scrollbar ma mantieni swipe */
 ion-content.kiosk::-webkit-scrollbar { display: none !important; }
 ion-content.kiosk { scrollbar-width: none !important; -ms-overflow-style: none !important; }
-
-.slide-container {
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
+.slide-container { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; }
 .slide-container::-webkit-scrollbar { width: 0; height: 0; background: transparent; }
-
-.ads-track {
-  overflow-x: auto; overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; -ms-overflow-style: none;
-  overscroll-behavior: contain;
-}
+.ads-track { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; overscroll-behavior: contain; }
 .ads-track::-webkit-scrollbar { width: 0; height: 0; background: transparent; }
 
-/* Toolbar host */
+/* toolbar host */
 .toolbar-logo { --background: transparent; --min-height: 72px; position: relative; }
-.toolbar-container {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  pointer-events: none;
-}
-.toolbar-container img {
-  max-width: 100%; max-height: 100%;
-  width: auto; height: 100%; object-fit: contain;
-}
+.toolbar-container { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.toolbar-container img { max-width: 100%; max-height: 100%; width: auto; height: 100%; object-fit: contain; }

@@ -10,7 +10,6 @@
   </ion-toolbar>
 </ion-header>
 
-<!-- NB: #pageContent serve al fix offsetHeight (gestito nel TS) -->
 <ion-content #pageContent fullscreen="true" class="kiosk">
   <div class="viewport">
     <!-- Info -->
@@ -22,9 +21,9 @@
       </div>
     </div>
 
-    <!-- Slides (solo swipe orizzontale) -->
+    <!-- Slides -->
     <div class="slide-container">
-      <!-- SLIDE 1: Carosello A3 -->
+      <!-- SLIDE 1: Carosello -->
       <section #firstSlide class="slide slide-ads">
         <div class="ads-carousel">
           <div
@@ -36,17 +35,50 @@
             (touchstart)="$event.stopPropagation()"
             (touchend)="resumeAdsCarousel()"
           >
-            <figure class="ads-item" *ngFor="let img of adsImages; let i = index" (click)="openImageFull(img)">
-              <img [src]="img" (error)="removeBrokenAd(i)" alt="Promozione" loading="eager" />
+            <figure class="ads-item" *ngFor="let ad of ads; let i = index">
+              <!-- IMMAGINE -->
+              <img
+                *ngIf="ad.kind === 'image'; else videoTpl"
+                [src]="ad.src"
+                (error)="removeBrokenAd(i)"
+                (click)="openImageFull(ad.src)"
+                alt="Promozione"
+                loading="eager" />
+
+              <!-- VIDEO -->
+              <ng-template #videoTpl>
+                <video
+                  #adVideo
+                  class="ad-video"
+                  [src]="ad.src"
+                  [poster]="ad.poster || null"
+                  preload="auto"
+                  muted
+                  playsinline
+                  webkit-playsinline
+                  autoplay
+                  (loadedmetadata)="onAdVideoMeta(i, $event)"
+                  (ended)="onAdVideoEnded(i)"
+                  (error)="removeBrokenAd(i)"
+                ></video>
+              </ng-template>
             </figure>
           </div>
 
-          <div class="ads-dots" *ngIf="adsImages.length > 1">
+          <div class="ads-dots" *ngIf="ads.length > 1">
             <span
-              *ngFor="let _ of adsImages; let i = index"
+              *ngFor="let _ of ads; let i = index"
               class="dot"
               [class.active]="i === adsIndex"
-              (click)="goToAd(i)"></span>
+              (click)="goToAd(i)"
+            ></span>
+          </div>
+
+          <!-- CTA audio (se il browser chiede gesto utente) -->
+          <div class="ads-cta" *ngIf="showAdsAudioCta">
+            <ion-button size="large" color="primary" (click)="toggleAdsAudio()">
+              🔊 Audio ON
+            </ion-button>
           </div>
         </div>
       </section>
@@ -55,9 +87,7 @@
       <section class="slide slide-info">
         <div class="info-card">
           <img src="assets/img/ica-slidebox-img-1.png" class="slide-image" alt="Logo" />
-
           <h2 class="slide-title tight">Welcome to <b>CASTELRAIMONDO</b></h2>
-
           <p class="slide-text">
             Centro commerciale Naturale "<b>Il Cassero 2.0</b>" è il progetto di
             riqualificazione e valorizzazione territoriale realizzato da un' aggregazione di 10 imprese locali che, con
@@ -65,14 +95,13 @@
             proprie attività e ad un intervento condiviso, che si è tradotto in un totem multimediale per la promozione
             delle imprese e del territorio di Castelraimondo. Un progetto che premia la sinergia e il fare sistema.
           </p>
-
           <div class="partners-logos">
             <img src="assets/img/loghi_enti.png" alt="Enti e Partner" loading="lazy" />
           </div>
         </div>
       </section>
 
-      <!-- SLIDE 3: Video + CTA in basso -->
+      <!-- SLIDE 3: Video + CTA -->
       <section #videoSection class="slide slide-video" [class.active]="isVideoActive">
         <video
           #slideVideo
@@ -82,26 +111,20 @@
           playsinline
           [attr.poster]="'assets/img/video-poster.jpg'"
           [attr.webkit-playsinline]="true"
-          (error)="onVideoError($event)">
+          (error)="onVideoError($event)"
+        >
           <!-- src impostata da TS quando la slide è attiva -->
         </video>
 
-        <!-- Hamburger -->
         <div class="video-chrome">
           <ion-button fill="clear" size="large" (click)="toggleMenu()" aria-label="Apri menu">
             <ion-icon [ios]="'menu-outline'" [md]="'menu-outline'"></ion-icon>
           </ion-button>
         </div>
 
-        <!-- CTA (ancorata sopra il footer) -->
         <div class="video-cta">
           <ion-button size="large" (click)="unmuteAndPlay()" *ngIf="showUnmuteBtn">🔊 Audio ON</ion-button>
-          <ion-button
-            class="cta"
-            size="large"
-            color="primary"
-            routerLink="/app/tabs/schedule"
-            routerDirection="root">
+          <ion-button class="cta" size="large" color="primary" routerLink="/app/tabs/schedule" routerDirection="root">
             INIZIA ORA
           </ion-button>
         </div>
@@ -109,12 +132,13 @@
     </div>
   </div>
 
-  <!-- Modal immagine full-screen -->
+  <!-- Modal immagine -->
   <ion-modal
     [isOpen]="isImageModalOpen"
     (didDismiss)="closeImageFull()"
     class="image-modal"
-    backdropDismiss="true">
+    backdropDismiss="true"
+  >
     <ng-template>
       <div class="image-modal-wrapper" (click)="closeImageFull()">
         <img [src]="modalImageSrc" alt="Anteprima" />
@@ -122,12 +146,13 @@
     </ng-template>
   </ion-modal>
 
-  <!-- Modal Assistenza / WhatsApp -->
+  <!-- Modal Assistenza -->
   <ion-modal
     [isOpen]="supportModalOpen"
     (didDismiss)="supportModalOpen = false"
     class="support-modal"
-    backdropDismiss="true">
+    backdropDismiss="true"
+  >
     <ng-template>
       <div class="support-modal-wrap" (click)="$event.stopPropagation()">
         <h3>Assistenza</h3>
@@ -145,7 +170,7 @@
   </ion-modal>
 </ion-content>
 
-<!-- Footer PBC + Endri in CARD -->
+<!-- Footer -->
 <ion-footer class="pbc-footer">
   <ion-card class="pbc-card" mode="md">
     <ion-card-content class="pbc-wrap">
