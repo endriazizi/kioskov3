@@ -43,7 +43,8 @@
                 (error)="removeBrokenAd(i)"
                 (click)="openImageFull(ad.src)"
                 alt="Promozione"
-                loading="eager" />
+                loading="eager"
+              />
 
               <!-- VIDEO -->
               <ng-template #videoTpl>
@@ -123,8 +124,16 @@
         </div>
 
         <div class="video-cta">
-          <ion-button size="large" (click)="unmuteAndPlay()" *ngIf="showUnmuteBtn">🔊 Audio ON</ion-button>
-          <ion-button class="cta" size="large" color="primary" routerLink="/app/tabs/schedule" routerDirection="root">
+          <ion-button size="large" (click)="unmuteAndPlay()" *ngIf="showUnmuteBtn">
+            🔊 Audio ON
+          </ion-button>
+          <ion-button
+            class="cta"
+            size="large"
+            color="primary"
+            routerLink="/app/tabs/schedule"
+            routerDirection="root"
+          >
             INIZIA ORA
           </ion-button>
         </div>

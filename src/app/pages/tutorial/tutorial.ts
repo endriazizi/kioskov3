@@ -22,7 +22,7 @@ import {
   MenuController,
   ToastController,
   IonCard,
-  IonCardContent
+  IonCardContent,
 } from "@ionic/angular/standalone";
 import { IonContent as IonContentBase } from "@ionic/angular";
 import { Storage } from "@ionic/storage-angular";
@@ -52,7 +52,7 @@ type AdItem = { kind: "image" | "video"; src: string; poster?: string };
     IonFooter,
     IonModal,
     IonCard,
-    IonCardContent
+    IonCardContent,
   ],
 })
 export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
@@ -86,7 +86,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     { kind: "image", src: "assets/poster/a3_11.jpg" },
     { kind: "image", src: "assets/poster/a3_12.jpg" },
     { kind: "image", src: "assets/poster/a3_13.jpg" },
-    // { kind: "image", src: "assets/poster/a3_14.jpg" },
+    { kind: "image", src: "assets/poster/a3_14.jpg" }, // poster A3 verticale adattato all'area disponibile
     { kind: "video", src: "assets/poster/eclissi.mp4" }, // video carosello
   ];
   adsIndex = 0;
@@ -98,7 +98,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   // Video carosello: auto-duration + audio
   private adDurationsMs: number[] = [];
-  private readonly VIDEO_FALLBACK_MS = 15000;
+  private readonly VIDEO_FALLBACK_MS = 15_000;
   private videoAdAdvanceTimer?: any;
   adsMuted = true;
   adsShowUnmuteBtn = false;
@@ -154,7 +154,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async ngAfterViewInit() {
-    try { await this.pageContent.getScrollElement(); } catch {}
+    try {
+      await this.pageContent.getScrollElement();
+    } catch {}
 
     // Carosello
     setTimeout(() => this.goToAd(this.adsIndex, "auto"), 0);
@@ -169,8 +171,13 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.adVideoEls.changes.subscribe(() => this.bindAdVideoObserver());
 
     // Sblocco su qualsiasi gesto (tap/tasto) — utile su alcuni Android/iOS
-    window.addEventListener("pointerdown", this.firstGestureHandlerAll, { capture: true, passive: true });
-    window.addEventListener("keydown", this.firstGestureHandlerAll, { capture: true });
+    window.addEventListener("pointerdown", this.firstGestureHandlerAll, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("keydown", this.firstGestureHandlerAll, {
+      capture: true,
+    });
 
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
@@ -179,7 +186,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       }
     });
 
-    // Misura top dinamico
+    // Misura top dinamico: calcola lo spazio tra header+meteo e footer
     this.unbindKiosk = bindKioskUiTopAuto({
       headerSelector: "ion-header",
       weatherBoxSelector: ".info-kiosk",
@@ -211,9 +218,18 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   // Clock / Weather
   updateTimeAndDate() {
     const now = new Date();
-    this.currentTime = now.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    this.currentDate = now.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
+    this.currentTime = now.toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    this.currentDate = now.toLocaleDateString("it-IT", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
   }
+
   fetchWeather() {
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${this.weatherCity}&appid=${this.weatherApiKey}&units=metric&lang=it`;
     this.http.get(url).subscribe({
@@ -233,31 +249,50 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       this.goToAd(next);
     }, this.ADS_DURATION_MS);
   }
-  stopAdsCarousel() { if (this.adsTimer) { clearInterval(this.adsTimer); this.adsTimer = undefined; } }
+
+  stopAdsCarousel() {
+    if (this.adsTimer) {
+      clearInterval(this.adsTimer);
+      this.adsTimer = undefined;
+    }
+  }
 
   private pauseAllAdVideos(resetTime = true) {
     this.adVideoEls?.forEach((ref) => {
       const v = ref.nativeElement;
-      try { v.pause(); if (resetTime) v.currentTime = 0; } catch {}
+      try {
+        v.pause();
+        if (resetTime) v.currentTime = 0;
+      } catch {}
     });
   }
 
   /** Observer: fa partire i video quando sono realmente in vista */
   private bindAdVideoObserver() {
-    try { this.adVideoIO?.disconnect(); } catch {}
+    try {
+      this.adVideoIO?.disconnect();
+    } catch {}
     if (!this.adVideoEls || !this.adVideoEls.length) return;
 
     this.adVideoIO = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           const v = e.target as HTMLVideoElement;
-          const idx = this.adVideoEls.toArray().findIndex((r) => r.nativeElement === v);
+          const idx = this.adVideoEls
+            .toArray()
+            .findIndex((r) => r.nativeElement === v);
           if (idx < 0) return;
-          if (e.isIntersecting && e.intersectionRatio > 0.6) this.ensureAdVideoPlaying(idx);
+          if (e.isIntersecting && e.intersectionRatio > 0.6) {
+            this.ensureAdVideoPlaying(idx);
+          }
         });
       },
-      { threshold: [0, 0.6, 1], root: null }
+      {
+        threshold: [0, 0.6, 1],
+        root: null,
+      }
     );
+
     this.adVideoEls.forEach((r) => this.adVideoIO!.observe(r.nativeElement));
   }
 
@@ -268,7 +303,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
     // proprietà + attributi richiesti su iOS
     v.muted = true;
-    v.setAttribute("muted", "");          // importante su Safari
+    v.setAttribute("muted", ""); // importante su Safari
     (v as any).playsInline = true;
     v.setAttribute("playsinline", "");
     v.setAttribute("webkit-playsinline", "true");
@@ -276,7 +311,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
     const tryPlay = (tries = 6) => {
       try {
-        // alcuni device gradiscono un load() prima del play()
         v.load();
         const p = v.play();
         if (p && typeof p.then === "function") {
@@ -285,18 +319,26 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
             this.tryUnmuteAd(i);
           }).catch(() => {
             if (tries > 0) setTimeout(() => tryPlay(tries - 1), 300);
-            else { this.adsMuted = true; this.adsShowUnmuteBtn = true; }
+            else {
+              this.adsMuted = true;
+              this.adsShowUnmuteBtn = true;
+            }
           });
         }
       } catch {
         if (tries > 0) setTimeout(() => tryPlay(tries - 1), 300);
-        else { this.adsMuted = true; this.adsShowUnmuteBtn = true; }
+        else {
+          this.adsMuted = true;
+          this.adsShowUnmuteBtn = true;
+        }
       }
     };
 
-    // riprova anche su eventi media
     const once = (ev: keyof HTMLVideoElementEventMap, fn: any) => {
-      const h = () => { v.removeEventListener(ev, h as any); fn(); };
+      const h = () => {
+        v.removeEventListener(ev, h as any);
+        fn();
+      };
       v.addEventListener(ev, h as any, { once: true });
     };
     once("loadeddata", () => tryPlay(4));
@@ -315,16 +357,24 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
     const durMs = Number.isFinite(this.adDurationsMs[i])
       ? this.adDurationsMs[i]
-      : (Number.isFinite(v.duration) && v.duration > 0 ? v.duration * 1000 : this.VIDEO_FALLBACK_MS);
+      : Number.isFinite(v.duration) && v.duration > 0
+      ? v.duration * 1000
+      : this.VIDEO_FALLBACK_MS;
 
     this.videoAdAdvanceTimer = setTimeout(() => {
       this.goToAd((i + 1) % this.ads.length);
     }, Math.max(1000, durMs + 300));
   }
 
-  private leaveVideoAd() { this.clearVideoAdAdvance(); }
+  private leaveVideoAd() {
+    this.clearVideoAdAdvance();
+  }
+
   private clearVideoAdAdvance() {
-    if (this.videoAdAdvanceTimer) { clearTimeout(this.videoAdAdvanceTimer); this.videoAdAdvanceTimer = undefined; }
+    if (this.videoAdAdvanceTimer) {
+      clearTimeout(this.videoAdAdvanceTimer);
+      this.videoAdAdvanceTimer = undefined;
+    }
   }
 
   private async tryUnmuteAd(i: number) {
@@ -377,7 +427,10 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
     this.pauseAdsCarousel();
     clearTimeout(this.adsScrollDebounce);
-    this.adsScrollDebounce = setTimeout(() => this.resumeAdsCarousel(), 2500);
+    this.adsScrollDebounce = setTimeout(
+      () => this.resumeAdsCarousel(),
+      2_500
+    );
   }
 
   pauseAdsCarousel(user = false) {
@@ -386,6 +439,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.clearVideoAdAdvance();
     this.pauseAllAdVideos(false);
   }
+
   resumeAdsCarousel() {
     this.adsUserPause = false;
     const current = this.ads[this.adsIndex];
@@ -397,7 +451,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     const missing = this.ads[i]?.src;
     console.warn("[Carosello] Media mancante: rimuovo", missing);
     this.ads.splice(i, 1);
-    if (!this.ads.length) { this.stopAdsCarousel(); this.clearVideoAdAdvance(); return; }
+    if (!this.ads.length) {
+      this.stopAdsCarousel();
+      this.clearVideoAdAdvance();
+      return;
+    }
     this.adsIndex = Math.min(this.adsIndex, this.ads.length - 1);
     setTimeout(() => this.goToAd(this.adsIndex, "auto"), 0);
   }
@@ -409,18 +467,30 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       this.adDurationsMs[i] = v.duration * 1000;
     }
   }
+
   onAdVideoEnded(i: number) {
     this.clearVideoAdAdvance();
     this.goToAd((i + 1) % this.ads.length);
   }
 
   // CTA audio carosello
-  get isCurrentAdVideo(): boolean { return this.ads[this.adsIndex]?.kind === "video"; }
-  get showAdsAudioCta(): boolean { return this.isCurrentAdVideo && this.adsShowUnmuteBtn; }
+  get isCurrentAdVideo(): boolean {
+    return this.ads[this.adsIndex]?.kind === "video";
+  }
+
+  get showAdsAudioCta(): boolean {
+    return this.isCurrentAdVideo && this.adsShowUnmuteBtn;
+  }
+
   toggleAdsAudio() {
     const v = this.adVideoEls?.toArray()[this.adsIndex]?.nativeElement;
     if (!v) return;
-    try { v.muted = false; v.play().catch(() => {}); this.adsMuted = false; this.adsShowUnmuteBtn = false; } catch {}
+    try {
+      v.muted = false;
+      v.play().catch(() => {});
+      this.adsMuted = false;
+      this.adsShowUnmuteBtn = false;
+    } catch {}
   }
 
   // Modal immagine
@@ -428,21 +498,29 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.modalImageSrc = src;
     this.isImageModalOpen = true;
     if (this.modalAutoCloseTimer) clearTimeout(this.modalAutoCloseTimer);
-    this.modalAutoCloseTimer = setTimeout(() => this.closeImageFull(), 10_000);
-  }
-  closeImageFull(): void {
-    this.isImageModalOpen = false;
-    if (this.modalAutoCloseTimer) { clearTimeout(this.modalAutoCloseTimer); this.modalAutoCloseTimer = undefined; }
+    this.modalAutoCloseTimer = setTimeout(
+      () => this.closeImageFull(),
+      10_000
+    );
   }
 
-  // Slide 3: Video principale (come prima)
+  closeImageFull(): void {
+    this.isImageModalOpen = false;
+    if (this.modalAutoCloseTimer) {
+      clearTimeout(this.modalAutoCloseTimer);
+      this.modalAutoCloseTimer = undefined;
+    }
+  }
+
+  // Slide 3: Video principale
   private setupIntersectionObserverForVideo() {
     this.io = new IntersectionObserver(
       ([entry]) => {
         const active = entry.isIntersecting && entry.intersectionRatio > 0.6;
         this.isVideoActive = active;
         this.menu.enable(active);
-        if (active) this.startVideo(); else this.pauseVideo();
+        if (active) this.startVideo();
+        else this.pauseVideo();
       },
       { threshold: [0, 0.6, 1] }
     );
@@ -451,46 +529,101 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   private startVideo() {
     const v = this.slideVideo.nativeElement;
-    if (!this.videoSrcSet) { v.src = this.VIDEO_SRC; this.videoSrcSet = true; }
+    if (!this.videoSrcSet) {
+      v.src = this.VIDEO_SRC;
+      this.videoSrcSet = true;
+    }
     v.loop = true;
     v.muted = this.muted;
     v.autoplay = true;
     v.playsInline = true;
     v.setAttribute("webkit-playsinline", "true");
-    v.play().then(() => { this.isPlaying = true; this.tryUnmute(); })
-            .catch(() => { this.showUnmuteBtn = true; });
+    v.play()
+      .then(() => {
+        this.isPlaying = true;
+        this.tryUnmute();
+      })
+      .catch(() => {
+        this.showUnmuteBtn = true;
+      });
   }
+
   private pauseVideo(clear = false) {
     const v = this.slideVideo?.nativeElement;
     if (!v) return;
-    v.pause(); this.isPlaying = false;
-    if (clear) { v.removeAttribute("src"); v.load(); this.videoSrcSet = false; }
+    v.pause();
+    this.isPlaying = false;
+    if (clear) {
+      v.removeAttribute("src");
+      v.load();
+      this.videoSrcSet = false;
+    }
   }
+
   private async tryUnmute() {
     if (!this.isVideoActive) return;
     const v = this.slideVideo.nativeElement;
-    try { v.muted = false; await v.play(); this.muted = false; this.showUnmuteBtn = false; this.isPlaying = true; }
-    catch { v.muted = true; this.muted = true; this.showUnmuteBtn = true; }
+    try {
+      v.muted = false;
+      await v.play();
+      this.muted = false;
+      this.showUnmuteBtn = false;
+      this.isPlaying = true;
+    } catch {
+      v.muted = true;
+      this.muted = true;
+      this.showUnmuteBtn = true;
+    }
   }
+
   private async forceUnlockAudio() {
     const v = this.slideVideo?.nativeElement;
     try {
-      const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (Ctx) { const ctx = new Ctx(); if (ctx.state === "suspended") await ctx.resume();
-        const src = ctx.createBufferSource(); src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
-        src.connect(ctx.destination); src.start(0);
+      const Ctx =
+        (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (Ctx) {
+        const ctx = new Ctx();
+        if (ctx.state === "suspended") await ctx.resume();
+        const src = ctx.createBufferSource();
+        src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+        src.connect(ctx.destination);
+        src.start(0);
       }
-      if (v) { v.muted = false; await v.play(); this.muted = false; this.showUnmuteBtn = false; this.isPlaying = true; }
-    } catch { if (v) { v.muted = true; this.muted = true; this.showUnmuteBtn = true; } }
+      if (v) {
+        v.muted = false;
+        await v.play();
+        this.muted = false;
+        this.showUnmuteBtn = false;
+        this.isPlaying = true;
+      }
+    } catch {
+      if (v) {
+        v.muted = true;
+        this.muted = true;
+        this.showUnmuteBtn = true;
+      }
+    }
   }
-  unmuteAndPlay() { this.forceUnlockAudio(); }
+
+  unmuteAndPlay() {
+    this.forceUnlockAudio();
+  }
 
   onVideoError(_ev: Event) {
-    this.toastCtrl.create({
-      message: "Il video non è disponibile. Se il problema persiste, contattaci su WhatsApp: +39 389 986 8381",
-      duration: 7000, position: "bottom",
-      buttons: [{ text: "QR WhatsApp", handler: () => this.openWhatsAppSafe() }],
-    }).then((t) => t.present());
+    this.toastCtrl
+      .create({
+        message:
+          "Il video non è disponibile. Se il problema persiste, contattaci su WhatsApp: +39 389 986 8381",
+        duration: 7_000,
+        position: "bottom",
+        buttons: [
+          {
+            text: "QR WhatsApp",
+            handler: () => this.openWhatsAppSafe(),
+          },
+        ],
+      })
+      .then((t) => t.present());
   }
 
   // Toast assistenza
@@ -499,12 +632,14 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       ([entry]) => {
         const active = entry.isIntersecting && entry.intersectionRatio > 0.6;
         this.isFirstSlideActive = active;
-        if (active) this.startSupportTimers(); else this.clearSupportTimers();
+        if (active) this.startSupportTimers();
+        else this.clearSupportTimers();
       },
       { threshold: [0, 0.6, 1] }
     );
     this.ioFirst.observe(this.firstSlide.nativeElement);
   }
+
   private startSupportTimers() {
     this.clearSupportTimers();
     if (this.supportToastShown) return;
@@ -514,12 +649,18 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       this.supportToastShown = true;
     }, this.SUPPORT_TOAST_DELAY_MS);
   }
+
   private clearSupportTimers() {
-    if (this.supportDelayTimer) { clearTimeout(this.supportDelayTimer); this.supportDelayTimer = undefined; }
+    if (this.supportDelayTimer) {
+      clearTimeout(this.supportDelayTimer);
+      this.supportDelayTimer = undefined;
+    }
   }
+
   private async showSupportToast() {
     const toast = await this.toastCtrl.create({
-      message: "Se noti malfunzionamenti o errori nel totem, contattaci su WhatsApp: +39 389 986 8381",
+      message:
+        "Se noti malfunzionamenti o errori nel totem, contattaci su WhatsApp: +39 389 986 8381",
       position: "bottom",
       duration: this.SUPPORT_TOAST_DURATION_MS,
       cssClass: "toast-green",
@@ -537,22 +678,38 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     const msg = "Ciao, nel totem ho notato un problema. Potete verificare?";
     const link = `https://wa.me/393899868381?text=${encodeURIComponent(msg)}`;
     this.supportWhatsappLink = link;
-    this.supportQrSrc = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(link);
+    this.supportQrSrc =
+      "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" +
+      encodeURIComponent(link);
     this.supportModalOpen = true;
   }
+
   async copyWhatsAppLink() {
     try {
       await navigator.clipboard.writeText(this.supportWhatsappLink);
-      const t = await this.toastCtrl.create({ message: "Link WhatsApp copiato negli appunti.", duration: 2000, position: "bottom" });
+      const t = await this.toastCtrl.create({
+        message: "Link WhatsApp copiato negli appunti.",
+        duration: 2000,
+        position: "bottom",
+      });
       await t.present();
     } catch {
-      const t = await this.toastCtrl.create({ message: "Impossibile copiare. Numero: +39 389 986 8381", duration: 3000, position: "bottom" });
+      const t = await this.toastCtrl.create({
+        message: "Impossibile copiare. Numero: +39 389 986 8381",
+        duration: 3000,
+        position: "bottom",
+      });
       await t.present();
     }
   }
 
   // Menu & Nav
-  async toggleMenu() { try { await this.menu.toggle(); } catch {} }
+  async toggleMenu() {
+    try {
+      await this.menu.toggle();
+    } catch {}
+  }
+
   startApp() {
     this.router
       .navigateByUrl("/app/tabs/schedule", { replaceUrl: true })
