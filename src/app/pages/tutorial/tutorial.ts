@@ -84,7 +84,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   ads: AdItem[] = [
     { kind: "image", src: "assets/poster/a3_11.jpg" },
-    { kind: "image", src: "assets/poster/a3_12.jpg" },
+    { kind: "image", src: "assets/poster/a3_10.jpg" },
     { kind: "image", src: "assets/poster/a3_13.jpg" },
     { kind: "image", src: "assets/poster/a3_14.jpg" }, // poster A3 verticale 720x1280
     { kind: "video", src: "assets/poster/eclissi.mp4" }, // video carosello
