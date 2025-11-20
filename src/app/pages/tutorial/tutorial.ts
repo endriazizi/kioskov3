@@ -86,7 +86,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     { kind: "image", src: "assets/poster/a3_11.jpg" },
     { kind: "image", src: "assets/poster/a3_12.jpg" },
     { kind: "image", src: "assets/poster/a3_13.jpg" },
-    { kind: "image", src: "assets/poster/a3_14.jpg" }, // poster A3 verticale adattato all'area disponibile
+    { kind: "image", src: "assets/poster/a3_14.jpg" }, // poster A3 verticale 720x1280
     { kind: "video", src: "assets/poster/eclissi.mp4" }, // video carosello
   ];
   adsIndex = 0;
@@ -136,11 +136,14 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly SUPPORT_TOAST_DELAY_MS = 6_000;
   private readonly SUPPORT_TOAST_DURATION_MS = 12_000;
 
-  // Top dinamico
+  // Top dinamico (header + box meteo)
   private unbindKiosk?: () => void;
 
   // Observer per i video del carosello
   private adVideoIO?: IntersectionObserver;
+
+  // Gestione dinamica altezza footer (usata solo per dare respiro al layout)
+  private readonly footerResizeHandler = () => this.updateKioskFooterHeight();
 
   constructor() {
     addIcons({ arrowForward, close, menuOutline });
@@ -186,13 +189,18 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       }
     });
 
-    // Misura top dinamico: calcola lo spazio tra header+meteo e footer
+    // Misura top dinamico (header + box meteo) → scrive --kiosk-ui-top
     this.unbindKiosk = bindKioskUiTopAuto({
       headerSelector: "ion-header",
       weatherBoxSelector: ".info-kiosk",
       cssVarName: "--kiosk-ui-top",
       log: false,
     });
+
+    // Misura dinamicamente l'altezza reale del footer per dare respiro al layout
+    this.updateKioskFooterHeight();
+    window.addEventListener("resize", this.footerResizeHandler);
+    setTimeout(() => this.updateKioskFooterHeight(), 500);
   }
 
   ngOnDestroy() {
@@ -207,6 +215,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
     window.removeEventListener("pointerdown", this.firstGestureHandlerAll, true);
     window.removeEventListener("keydown", this.firstGestureHandlerAll, true);
+    window.removeEventListener("resize", this.footerResizeHandler);
 
     this.pauseVideo(true);
     this.menu.enable(true);
@@ -215,7 +224,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.unbindKiosk?.();
   }
 
-  // Clock / Weather
+  // ========= CLOCK / METEO =========
   updateTimeAndDate() {
     const now = new Date();
     this.currentTime = now.toLocaleTimeString("it-IT", {
@@ -238,7 +247,31 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  // Carosello
+  // ========= LAYOUT / FOOTER (workaround anti-crop) =========
+  private updateKioskFooterHeight(): void {
+    try {
+      const root = document.documentElement;
+      if (!root) return;
+
+      const footer =
+        (document.querySelector("ion-footer.pbc-footer") as HTMLElement | null) ||
+        (document.querySelector("ion-footer") as HTMLElement | null);
+
+      if (!footer) return;
+
+      const rect = footer.getBoundingClientRect();
+      const h = rect.height || footer.offsetHeight;
+      if (!h || !Number.isFinite(h)) return;
+
+      // Non usiamo questo valore per calcoli precisi, ma come riferimento:
+      // ci basta sapere che lo spazio sotto al carosello è sufficiente.
+      root.style.setProperty("--kiosk-ui-bottom", `${h}px`);
+    } catch (err) {
+      console.warn("[kiosk] Impossibile calcolare altezza footer:", err);
+    }
+  }
+
+  // ========= CAROSELLO POSTER / VIDEO =========
   startAdsCarousel() {
     if (!this.ads.length || this.adsTimer) return;
     this.adsTimer = setInterval(() => {
@@ -278,9 +311,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       (entries) => {
         entries.forEach((e) => {
           const v = e.target as HTMLVideoElement;
-          const idx = this.adVideoEls
-            .toArray()
-            .findIndex((r) => r.nativeElement === v);
+          const idx = this.adVideoEls.toArray().findIndex((r) => r.nativeElement === v);
           if (idx < 0) return;
           if (e.isIntersecting && e.intersectionRatio > 0.6) {
             this.ensureAdVideoPlaying(idx);
@@ -427,10 +458,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
     this.pauseAdsCarousel();
     clearTimeout(this.adsScrollDebounce);
-    this.adsScrollDebounce = setTimeout(
-      () => this.resumeAdsCarousel(),
-      2_500
-    );
+    this.adsScrollDebounce = setTimeout(() => this.resumeAdsCarousel(), 2_500);
   }
 
   pauseAdsCarousel(user = false) {
@@ -493,15 +521,12 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     } catch {}
   }
 
-  // Modal immagine
+  // ========= MODAL IMMAGINE =========
   openImageFull(src: string): void {
     this.modalImageSrc = src;
     this.isImageModalOpen = true;
     if (this.modalAutoCloseTimer) clearTimeout(this.modalAutoCloseTimer);
-    this.modalAutoCloseTimer = setTimeout(
-      () => this.closeImageFull(),
-      10_000
-    );
+    this.modalAutoCloseTimer = setTimeout(() => this.closeImageFull(), 10_000);
   }
 
   closeImageFull(): void {
@@ -512,7 +537,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  // Slide 3: Video principale
+  // ========= SLIDE 3: VIDEO PRINCIPALE =========
   private setupIntersectionObserverForVideo() {
     this.io = new IntersectionObserver(
       ([entry]) => {
@@ -626,7 +651,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       .then((t) => t.present());
   }
 
-  // Toast assistenza
+  // ========= TOAST ASSISTENZA =========
   private setupFirstSlideObserver() {
     this.ioFirst = new IntersectionObserver(
       ([entry]) => {
