@@ -2,25 +2,10 @@
    VARIABILI
    ========================= */
 :root{
-  --pbc-footer-h: 56px; /* fallback generico, poi TS imposta --kiosk-ui-bottom */
   --cta-gap: 14px;
 
-  /* valori scritti a runtime da kiosk-ui-top.ts + TutorialPage */
+  /* runtime da kiosk-ui-top.ts (header + meteo), se ti serve altrove */
   --kiosk-ui-top: 0px;
-  --kiosk-ui-bottom: var(--pbc-footer-h);
-
-  --ads-gap: 8px;
-  --ads-safe-margin: 32px;
-
-  /* area “utile” per il carosello sopra al footer
-     (rimane comunque un po' di margine di sicurezza) */
-  --ads-area-h: calc(
-    100dvh
-    - var(--kiosk-ui-top)
-    - var(--kiosk-ui-bottom)
-    - var(--ads-gap)
-    - var(--ads-safe-margin)
-  );
 
   /* stesso grigio della card meteo */
   --kiosk-card-bg: #f4f4f4;
@@ -37,14 +22,13 @@
 
 /* LAYOUT KIOSK */
 .kiosk{ --overflow:hidden; }
+
 .viewport{
-  height:100%;
-  display:grid;
-  grid-template-rows:auto 1fr;
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
   row-gap: 2px;
-  min-height: 0;
 }
-ion-toolbar{ --background:transparent; }
 
 /* INFO (clock/meteo) */
 .info-kiosk{
@@ -59,24 +43,24 @@ ion-toolbar{ --background:transparent; }
 .info-kiosk .date{  font-size:clamp(1.1rem,2.2vw,1.6rem); margin-bottom:4px; }
 .info-kiosk .weather{ font-size:clamp(1rem,2vw,1.4rem); font-style:italic; }
 
-/* FOOTER (card) */
-.pbc-footer{
-  --background:transparent;
-  --border-color:transparent;
-  min-height:var(--pbc-footer-h);
-  z-index:1000;
+/* FOOTER grafico (ora dentro il content) */
+.pbc-footer-shell{
+  padding:0 10px 8px;
 }
-.pbc-footer .pbc-wrap{
+.pbc-card{
+  background:transparent;
+  box-shadow: 0 -10px 24px rgba(0,0,0,.10);
+  border-radius:14px 14px 0 0;
+}
+.pbc-wrap{
   width:100%;
   display:flex; justify-content:center; align-items:center;
   gap:18px;
   padding:6px 0 8px;
   background:#fff;
   border-radius:14px 14px 0 0;
-  box-shadow: 0 -10px 24px rgba(0,0,0,.10);
-  margin: 0 10px;
 }
-.pbc-footer .brand-logo{
+.brand-logo{
   height:clamp(22px,4vh,36px);
   width:auto; opacity:.95;
   filter:drop-shadow(0 3px 10px rgba(0,0,0,.25));
@@ -84,8 +68,8 @@ ion-toolbar{ --background:transparent; }
 
 /* SLIDES */
 .slide-container{
-  height: var(--ads-area-h);
-  min-height: 0;
+  flex:1;            /* 👈 prende tutto lo spazio tra info-kiosk e footer */
+  min-height:0;
   display:grid;
   grid-auto-flow:column;
   grid-auto-columns:100%;
@@ -105,14 +89,16 @@ ion-toolbar{ --background:transparent; }
 
 /* SLIDE 1: CAROSELLO */
 .slide-ads{ display:grid; place-items:center; gap:10px; }
+
 .ads-carousel{
   position:relative;
   width:min(96%, 980px);
-  height: 100%;
-  max-height: var(--ads-area-h); /* l'area poster resta sempre dentro lo spazio sopra il footer */
-  margin:0 auto 260px;            /* 👈 workaround: grosso margine sotto, il footer copre questo MAI il poster */
+  height:100%;
+  max-height:100%;
+  margin:0 auto;
   display:grid; place-items:center;
 }
+
 .ads-track{
   width:100%; height:100%;
   display:grid;
@@ -123,7 +109,7 @@ ion-toolbar{ --background:transparent; }
   -webkit-overflow-scrolling:touch;
 }
 
-/* poster pieno e centrato; sfondo GRIGIO come card meteo */
+/* poster pieno e centrato 720x1280 (9:16) */
 .ads-item{
   width:100%; height:100%;
   display:grid; place-items:center;
@@ -133,22 +119,24 @@ ion-toolbar{ --background:transparent; }
   overflow:hidden;
   background:var(--kiosk-card-bg);
 }
-.ads-item img{
-  max-width:100%; max-height:100%;
-  width:100%; height:100%;
-  object-fit: contain;         /* 720x1280: si vede sempre tutto */
+.ads-item img,
+.ads-item video{
+  width:100%;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  aspect-ratio: 9 / 16;     /* 👈 forziamo il rapporto 720x1280 */
+  object-fit: contain;       /* 👈 si vede SEMPRE tutto, senza crop */
   object-position:center;
   background:#fff;
   display:block;
   user-select:none; -webkit-user-drag:none;
   cursor:pointer;
 }
+
+/* per i video vogliamo audio/CTA ma stessa area visiva dei poster */
 .ads-item video{
-  width:100%; height:100%;
-  object-fit: cover;      /* niente bande per i video */
-  object-position:center;
   background:var(--kiosk-card-bg);
-  display:block;
 }
 
 /* dots */

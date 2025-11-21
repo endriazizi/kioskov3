@@ -12,7 +12,7 @@
 
 <ion-content #pageContent class="kiosk">
   <div class="viewport">
-    <!-- Info -->
+    <!-- INFO (clock + meteo) -->
     <div class="info-kiosk">
       <div class="clock">🕒 {{ currentTime }}</div>
       <div class="date">📅 {{ currentDate }}</div>
@@ -21,9 +21,9 @@
       </div>
     </div>
 
-    <!-- Slides -->
+    <!-- SLIDES -->
     <div class="slide-container">
-      <!-- SLIDE 1: Carosello -->
+      <!-- SLIDE 1: Carosello poster/video -->
       <section #firstSlide class="slide slide-ads">
         <div class="ads-carousel">
           <div
@@ -84,7 +84,7 @@
         </div>
       </section>
 
-      <!-- SLIDE 2: Info -->
+      <!-- SLIDE 2: Info testo -->
       <section class="slide slide-info">
         <div class="info-card">
           <img src="assets/img/ica-slidebox-img-1.png" class="slide-image" alt="Logo" />
@@ -102,7 +102,7 @@
         </div>
       </section>
 
-      <!-- SLIDE 3: Video + CTA -->
+      <!-- SLIDE 3: Video principale + CTA -->
       <section #videoSection class="slide slide-video" [class.active]="isVideoActive">
         <video
           #slideVideo
@@ -138,6 +138,16 @@
           </ion-button>
         </div>
       </section>
+    </div>
+
+    <!-- FOOTER GRAFICO *DENTRO* IL CONTENT (non è più ion-footer) -->
+    <div class="pbc-footer-shell">
+      <ion-card class="pbc-card" mode="md">
+        <ion-card-content class="pbc-wrap">
+          <img src="assets/img/pbc.png"   alt="PBC - Grafica sito"   class="brand-logo" />
+          <img src="assets/img/endri.png" alt="Endri - Grafica sito" class="brand-logo" />
+        </ion-card-content>
+      </ion-card>
     </div>
   </div>
 
@@ -178,13 +188,3 @@
     </ng-template>
   </ion-modal>
 </ion-content>
-
-<!-- Footer -->
-<ion-footer class="pbc-footer">
-  <ion-card class="pbc-card" mode="md">
-    <ion-card-content class="pbc-wrap">
-      <img src="assets/img/pbc.png"   alt="PBC - Grafica sito"  class="brand-logo" />
-      <img src="assets/img/endri.png" alt="Endri - Grafica sito" class="brand-logo" />
-    </ion-card-content>
-  </ion-card>
-</ion-footer>

@@ -17,7 +17,6 @@ import {
   IonButton,
   IonIcon,
   IonContent,
-  IonFooter,
   IonModal,
   MenuController,
   ToastController,
@@ -49,7 +48,6 @@ type AdItem = { kind: "image" | "video"; src: string; poster?: string };
     IonButton,
     IonIcon,
     IonContent,
-    IonFooter,
     IonModal,
     IonCard,
     IonCardContent,
@@ -142,9 +140,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   // Observer per i video del carosello
   private adVideoIO?: IntersectionObserver;
 
-  // Gestione dinamica altezza footer (usata solo per dare respiro al layout)
-  private readonly footerResizeHandler = () => this.updateKioskFooterHeight();
-
   constructor() {
     addIcons({ arrowForward, close, menuOutline });
   }
@@ -196,11 +191,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       cssVarName: "--kiosk-ui-top",
       log: false,
     });
-
-    // Misura dinamicamente l'altezza reale del footer per dare respiro al layout
-    this.updateKioskFooterHeight();
-    window.addEventListener("resize", this.footerResizeHandler);
-    setTimeout(() => this.updateKioskFooterHeight(), 500);
   }
 
   ngOnDestroy() {
@@ -215,7 +205,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
     window.removeEventListener("pointerdown", this.firstGestureHandlerAll, true);
     window.removeEventListener("keydown", this.firstGestureHandlerAll, true);
-    window.removeEventListener("resize", this.footerResizeHandler);
 
     this.pauseVideo(true);
     this.menu.enable(true);
@@ -245,30 +234,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       next: (data) => (this.weather = data),
       error: (err) => console.error("Errore meteo:", err),
     });
-  }
-
-  // ========= LAYOUT / FOOTER (workaround anti-crop) =========
-  private updateKioskFooterHeight(): void {
-    try {
-      const root = document.documentElement;
-      if (!root) return;
-
-      const footer =
-        (document.querySelector("ion-footer.pbc-footer") as HTMLElement | null) ||
-        (document.querySelector("ion-footer") as HTMLElement | null);
-
-      if (!footer) return;
-
-      const rect = footer.getBoundingClientRect();
-      const h = rect.height || footer.offsetHeight;
-      if (!h || !Number.isFinite(h)) return;
-
-      // Non usiamo questo valore per calcoli precisi, ma come riferimento:
-      // ci basta sapere che lo spazio sotto al carosello è sufficiente.
-      root.style.setProperty("--kiosk-ui-bottom", `${h}px`);
-    } catch (err) {
-      console.warn("[kiosk] Impossibile calcolare altezza footer:", err);
-    }
   }
 
   // ========= CAROSELLO POSTER / VIDEO =========
