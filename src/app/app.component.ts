@@ -93,7 +93,7 @@ export class AppComponent implements OnInit {
 
         // { title: "About", url: "/app/tabs/about", icon: "information-circle" },
   appPages = [
-    { title: "Eventi", url: "/app/tabs/schedule", icon: "calendar" },
+    // { title: "Eventi", url: "/app/tabs/schedule", icon: "calendar" },
     { title: "Attività", url: "/app/tabs/speakers", icon: "people" },
     { title: "Map", url: "/app/tabs/map", icon: "map" },
 
