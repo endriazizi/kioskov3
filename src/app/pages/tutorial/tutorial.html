@@ -30,10 +30,8 @@
             #adsTrack
             class="ads-track"
             (scroll)="onAdsScroll()"
-            (pointerdown)="pauseAdsCarousel(true); $event.stopPropagation()"
-            (pointerup)="resumeAdsCarousel()"
+            (pointerdown)="$event.stopPropagation()"
             (touchstart)="$event.stopPropagation()"
-            (touchend)="resumeAdsCarousel()"
           >
             <figure class="ads-item" *ngFor="let ad of ads; let i = index">
               <!-- IMMAGINE -->

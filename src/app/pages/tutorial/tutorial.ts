@@ -74,23 +74,30 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   // View refs
   @ViewChild("pageContent", { static: true }) pageContent!: IonContentBase;
-  @ViewChild("firstSlide", { static: true }) firstSlide!: ElementRef<HTMLElement>;
+  @ViewChild("firstSlide", { static: true })
+  firstSlide!: ElementRef<HTMLElement>;
 
   // Slide 1: Carosello
-  @ViewChild("adsTrack", { static: false }) adsTrack!: ElementRef<HTMLDivElement>;
+  @ViewChild("adsTrack", { static: false })
+  adsTrack!: ElementRef<HTMLDivElement>;
   @ViewChildren("adVideo") adVideoEls!: QueryList<ElementRef<HTMLVideoElement>>;
 
   ads: AdItem[] = [
     { kind: "image", src: "assets/poster/a3_01.png" },
-     { kind: "image", src: "assets/poster/a3_02.png" },
-      { kind: "image", src: "assets/poster/a3_03.png" },
-    { kind: "video", src: "assets/poster/bar centrale_TikTok.mp4" },
-    // { kind: "image", src: "assets/poster/a3_11.jpg" },
+
+ 
+
     { kind: "image", src: "assets/poster/a3_10.jpg" },
     { kind: "image", src: "assets/poster/a3_13.jpg" },
     { kind: "image", src: "assets/poster/a3_14.jpg" }, // poster A3 verticale 720x1280
-    { kind: "video", src: "assets/poster/eclissi.mp4" }, // video carosello centrale_video.mp4
-     
+
+    { kind: "image", src: "assets/poster/a3_15.jpg" },
+    { kind: "image", src: "assets/poster/a3_16.jpg" },
+    { kind: "image", src: "assets/poster/a3_17.jpg" },
+    { kind: "image", src: "assets/poster/a3_18.jpg" },
+    { kind: "image", src: "assets/poster/a3_19.jpg" },
+        { kind: "video", src: "assets/poster/eclissi.mp4" }, // video carosello centrale_video.mp4
+           { kind: "video", src: "assets/poster/bar centrale_TikTok.mp4" },
   ];
   adsIndex = 0;
 
@@ -112,8 +119,10 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private modalAutoCloseTimer?: any;
 
   // Slide 3: Video principale
-  @ViewChild("slideVideo", { static: true }) slideVideo!: ElementRef<HTMLVideoElement>;
-  @ViewChild("videoSection", { static: true }) videoSection!: ElementRef<HTMLElement>;
+  @ViewChild("slideVideo", { static: true })
+  slideVideo!: ElementRef<HTMLVideoElement>;
+  @ViewChild("videoSection", { static: true })
+  videoSection!: ElementRef<HTMLElement>;
   private readonly VIDEO_SRC = "assets/video/polveredistelle.mp4";
   muted = true;
   showUnmuteBtn = false;
@@ -208,7 +217,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.ioFirst) this.ioFirst.disconnect();
     if (this.adVideoIO) this.adVideoIO.disconnect();
 
-    window.removeEventListener("pointerdown", this.firstGestureHandlerAll, true);
+    window.removeEventListener(
+      "pointerdown",
+      this.firstGestureHandlerAll,
+      true
+    );
     window.removeEventListener("keydown", this.firstGestureHandlerAll, true);
 
     this.pauseVideo(true);
@@ -281,7 +294,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       (entries) => {
         entries.forEach((e) => {
           const v = e.target as HTMLVideoElement;
-          const idx = this.adVideoEls.toArray().findIndex((r) => r.nativeElement === v);
+          const idx = this.adVideoEls
+            .toArray()
+            .findIndex((r) => r.nativeElement === v);
           if (idx < 0) return;
           if (e.isIntersecting && e.intersectionRatio > 0.6) {
             this.ensureAdVideoPlaying(idx);
