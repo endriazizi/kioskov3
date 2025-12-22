@@ -84,24 +84,18 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   ads: AdItem[] = [
     { kind: "image", src: "assets/poster/a3_01.png" },
-    { kind: "image", src: "assets/poster/carla.mp4" },
-
+    { kind: "video", src: "assets/poster/carla.mp4" },
     { kind: "image", src: "assets/poster/a3_10.jpg" },
     { kind: "image", src: "assets/poster/a3_21.jpg" },
     { kind: "image", src: "assets/poster/a3_22.jpg" },
 
-    { kind: "image", src: "assets/poster/a3_23.jpg" },
-    { kind: "image", src: "assets/poster/a3_24.jpg" },
     { kind: "image", src: "assets/poster/a3_25.jpg" },
 
-    { kind: "image", src: "assets/poster/a3_13.jpg" },
-
-    { kind: "image", src: "assets/poster/a3_15.jpg" },
     { kind: "image", src: "assets/poster/a3_16.jpg" },
     { kind: "image", src: "assets/poster/a3_17.jpg" },
     { kind: "image", src: "assets/poster/a3_18.jpg" },
     { kind: "image", src: "assets/poster/a3_19.jpg" },
-    { kind: "image", src: "assets/poster/a3_20.jpg" },
+
     { kind: "video", src: "assets/poster/eclissi.mp4" }, // video carosello centrale_video.mp4
     { kind: "video", src: "assets/poster/bar centrale_TikTok.mp4" },
   ];
@@ -137,8 +131,34 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private videoSrcSet = false;
   private io?: IntersectionObserver;
 
+  // ===== INIZIO MODIFICA: fix audio “fuori turno” + mapping corretto video =====
+  /**
+   * Nel template i video sono pochi, ma `adsIndex` conta anche le immagini.
+   * Quindi NON si può fare `adVideoEls[adsIndex]`.
+   * Questo array contiene gli indici dentro `ads` che sono video, es:
+   * ads = [img(0), video(1), img(2), ..., video(10), video(11)]
+   * videoAdIndexes = [1, 10, 11]
+   */
+  private videoAdIndexes: number[] = [];
+
+  /** True dopo il primo gesto utente (sblocco policy browser per audio) */
+  private adsAudioUnlocked = false;
+
+  /** True solo se l’utente ha richiesto audio (tap sul bottone) */
+  private adsAudioWanted = false;
+  // ===== FINE MODIFICA =====
+
   // Primo gesto: ora sblocca anche il video del carosello
   private firstGestureHandlerAll = () => {
+    // ===== INIZIO MODIFICA =====
+    // ✅ memorizzo che l’utente ha fatto un gesto: ora l’audio può essere “consentito”
+    // ma lo abilitiamo SOLO quando l’utente lo chiede (adsAudioWanted).
+    this.adsAudioUnlocked = true;
+
+    // Se siamo su un video, mostra il bottone audio (così l’utente decide)
+    this.adsShowUnmuteBtn = this.isCurrentAdVideo;
+    // ===== FINE MODIFICA =====
+
     this.ensureAdVideoPlaying(this.adsIndex);
     this.forceUnlockAudio(); // per la slide video principale se attiva
   };
@@ -162,6 +182,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   constructor() {
     addIcons({ arrowForward, close, menuOutline });
+
+    // ===== INIZIO MODIFICA =====
+    // Cache dei video presenti in `ads` (serve per mappare video DOM ↔ adsIndex)
+    this.rebuildVideoAdIndexes();
+    // ===== FINE MODIFICA =====
   }
 
   // Lifecycle
@@ -279,13 +304,59 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  // ===== INIZIO MODIFICA =====
+  /** Ricostruisce l’elenco degli indici video presenti nell’array `ads` */
+  private rebuildVideoAdIndexes() {
+    this.videoAdIndexes = [];
+    for (let i = 0; i < this.ads.length; i++) {
+      if (this.ads[i]?.kind === "video") this.videoAdIndexes.push(i);
+    }
+  }
+
+  /**
+   * Ritorna l’elemento <video> DOM associato ad un certo indice `adsIndex`.
+   * ✅ Mapping corretto: adIndex -> ordinal video -> QueryList video.
+   */
+  private getVideoElByAdIndex(adIndex: number): HTMLVideoElement | null {
+    const ordinal = this.videoAdIndexes.indexOf(adIndex);
+    if (ordinal < 0) return null;
+    const v = this.adVideoEls?.toArray()?.[ordinal]?.nativeElement;
+    return v ?? null;
+  }
+
+  /** Stop + mute sicuro (così non “scappa” audio) */
+  private stopAndMuteVideoEl(v: HTMLVideoElement, resetTime = false) {
+    try {
+      v.pause();
+      v.muted = true;
+      v.setAttribute("muted", "");
+      if (resetTime) v.currentTime = 0;
+    } catch {}
+  }
+
+  /** Muta/stoppa TUTTI i video tranne quello di turno (se è un video) */
+  private syncAdVideos() {
+    const videos = this.adVideoEls?.toArray() ?? [];
+    if (!videos.length) return;
+
+    const currentAdIndex = this.adsIndex;
+    const currentIsVideo = this.isCurrentAdVideo;
+
+    // 1) stop+muto di sicurezza per tutti
+    videos.forEach((ref) => this.stopAndMuteVideoEl(ref.nativeElement, false));
+
+    // 2) se il current è video → lo faccio partire (muted). L’audio solo se richiesto.
+    if (currentIsVideo) this.ensureAdVideoPlaying(currentAdIndex);
+  }
+  // ===== FINE MODIFICA =====
+
   private pauseAllAdVideos(resetTime = true) {
     this.adVideoEls?.forEach((ref) => {
       const v = ref.nativeElement;
-      try {
-        v.pause();
-        if (resetTime) v.currentTime = 0;
-      } catch {}
+      // ===== INIZIO MODIFICA =====
+      // prima pausavi soltanto: ora mettiamo anche muted per evitare audio fantasma
+      this.stopAndMuteVideoEl(v, resetTime);
+      // ===== FINE MODIFICA =====
     });
   }
 
@@ -296,32 +367,66 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     } catch {}
     if (!this.adVideoEls || !this.adVideoEls.length) return;
 
+    // ===== INIZIO MODIFICA =====
+    // root = contenitore scroll orizzontale del carosello
+    // così l’IntersectionObserver ragiona “dentro” il track, non sulla viewport intera
+    const rootEl = this.adsTrack?.nativeElement ?? null;
+    // ===== FINE MODIFICA =====
+
     this.adVideoIO = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           const v = e.target as HTMLVideoElement;
-          const idx = this.adVideoEls
+
+          // ===== INIZIO MODIFICA =====
+          // Ordinale del video nel DOM (0..nVideo-1)
+          const ordinal = this.adVideoEls
             .toArray()
             .findIndex((r) => r.nativeElement === v);
-          if (idx < 0) return;
-          if (e.isIntersecting && e.intersectionRatio > 0.6) {
-            this.ensureAdVideoPlaying(idx);
+          if (ordinal < 0) return;
+
+          // Indice corrispondente in `ads`
+          const adIndex = this.videoAdIndexes[ordinal];
+          if (typeof adIndex !== "number") return;
+
+          // Se NON è il video di turno → stop + mute SEMPRE (così niente audio fuori turno)
+          if (adIndex !== this.adsIndex) {
+            this.stopAndMuteVideoEl(v, false);
+            return;
           }
+
+          // È quello di turno: parte solo se davvero visibile nel track
+          if (e.isIntersecting && e.intersectionRatio > 0.6) {
+            this.ensureAdVideoPlaying(adIndex);
+          }
+          // ===== FINE MODIFICA =====
         });
       },
       {
         threshold: [0, 0.6, 1],
-        root: null,
+        // ===== INIZIO MODIFICA =====
+        root: rootEl,
+        // ===== FINE MODIFICA =====
       }
     );
 
     this.adVideoEls.forEach((r) => this.adVideoIO!.observe(r.nativeElement));
   }
 
-  /** Avvio robusto del video n-esimo con retry progressivi */
-  private ensureAdVideoPlaying(i: number) {
-    const v = this.adVideoEls?.toArray()[i]?.nativeElement;
+  /** Avvio robusto del video “di turno” con retry progressivi */
+  private ensureAdVideoPlaying(adIndex: number) {
+    // ===== INIZIO MODIFICA =====
+    // ✅ Qui NON usiamo più adIndex come indice dei video.
+    // Prendiamo il video corretto tramite mapping.
+    const v = this.getVideoElByAdIndex(adIndex);
     if (!v) return;
+
+    // Se qualcuno chiama per errore un video non di turno → lo blocco subito
+    if (adIndex !== this.adsIndex) {
+      this.stopAndMuteVideoEl(v, false);
+      return;
+    }
+    // ===== FINE MODIFICA =====
 
     // proprietà + attributi richiesti su iOS
     v.muted = true;
@@ -331,19 +436,45 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     v.setAttribute("webkit-playsinline", "true");
     v.autoplay = true;
 
+    // ===== INIZIO MODIFICA =====
+    // di default: audio OFF.
+    // Mostro CTA solo se:
+    // - è un video corrente
+    // - l’utente ha già fatto almeno un gesto (così il bottone ha senso)
+    this.adsMuted = true;
+    this.adsShowUnmuteBtn = this.adsAudioUnlocked && this.isCurrentAdVideo;
+    // ===== FINE MODIFICA =====
+
     const tryPlay = (tries = 6) => {
       try {
+        // NB: load() forza refresh; lo lasciamo per la tua logica “robusta”
         v.load();
         const p = v.play();
         if (p && typeof p.then === "function") {
           p.then(() => {
-            // appena parte, prova l’auto-unmute come la slide video principale
-            this.tryUnmuteAd(i);
+            // ===== INIZIO MODIFICA =====
+            // ✅ Unmute SOLO se:
+            // - è il video corrente
+            // - l’utente ha sbloccato policy (gesture)
+            // - l’utente ha CHIESTO audio (tap sul bottone)
+            if (
+              adIndex === this.adsIndex &&
+              this.adsAudioUnlocked &&
+              this.adsAudioWanted
+            ) {
+              this.tryUnmuteAd(adIndex);
+            } else {
+              // rimane MUTED (evita audio fantasma)
+              v.muted = true;
+              v.setAttribute("muted", "");
+            }
+            // ===== FINE MODIFICA =====
           }).catch(() => {
             if (tries > 0) setTimeout(() => tryPlay(tries - 1), 300);
             else {
               this.adsMuted = true;
-              this.adsShowUnmuteBtn = true;
+              this.adsShowUnmuteBtn =
+                this.adsAudioUnlocked && this.isCurrentAdVideo;
             }
           });
         }
@@ -351,7 +482,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
         if (tries > 0) setTimeout(() => tryPlay(tries - 1), 300);
         else {
           this.adsMuted = true;
-          this.adsShowUnmuteBtn = true;
+          this.adsShowUnmuteBtn = this.adsAudioUnlocked && this.isCurrentAdVideo;
         }
       }
     };
@@ -369,22 +500,24 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     tryPlay();
   }
 
-  private enterVideoAd(i: number) {
+  private enterVideoAd(adIndex: number) {
     this.stopAdsCarousel();
     this.clearVideoAdAdvance();
-    this.ensureAdVideoPlaying(i);
+    this.ensureAdVideoPlaying(adIndex);
 
-    const v = this.adVideoEls?.toArray()[i]?.nativeElement;
+    // ===== INIZIO MODIFICA =====
+    const v = this.getVideoElByAdIndex(adIndex);
+    // ===== FINE MODIFICA =====
     if (!v) return;
 
-    const durMs = Number.isFinite(this.adDurationsMs[i])
-      ? this.adDurationsMs[i]
+    const durMs = Number.isFinite(this.adDurationsMs[adIndex])
+      ? this.adDurationsMs[adIndex]
       : Number.isFinite(v.duration) && v.duration > 0
       ? v.duration * 1000
       : this.VIDEO_FALLBACK_MS;
 
     this.videoAdAdvanceTimer = setTimeout(() => {
-      this.goToAd((i + 1) % this.ads.length);
+      this.goToAd((adIndex + 1) % this.ads.length);
     }, Math.max(1000, durMs + 300));
   }
 
@@ -399,9 +532,17 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  private async tryUnmuteAd(i: number) {
-    const v = this.adVideoEls?.toArray()[i]?.nativeElement;
+  private async tryUnmuteAd(adIndex: number) {
+    // ===== INIZIO MODIFICA =====
+    // ✅ anti-audio-fantasma: mai unmute fuori turno
+    if (adIndex !== this.adsIndex) return;
+    if (!this.adsAudioUnlocked) return;
+    if (!this.adsAudioWanted) return;
+
+    const v = this.getVideoElByAdIndex(adIndex);
+    // ===== FINE MODIFICA =====
     if (!v) return;
+
     try {
       v.muted = false;
       await v.play();
@@ -409,14 +550,22 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       this.adsShowUnmuteBtn = false;
     } catch {
       v.muted = true;
+      v.setAttribute("muted", "");
       this.adsMuted = true;
-      this.adsShowUnmuteBtn = true;
+      this.adsShowUnmuteBtn = this.adsAudioUnlocked && this.isCurrentAdVideo;
     }
   }
 
   goToAd(i: number, behavior: ScrollBehavior = "smooth") {
     const prev = this.ads[this.adsIndex];
     if (prev?.kind === "video") this.leaveVideoAd();
+
+    // ===== INIZIO MODIFICA =====
+    // quando cambio slide, l’audio NON deve “restare armato”
+    this.adsAudioWanted = false;
+    this.adsMuted = true;
+    this.adsShowUnmuteBtn = false;
+    // ===== FINE MODIFICA =====
 
     this.adsIndex = Math.max(0, Math.min(i, this.ads.length - 1));
     const track = this.adsTrack?.nativeElement;
@@ -428,6 +577,14 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.pauseAllAdVideos(false);
     if (current?.kind === "video") this.enterVideoAd(this.adsIndex);
     else this.startAdsCarousel();
+
+    // ===== INIZIO MODIFICA =====
+    // allineo stato video: solo quello di turno può riprodurre / avere audio
+    this.syncAdVideos();
+
+    // se siamo su un video e l’utente ha già “sbloccato” il device, mostro CTA
+    this.adsShowUnmuteBtn = this.adsAudioUnlocked && this.isCurrentAdVideo;
+    // ===== FINE MODIFICA =====
   }
 
   onAdsScroll() {
@@ -439,12 +596,24 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       const prev = this.ads[this.adsIndex];
       if (prev?.kind === "video") this.leaveVideoAd();
 
+      // ===== INIZIO MODIFICA =====
+      // anche con scroll manuale: resetto “armed audio”
+      this.adsAudioWanted = false;
+      this.adsMuted = true;
+      this.adsShowUnmuteBtn = false;
+      // ===== FINE MODIFICA =====
+
       this.adsIndex = idx;
       this.pauseAllAdVideos(false);
 
       const current = this.ads[this.adsIndex];
       if (current?.kind === "video") this.enterVideoAd(this.adsIndex);
       else this.startAdsCarousel();
+
+      // ===== INIZIO MODIFICA =====
+      this.syncAdVideos();
+      this.adsShowUnmuteBtn = this.adsAudioUnlocked && this.isCurrentAdVideo;
+      // ===== FINE MODIFICA =====
     }
 
     this.pauseAdsCarousel();
@@ -469,7 +638,13 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   removeBrokenAd(i: number) {
     const missing = this.ads[i]?.src;
     console.warn("[Carosello] Media mancante: rimuovo", missing);
+
+    // ===== INIZIO MODIFICA =====
+    // se rimuovo un elemento, devo ricostruire la cache videoAdIndexes
     this.ads.splice(i, 1);
+    this.rebuildVideoAdIndexes();
+    // ===== FINE MODIFICA =====
+
     if (!this.ads.length) {
       this.stopAdsCarousel();
       this.clearVideoAdAdvance();
@@ -483,6 +658,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   onAdVideoMeta(i: number, ev: Event) {
     const v = ev?.target as HTMLVideoElement;
     if (v && Number.isFinite(v.duration) && v.duration > 0) {
+      // i qui è l’indice ADS (come da template) -> perfetto
       this.adDurationsMs[i] = v.duration * 1000;
     }
   }
@@ -502,14 +678,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   toggleAdsAudio() {
-    const v = this.adVideoEls?.toArray()[this.adsIndex]?.nativeElement;
-    if (!v) return;
-    try {
-      v.muted = false;
-      v.play().catch(() => {});
-      this.adsMuted = false;
-      this.adsShowUnmuteBtn = false;
-    } catch {}
+    // ===== INIZIO MODIFICA =====
+    // l’utente CHIEDE audio → lo abilitiamo solo per il video corrente
+    this.adsAudioWanted = true;
+    this.tryUnmuteAd(this.adsIndex);
+    // ===== FINE MODIFICA =====
   }
 
   // ========= MODAL IMMAGINE =========
