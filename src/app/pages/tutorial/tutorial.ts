@@ -84,18 +84,10 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   ads: AdItem[] = [
     { kind: "image", src: "assets/poster/a3_01.png" },
-    { kind: "video", src: "assets/poster/carla.mp4" },
-    { kind: "image", src: "assets/poster/a3_10.jpg" },
-    { kind: "image", src: "assets/poster/a3_21.jpg" },
-    { kind: "image", src: "assets/poster/a3_22.jpg" },
-
-    { kind: "image", src: "assets/poster/a3_25.jpg" },
-
-    { kind: "image", src: "assets/poster/a3_16.jpg" },
-    { kind: "image", src: "assets/poster/a3_17.jpg" },
-    { kind: "image", src: "assets/poster/a3_18.jpg" },
-    { kind: "image", src: "assets/poster/a3_19.jpg" },
-
+    
+    { kind: "image", src: "assets/poster/a3_02.jpg" },
+    { kind: "image", src: "assets/poster/a3_03.jpg" },
+   
     { kind: "video", src: "assets/poster/eclissi.mp4" }, // video carosello centrale_video.mp4
     { kind: "video", src: "assets/poster/bar centrale_TikTok.mp4" },
   ];
