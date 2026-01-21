@@ -87,6 +87,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     
     { kind: "image", src: "assets/poster/a3_02.jpg" },
     { kind: "image", src: "assets/poster/a3_03.jpg" },
+    { kind: "image", src: "assets/poster/a3_04.jpg" },
    
     { kind: "video", src: "assets/poster/eclissi.mp4" }, // video carosello centrale_video.mp4
     { kind: "video", src: "assets/poster/bar centrale_TikTok.mp4" },
