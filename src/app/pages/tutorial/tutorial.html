@@ -33,13 +33,16 @@
             (pointerdown)="$event.stopPropagation()"
             (touchstart)="$event.stopPropagation()"
           >
-            <figure class="ads-item" *ngFor="let ad of ads; let i = index">
+            <figure
+              class="ads-item"
+              *ngFor="let ad of ads; let i = index"
+              (click)="onAdClick(ad, $event)"
+            >
               <!-- IMMAGINE -->
               <img
                 *ngIf="ad.kind === 'image'; else videoTpl"
                 [src]="ad.src"
                 (error)="removeBrokenAd(i)"
-                (click)="openImageFull(ad.src)"
                 alt="Promozione"
                 loading="eager"
               />
@@ -159,6 +162,33 @@
     <ng-template>
       <div class="image-modal-wrapper" (click)="closeImageFull()">
         <img [src]="modalImageSrc" alt="Anteprima" />
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal sito esterno (es. Lanterna – in-app) -->
+  <ion-modal
+    [isOpen]="isWebViewOpen"
+    (didDismiss)="closeWebView()"
+    class="webview-modal"
+    backdropDismiss="true"
+  >
+    <ng-template>
+      <div class="webview-modal-wrap">
+        <div class="webview-toolbar">
+          <ion-button fill="clear" (click)="closeWebView()" class="webview-back">
+            ← Torna all'app
+          </ion-button>
+          <ion-button fill="outline" size="small" (click)="openWebViewInNewTab()" class="webview-newtab">
+            Apri in nuova scheda
+          </ion-button>
+        </div>
+        <iframe
+          *ngIf="webViewSafeUrl"
+          [src]="webViewSafeUrl"
+          class="webview-iframe"
+          title="Prenota Pizzeria La Lanterna"
+        ></iframe>
       </div>
     </ng-template>
   </ion-modal>

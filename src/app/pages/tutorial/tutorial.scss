@@ -244,6 +244,44 @@
 }
 .image-modal img{ width:100%; height:100%; object-fit:contain; }
 
+/* MODAL sito esterno (Lanterna – in-app webview) */
+.webview-modal::part(content) {
+  --height: 100%;
+  --width: 100%;
+  --border-radius: 0;
+  --background: #fff;
+}
+.webview-modal-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+.webview-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: max(10px, env(safe-area-inset-top)) 12px 10px;
+  background: var(--ion-toolbar-background, #fff);
+  border-bottom: 1px solid var(--ion-color-light-shade, #d7d8da);
+}
+.webview-back {
+  font-weight: 600;
+  --padding-start: 0;
+  --padding-end: 12px;
+}
+.webview-newtab {
+  flex-shrink: 0;
+}
+.webview-iframe {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: none;
+}
+
 /* MODAL Assistenza */
 .support-modal::part(content) {
   --height: auto;

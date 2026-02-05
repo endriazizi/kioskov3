@@ -29,10 +29,13 @@ import { addIcons } from "ionicons";
 import { arrowForward, close, menuOutline } from "ionicons/icons";
 import { HttpClient } from "@angular/common/http";
 import { CommonModule } from "@angular/common";
+import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { bindKioskUiTopAuto } from "../../shared/kiosk-ui-top";
 
-/** Item del carosello */
-type AdItem = { kind: "image" | "video"; src: string; poster?: string };
+/** Item del carosello (externalUrl = apre sito in-app per es. lanterna) */
+type AdItem = { kind: "image" | "video"; src: string; poster?: string; externalUrl?: string };
 
 @Component({
   standalone: true,
@@ -60,6 +63,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private storage = inject(Storage);
   private http = inject(HttpClient);
   private toastCtrl = inject(ToastController);
+  private sanitizer = inject(DomSanitizer);
 
   // Header / UI
   showSkip = true;
@@ -83,11 +87,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   @ViewChildren("adVideo") adVideoEls!: QueryList<ElementRef<HTMLVideoElement>>;
 
   ads: AdItem[] = [
-    { kind: "image", src: "assets/poster/a3_01.png" },
+    // { kind: "image", src: "assets/poster/a3_01.png" },
     
     { kind: "image", src: "assets/poster/a3_02.jpg" },
     { kind: "image", src: "assets/poster/a3_03.jpg" },
-    { kind: "image", src: "assets/poster/a3_04.jpg" },
+    { kind: "image", src: "assets/poster/lanterna.jpg", externalUrl: "https://prenota.pizzerialalanterna.it/prenota" },
     { kind: "image", src: "assets/poster/a3_05.jpg" },
     { kind: "image", src: "assets/poster/a3_06.jpg" },
    
@@ -112,6 +116,10 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   isImageModalOpen = false;
   modalImageSrc = "";
   private modalAutoCloseTimer?: any;
+
+  // Modal sito esterno (es. lanterna – in-app webview)
+  isWebViewOpen = false;
+  webViewUrl = "";
 
   // Slide 3: Video principale
   @ViewChild("slideVideo", { static: true })
@@ -694,6 +702,60 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       clearTimeout(this.modalAutoCloseTimer);
       this.modalAutoCloseTimer = undefined;
     }
+  }
+
+  /** Click su slide del carosello: apre sito esterno (Lanterna) o immagine a tutto schermo */
+  onAdClick(ad: AdItem, event: Event): void {
+    if (ad.kind !== "image") return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (ad.externalUrl) {
+      this.openExternalSite(ad.externalUrl);
+    } else {
+      this.openImageFull(ad.src);
+    }
+  }
+
+  /** Apre il sito in-app (es. prenotazione Lanterna): su device usa Capacitor Browser, su web modal con iframe */
+  async openExternalSite(url: string): Promise<void> {
+    this.stopAdsCarousel();
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Browser.open({ url, presentationStyle: "fullscreen" });
+      } catch (err) {
+        console.error("Browser.open failed:", err);
+        this.openWebViewModal(url);
+      }
+      return;
+    }
+    this.openWebViewModal(url);
+    // Forza apertura modal (change detection)
+    setTimeout(() => {
+      if (this.webViewUrl && !this.isWebViewOpen) {
+        this.isWebViewOpen = true;
+      }
+    }, 0);
+  }
+
+  private openWebViewModal(url: string): void {
+    this.webViewUrl = url;
+    this.isWebViewOpen = true;
+  }
+
+  closeWebView(): void {
+    this.isWebViewOpen = false;
+    this.webViewUrl = "";
+    setTimeout(() => this.goToAd(this.adsIndex, "auto"), 100);
+  }
+
+  /** Fallback: apri il sito in nuova scheda (se l'iframe è bloccato dal sito) */
+  openWebViewInNewTab(): void {
+    if (this.webViewUrl) window.open(this.webViewUrl, "_blank", "noopener");
+  }
+
+  /** URL sanitizzato per iframe (sito Lanterna in-app) */
+  get webViewSafeUrl(): SafeResourceUrl | null {
+    return this.webViewUrl ? this.sanitizer.bypassSecurityTrustResourceUrl(this.webViewUrl) : null;
   }
 
   // ========= SLIDE 3: VIDEO PRINCIPALE =========
