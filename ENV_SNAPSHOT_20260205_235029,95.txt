@@ -1,0 +1,54 @@
+=============================================== 
+ENV SNAPSHOT - 05/02/2026 23:50:29,99                  
+PC: DESKTOP-FVH3GE1                            
+USER: Endri Azizi                              
+=============================================== 
+                                               
+------------------------------------------------- 
+node -v                                          
+------------------------------------------------- 
+""node -v"" non Š riconosciuto come comando interno o esterno,
+ un programma eseguibile o un file batch.
+
+------------------------------------------------- 
+npm -v                                          
+------------------------------------------------- 
+""npm -v"" non Š riconosciuto come comando interno o esterno,
+ un programma eseguibile o un file batch.
+
+------------------------------------------------- 
+where node                                          
+------------------------------------------------- 
+""where node"" non Š riconosciuto come comando interno o esterno,
+ un programma eseguibile o un file batch.
+
+------------------------------------------------- 
+where npm                                          
+------------------------------------------------- 
+""where npm"" non Š riconosciuto come comando interno o esterno,
+ un programma eseguibile o un file batch.
+
+------------------------------------------------- 
+git --version                                          
+------------------------------------------------- 
+""git --version"" non Š riconosciuto come comando interno o esterno,
+ un programma eseguibile o un file batch.
+
+------------------------------------------------- 
+npx -v                                          
+------------------------------------------------- 
+""npx -v"" non Š riconosciuto come comando interno o esterno,
+ un programma eseguibile o un file batch.
+
+------------------------------------------------- 
+npx ionic --version                                          
+------------------------------------------------- 
+""npx ionic --version"" non Š riconosciuto come comando interno o esterno,
+ un programma eseguibile o un file batch.
+
+------------------------------------------------- 
+npx ng version                                          
+------------------------------------------------- 
+""npx ng version"" non Š riconosciuto come comando interno o esterno,
+ un programma eseguibile o un file batch.
+

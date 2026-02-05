@@ -93,6 +93,12 @@ export const TABS_ROUTES: Routes = [
       import('../cronache-maceratesi/cronache-maceratesi.page')
         .then(m => m.CronacheMaceratesiPage),
   },
+  {
+    path: 'prenota-lanterna',
+    loadComponent: () =>
+      import('../prenota-lanterna/prenota-lanterna.page')
+        .then(m => m.PrenotaLanternaPage),
+  },
      {
     path: 'picchio-news',
     loadComponent: () =>

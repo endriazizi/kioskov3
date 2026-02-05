@@ -20,6 +20,8 @@ export class KioskWhitelistService {
     'castelraimondoturismo.it',
     'viverecamerino.it',
     'cronachemaceratesi.it',
+    'pizzerialalanterna.it',
+    'prenota.pizzerialalanterna.it',
     'picchionews.it',
     'comune.castelraimondo.mc.it',
     'cosmariambiente.it',

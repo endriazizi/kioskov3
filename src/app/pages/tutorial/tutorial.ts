@@ -30,12 +30,10 @@ import { arrowForward, close, menuOutline } from "ionicons/icons";
 import { HttpClient } from "@angular/common/http";
 import { CommonModule } from "@angular/common";
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser";
-import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
 import { bindKioskUiTopAuto } from "../../shared/kiosk-ui-top";
 
-/** Item del carosello (externalUrl = apre sito in-app per es. lanterna) */
-type AdItem = { kind: "image" | "video"; src: string; poster?: string; externalUrl?: string };
+/** Item del carosello (internalRoute = pagina in-app come Vivere Camerino; externalUrl = modal webview) */
+type AdItem = { kind: "image" | "video"; src: string; poster?: string; externalUrl?: string; internalRoute?: string };
 
 @Component({
   standalone: true,
@@ -91,7 +89,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     
     { kind: "image", src: "assets/poster/a3_02.jpg" },
     { kind: "image", src: "assets/poster/a3_03.jpg" },
-    { kind: "image", src: "assets/poster/lanterna.jpg", externalUrl: "https://prenota.pizzerialalanterna.it/prenota" },
+    { kind: "image", src: "assets/poster/lanterna.jpg", internalRoute: "/app/tabs/prenota-lanterna" },
     { kind: "image", src: "assets/poster/a3_05.jpg" },
     { kind: "image", src: "assets/poster/a3_06.jpg" },
    
@@ -120,6 +118,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   // Modal sito esterno (es. lanterna – in-app webview)
   isWebViewOpen = false;
   webViewUrl = "";
+  /** URL sanitizzato (cached): evita getter che crea nuovo oggetto ogni CD → iframe reload loop → Chrome throttling */
+  webViewSafeUrl: SafeResourceUrl | null = null;
 
   // Slide 3: Video principale
   @ViewChild("slideVideo", { static: true })
@@ -704,11 +704,16 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /** Click su slide del carosello: apre sito esterno (Lanterna) o immagine a tutto schermo */
+  /** Click su slide del carosello: pagina in-app (es. Prenota Lanterna), sito in modal, o immagine a tutto schermo */
   onAdClick(ad: AdItem, event: Event): void {
     if (ad.kind !== "image") return;
     event.preventDefault();
     event.stopPropagation();
+    if (ad.internalRoute) {
+      this.stopAdsCarousel();
+      this.router.navigateByUrl(ad.internalRoute);
+      return;
+    }
     if (ad.externalUrl) {
       this.openExternalSite(ad.externalUrl);
     } else {
@@ -716,20 +721,10 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /** Apre il sito in-app (es. prenotazione Lanterna): su device usa Capacitor Browser, su web modal con iframe */
-  async openExternalSite(url: string): Promise<void> {
+  /** Apre il sito sempre in-app (webview modal): resta dentro Ionic, nessuna navigazione al browser esterno */
+  openExternalSite(url: string): void {
     this.stopAdsCarousel();
-    if (Capacitor.isNativePlatform()) {
-      try {
-        await Browser.open({ url, presentationStyle: "fullscreen" });
-      } catch (err) {
-        console.error("Browser.open failed:", err);
-        this.openWebViewModal(url);
-      }
-      return;
-    }
     this.openWebViewModal(url);
-    // Forza apertura modal (change detection)
     setTimeout(() => {
       if (this.webViewUrl && !this.isWebViewOpen) {
         this.isWebViewOpen = true;
@@ -739,23 +734,20 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   private openWebViewModal(url: string): void {
     this.webViewUrl = url;
+    this.webViewSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
     this.isWebViewOpen = true;
   }
 
   closeWebView(): void {
     this.isWebViewOpen = false;
     this.webViewUrl = "";
+    this.webViewSafeUrl = null;
     setTimeout(() => this.goToAd(this.adsIndex, "auto"), 100);
   }
 
   /** Fallback: apri il sito in nuova scheda (se l'iframe è bloccato dal sito) */
   openWebViewInNewTab(): void {
     if (this.webViewUrl) window.open(this.webViewUrl, "_blank", "noopener");
-  }
-
-  /** URL sanitizzato per iframe (sito Lanterna in-app) */
-  get webViewSafeUrl(): SafeResourceUrl | null {
-    return this.webViewUrl ? this.sanitizer.bypassSecurityTrustResourceUrl(this.webViewUrl) : null;
   }
 
   // ========= SLIDE 3: VIDEO PRINCIPALE =========
