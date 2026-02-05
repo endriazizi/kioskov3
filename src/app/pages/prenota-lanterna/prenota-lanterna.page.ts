@@ -27,7 +27,7 @@ export class PrenotaLanternaPage implements OnInit {
   private router = inject(Router);
 
   // URL del sito Prenota La Lanterna
-  private readonly RAW_URL = 'https://prenota.pizzerialalanterna.it/prenota';
+  private readonly RAW_URL = 'https://prenota.pizzerialalanterna.it/asporto';
 
   isBrowser = true;          // true = PWA/desktop browser, false = app ibrida
   safeUrl!: SafeResourceUrl; // URL sanitizzato per l'iframe
