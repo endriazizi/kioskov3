@@ -93,6 +93,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     { kind: "image", src: "assets/poster/lanterna.jpg", internalRoute: "/app/tabs/prenota-lanterna" },
     { kind: "image", src: "assets/poster/a3_05.jpg" },
     { kind: "image", src: "assets/poster/a3_06.jpg" },
+    { kind: "image", src: "assets/poster/a3_07.jpg" },
    
     { kind: "video", src: "assets/poster/eclissi.mp4" }, // video carosello centrale_video.mp4
     { kind: "video", src: "assets/poster/bar centrale_TikTok.mp4" },
