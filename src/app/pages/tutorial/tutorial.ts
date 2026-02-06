@@ -85,8 +85,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   @ViewChildren("adVideo") adVideoEls!: QueryList<ElementRef<HTMLVideoElement>>;
 
   ads: AdItem[] = [
-     { kind: "image", src: "assets/poster/a3_01.png" },
-    
+    { kind: "image", src: "assets/poster/a3_01.jpg" },    
     { kind: "image", src: "assets/poster/a3_02.jpg" },
     { kind: "image", src: "assets/poster/a3_03.jpg" },
     { kind: "image", src: "assets/poster/a3_04.jpg" },
