@@ -58,11 +58,20 @@
                   muted
                   playsinline
                   webkit-playsinline
-                  autoplay
+                  [attr.autoplay]="isClickToPlayVideo(i) ? null : ''"
                   (loadedmetadata)="onAdVideoMeta(i, $event)"
                   (ended)="onAdVideoEnded(i)"
                   (error)="removeBrokenAd(i)"
                 ></video>
+                <div
+                  *ngIf="i === adsIndex && isClickToPlayVideo(i) && adsShowPlayBtn"
+                  class="ads-play-overlay"
+                  (click)="playClickToPlayAd(); $event.stopPropagation()"
+                >
+                  <ion-button fill="clear" size="large" class="ads-play-btn">
+                    <ion-icon name="play-circle"></ion-icon>
+                  </ion-button>
+                </div>
               </ng-template>
             </figure>
           </div>

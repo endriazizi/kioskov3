@@ -111,6 +111,7 @@
 
 /* poster pieno e centrato 720x1280 (9:16) */
 .ads-item{
+  position: relative;
   width:100%; height:100%;
   display:grid; place-items:center;
   scroll-snap-align:center;
@@ -137,6 +138,25 @@
 /* per i video vogliamo audio/CTA ma stessa area visiva dei poster */
 .ads-item video{
   background:var(--kiosk-card-bg);
+}
+
+/* Overlay Play per video click-to-play (scompare dopo 5s) */
+.ads-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 4;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
+}
+.ads-play-overlay .ads-play-btn {
+  --padding: 16px;
+  ion-icon {
+    font-size: 72px;
+    color: rgba(255, 255, 255, 0.95);
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+  }
 }
 
 /* dots */

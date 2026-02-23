@@ -26,7 +26,7 @@ import {
 import { IonContent as IonContentBase } from "@ionic/angular";
 import { Storage } from "@ionic/storage-angular";
 import { addIcons } from "ionicons";
-import { arrowForward, close, menuOutline } from "ionicons/icons";
+import { arrowForward, close, menuOutline, playCircle } from "ionicons/icons";
 import { HttpClient } from "@angular/common/http";
 import { CommonModule } from "@angular/common";
 import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser";
@@ -85,16 +85,14 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   @ViewChildren("adVideo") adVideoEls!: QueryList<ElementRef<HTMLVideoElement>>;
 
   ads: AdItem[] = [
-    { kind: "image", src: "assets/poster/a3_01.jpg" },    
-    { kind: "image", src: "assets/poster/a3_02.jpg" },
+
     { kind: "image", src: "assets/poster/a3_03.jpg" },
     { kind: "image", src: "assets/poster/a3_04.jpg" },
-    { kind: "image", src: "assets/poster/lanterna.jpg", internalRoute: "/app/tabs/prenota-lanterna" },
-    { kind: "image", src: "assets/poster/a3_05.jpg" },
+    // { kind: "image", src: "assets/poster/lanterna.jpg", internalRoute: "/app/tabs/prenota-lanterna" },
+
+        { kind: "image", src: "assets/poster/a3_05.jpg" },
     { kind: "image", src: "assets/poster/a3_06.jpg" },
-    { kind: "image", src: "assets/poster/a3_07.jpg" },
-    { kind: "image", src: "assets/poster/a3_08.jpg" },
-    { kind: "image", src: "assets/poster/a3_09.jpg" },
+
 
     { kind: "image", src: "assets/poster/a3_10.jpg" },
     { kind: "image", src: "assets/poster/a3_11.jpg" },
@@ -117,6 +115,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private adsTimer?: any;
   private adsUserPause = false;
   private adsScrollDebounce?: any;
+
+  /** Video che partono solo al tap su Play; stesso timer dei poster (10s) se non si preme Play */
+  private readonly CLICK_TO_PLAY_VIDEO_SRCS = ["eclissi.mp4", "bar centrale_TikTok.mp4"];
+  adsShowPlayBtn = false;
+  private adsPlayBtnHideTimer?: ReturnType<typeof setTimeout>;
 
   // Video carosello: auto-duration + audio
   private adDurationsMs: number[] = [];
@@ -177,7 +180,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.adsShowUnmuteBtn = this.isCurrentAdVideo;
     // ===== FINE MODIFICA =====
 
-    this.ensureAdVideoPlaying(this.adsIndex);
+    if (!this.isClickToPlayVideo(this.adsIndex)) this.ensureAdVideoPlaying(this.adsIndex);
     this.forceUnlockAudio(); // per la slide video principale se attiva
   };
 
@@ -199,7 +202,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private adVideoIO?: IntersectionObserver;
 
   constructor() {
-    addIcons({ arrowForward, close, menuOutline });
+    addIcons({ arrowForward, close, menuOutline, playCircle });
 
     // ===== INIZIO MODIFICA =====
     // Cache dei video presenti in `ads` (serve per mappare video DOM ↔ adsIndex)
@@ -242,7 +245,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
-        if (this.isCurrentAdVideo) this.ensureAdVideoPlaying(this.adsIndex);
+        if (this.isCurrentAdVideo && !this.isClickToPlayVideo(this.adsIndex))
+          this.ensureAdVideoPlaying(this.adsIndex);
         if (this.isVideoActive) this.startVideo();
       }
     });
@@ -261,6 +265,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
     this.stopAdsCarousel();
     this.clearVideoAdAdvance();
+    this.clearAdsPlayBtnTimer();
 
     if (this.io) this.io.disconnect();
     if (this.ioFirst) this.ioFirst.disconnect();
@@ -309,7 +314,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.adsTimer = setInterval(() => {
       if (this.adsUserPause) return;
       const current = this.ads[this.adsIndex];
-      if (current?.kind === "video") return;
+      if (current?.kind === "video" && !this.isClickToPlayVideo(this.adsIndex)) return;
       const next = (this.adsIndex + 1) % this.ads.length;
       this.goToAd(next);
     }, this.ADS_DURATION_MS);
@@ -364,7 +369,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     videos.forEach((ref) => this.stopAndMuteVideoEl(ref.nativeElement, false));
 
     // 2) se il current è video → lo faccio partire (muted). L’audio solo se richiesto.
-    if (currentIsVideo) this.ensureAdVideoPlaying(currentAdIndex);
+    if (currentIsVideo && !this.isClickToPlayVideo(currentAdIndex))
+      this.ensureAdVideoPlaying(currentAdIndex);
   }
   // ===== FINE MODIFICA =====
 
@@ -415,7 +421,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
           // È quello di turno: parte solo se davvero visibile nel track
           if (e.isIntersecting && e.intersectionRatio > 0.6) {
-            this.ensureAdVideoPlaying(adIndex);
+            if (!this.isClickToPlayVideo(adIndex)) this.ensureAdVideoPlaying(adIndex);
           }
           // ===== FINE MODIFICA =====
         });
@@ -577,6 +583,10 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   goToAd(i: number, behavior: ScrollBehavior = "smooth") {
     const prev = this.ads[this.adsIndex];
     if (prev?.kind === "video") this.leaveVideoAd();
+    if (this.isClickToPlayVideo(this.adsIndex)) {
+      this.clearAdsPlayBtnTimer();
+      this.adsShowPlayBtn = false;
+    }
 
     // ===== INIZIO MODIFICA =====
     // quando cambio slide, l’audio NON deve “restare armato”
@@ -593,8 +603,20 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
     const current = this.ads[this.adsIndex];
     this.pauseAllAdVideos(false);
-    if (current?.kind === "video") this.enterVideoAd(this.adsIndex);
-    else this.startAdsCarousel();
+    if (current?.kind === "video") {
+      if (this.isClickToPlayVideo(this.adsIndex)) {
+        this.clearAdsPlayBtnTimer();
+        this.adsShowPlayBtn = true;
+        this.adsPlayBtnHideTimer = setTimeout(() => {
+          this.adsShowPlayBtn = false;
+        }, 5_000);
+        this.startAdsCarousel();
+      } else {
+        this.enterVideoAd(this.adsIndex);
+      }
+    } else {
+      this.startAdsCarousel();
+    }
 
     // ===== INIZIO MODIFICA =====
     // allineo stato video: solo quello di turno può riprodurre / avere audio
@@ -613,6 +635,10 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     if (idx !== this.adsIndex) {
       const prev = this.ads[this.adsIndex];
       if (prev?.kind === "video") this.leaveVideoAd();
+      if (this.isClickToPlayVideo(this.adsIndex)) {
+        this.clearAdsPlayBtnTimer();
+        this.adsShowPlayBtn = false;
+      }
 
       // ===== INIZIO MODIFICA =====
       // anche con scroll manuale: resetto “armed audio”
@@ -625,8 +651,20 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       this.pauseAllAdVideos(false);
 
       const current = this.ads[this.adsIndex];
-      if (current?.kind === "video") this.enterVideoAd(this.adsIndex);
-      else this.startAdsCarousel();
+      if (current?.kind === "video") {
+        if (this.isClickToPlayVideo(this.adsIndex)) {
+          this.clearAdsPlayBtnTimer();
+          this.adsShowPlayBtn = true;
+          this.adsPlayBtnHideTimer = setTimeout(() => {
+            this.adsShowPlayBtn = false;
+          }, 5_000);
+          this.startAdsCarousel();
+        } else {
+          this.enterVideoAd(this.adsIndex);
+        }
+      } else {
+        this.startAdsCarousel();
+      }
 
       // ===== INIZIO MODIFICA =====
       this.syncAdVideos();
@@ -649,8 +687,20 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   resumeAdsCarousel() {
     this.adsUserPause = false;
     const current = this.ads[this.adsIndex];
-    if (current?.kind === "video") this.enterVideoAd(this.adsIndex);
-    else this.startAdsCarousel();
+    if (current?.kind === "video") {
+      if (this.isClickToPlayVideo(this.adsIndex)) {
+        this.clearAdsPlayBtnTimer();
+        this.adsShowPlayBtn = true;
+        this.adsPlayBtnHideTimer = setTimeout(() => {
+          this.adsShowPlayBtn = false;
+        }, 5_000);
+        this.startAdsCarousel();
+      } else {
+        this.enterVideoAd(this.adsIndex);
+      }
+    } else {
+      this.startAdsCarousel();
+    }
   }
 
   removeBrokenAd(i: number) {
@@ -687,6 +737,27 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // CTA audio carosello
+  /** True per i due video "play su tap"; usano lo stesso timer dei poster se non si preme Play */
+  isClickToPlayVideo(adIndex: number): boolean {
+    const ad = this.ads[adIndex];
+    return !!ad && ad.kind === "video" && this.CLICK_TO_PLAY_VIDEO_SRCS.some((s) => ad.src.includes(s));
+  }
+
+  /** Chiamato dal bottone Play sui video click-to-play: avvia video e timer di avanzamento a fine */
+  playClickToPlayAd(): void {
+    if (!this.isClickToPlayVideo(this.adsIndex)) return;
+    this.clearAdsPlayBtnTimer();
+    this.adsShowPlayBtn = false;
+    this.enterVideoAd(this.adsIndex);
+  }
+
+  private clearAdsPlayBtnTimer(): void {
+    if (this.adsPlayBtnHideTimer) {
+      clearTimeout(this.adsPlayBtnHideTimer);
+      this.adsPlayBtnHideTimer = undefined;
+    }
+  }
+
   get isCurrentAdVideo(): boolean {
     return this.ads[this.adsIndex]?.kind === "video";
   }
