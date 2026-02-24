@@ -86,6 +86,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   ads: AdItem[] = [
 
+    { kind: "image", src: "assets/poster/a3_01.jpg" },
+    { kind: "image", src: "assets/poster/a3_02.jpg" },
+
     { kind: "image", src: "assets/poster/a3_03.jpg" },
     { kind: "image", src: "assets/poster/a3_04.jpg" },
     // { kind: "image", src: "assets/poster/lanterna.jpg", internalRoute: "/app/tabs/prenota-lanterna" },
