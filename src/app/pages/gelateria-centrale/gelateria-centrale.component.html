@@ -33,7 +33,16 @@
     <ion-row class="gc-row">
       <ion-col size="12" sizeLg="6">
         <div class="gc-photo-frame">
-          <img [src]="c.storyImage" alt="La storia - foto d'epoca" />
+          <img
+            [src]="c.storyImage"
+            alt="La storia - foto d'epoca"
+            class="gc-img-tappable"
+            role="button"
+            tabindex="0"
+            (click)="openImageLightboxFromEvent($event)"
+            (keydown.enter)="openImageLightboxFromEvent($event)"
+            (keydown.space)="$event.preventDefault(); openImageLightboxFromEvent($event)"
+          />
         </div>
       </ion-col>
       <ion-col size="12" sizeLg="6" class="gc-story">
@@ -53,7 +62,17 @@
 
       <div class="gc-gallery">
         <div class="gc-gallery__item" *ngFor="let img of c.presentImages; trackBy: trackByIndex">
-          <img [src]="img.src" [alt]="img.alt" loading="lazy" />
+          <img
+            [src]="img.src"
+            [alt]="img.alt"
+            loading="lazy"
+            class="gc-img-tappable"
+            role="button"
+            tabindex="0"
+            (click)="openImageLightboxFromEvent($event)"
+            (keydown.enter)="openImageLightboxFromEvent($event)"
+            (keydown.space)="$event.preventDefault(); openImageLightboxFromEvent($event)"
+          />
         </div>
       </div>
     </ion-card-content>
@@ -70,7 +89,16 @@
       </div>
 
       <div class="gc-creations" *ngIf="c.creationsImage">
-        <img [src]="c.creationsImage" alt="Alcune delle nostre creazioni" />
+        <img
+          [src]="c.creationsImage"
+          alt="Alcune delle nostre creazioni"
+          class="gc-img-tappable"
+          role="button"
+          tabindex="0"
+          (click)="openImageLightboxFromEvent($event)"
+          (keydown.enter)="openImageLightboxFromEvent($event)"
+          (keydown.space)="$event.preventDefault(); openImageLightboxFromEvent($event)"
+        />
       </div>
 
       <!-- Il primo h4 ('Gelateria Artigianale') verrà reso come titolo rosso grande -->
@@ -78,3 +106,36 @@
     </ion-card-content>
   </ion-card>
 </section>
+
+<!-- Immagine a tutto schermo: Chiudi per tornare alla pagina -->
+<ion-modal
+  [isOpen]="lightboxOpen"
+  (didDismiss)="closeImageLightbox()"
+  class="gc-lightbox-modal"
+  backdropDismiss="true"
+>
+  <ng-template>
+    <ion-header class="ion-no-border">
+      <ion-toolbar>
+        <ion-title>{{ lightboxAlt || 'Immagine' }}</ion-title>
+        <ion-buttons slot="end">
+          <ion-button fill="solid" color="light" (click)="closeImageLightbox()" aria-label="Chiudi immagine">
+            <ion-icon slot="start" name="close-outline"></ion-icon>
+            Chiudi
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="gc-lightbox-content" [fullscreen]="true">
+      <div class="gc-lightbox-body" (click)="closeImageLightbox()">
+        <img
+          *ngIf="lightboxSrc"
+          [src]="lightboxSrc"
+          [alt]="lightboxAlt"
+          class="gc-lightbox-img"
+          (click)="$event.stopPropagation()"
+        />
+      </div>
+    </ion-content>
+  </ng-template>
+</ion-modal>

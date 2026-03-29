@@ -89,8 +89,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     { kind: "image", src: "assets/poster/a3_01.jpg" },
     { kind: "image", src: "assets/poster/a3_02.jpg" },
 
-    // { kind: "image", src: "assets/poster/a3_03.jpg" },
-    { kind: "image", src: "assets/poster/a3_04.jpg" },
+    { kind: "image", src: "assets/poster/a3_03.jpg" },
+    // { kind: "image", src: "assets/poster/a3_04.jpg" },
     // { kind: "image", src: "assets/poster/lanterna.jpg", internalRoute: "/app/tabs/prenota-lanterna" },
 
         { kind: "image", src: "assets/poster/a3_05.jpg" },
@@ -107,9 +107,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
    
     { kind: "image", src: "assets/poster/a3_13.jpg" },
    
-    // { kind: "image", src: "assets/poster/a3_14.jpg" },
+    { kind: "image", src: "assets/poster/a3_14.jpg" },
     // { kind: "image", src: "assets/poster/a3_15.jpg" },
-    { kind: "image", src: "assets/poster/a3_16.jpg" },
+    // { kind: "image", src: "assets/poster/a3_16.jpg" },
    
    
     { kind: "video", src: "assets/poster/eclissi.mp4" }, // video carosello centrale_video.mp4

@@ -1,13 +1,13 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
-  IonCard, IonCardHeader, IonCardTitle, IonCardContent,
+  IonCard, IonCardContent,
   IonGrid, IonRow, IonCol,
-  IonButton, IonIcon, IonLabel, IonList, IonItem, IonNote, IonText, IonContent
+  IonButton, IonIcon, IonContent,
+  IonModal, IonHeader, IonToolbar, IonButtons, IonTitle,
 } from '@ionic/angular/standalone';
-import { RouterLink } from '@angular/router';
 import { addIcons } from 'ionicons';
-import { imagesOutline } from 'ionicons/icons';
+import { closeOutline } from 'ionicons/icons';
 import { GC_DEFAULT_CONTENT, type GcContent } from './gelateria-centrale.content';
 
 @Component({
@@ -17,11 +17,11 @@ import { GC_DEFAULT_CONTENT, type GcContent } from './gelateria-centrale.content
   styleUrls: ['./gelateria-centrale.component.scss'],
   imports: [
     CommonModule,
-    RouterLink,
     IonContent,
-    IonCard, IonCardHeader, IonCardTitle, IonCardContent,
+    IonCard, IonCardContent,
     IonGrid, IonRow, IonCol,
-    IonButton, IonIcon, IonLabel, IonList, IonItem, IonNote, IonText
+    IonButton, IonIcon,
+    IonModal, IonHeader, IonToolbar, IonButtons, IonTitle,
   ]
 })
 export class GelateriaCentraleComponent {
@@ -36,8 +36,13 @@ export class GelateriaCentraleComponent {
   @Input() phone: string | null = null;
   @Input() websiteUrl?: string;
 
+  /** Lightbox immagine a tutto schermo */
+  lightboxOpen = false;
+  lightboxSrc = '';
+  lightboxAlt = '';
+
   constructor() {
-    addIcons({ imagesOutline });
+    addIcons({ closeOutline });
   }
 
   get c(): GcContent {
@@ -47,6 +52,25 @@ export class GelateriaCentraleComponent {
   scrollTo(id: string): void {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  openImageLightboxFromEvent(ev: Event): void {
+    const t = ev.target as HTMLImageElement | null;
+    if (!t?.src) return;
+    ev.stopPropagation();
+    this.openImageLightbox(t.currentSrc || t.src, t.alt || '');
+  }
+
+  openImageLightbox(src: string, alt: string): void {
+    this.lightboxSrc = src;
+    this.lightboxAlt = alt || '';
+    this.lightboxOpen = true;
+  }
+
+  closeImageLightbox(): void {
+    this.lightboxOpen = false;
+    this.lightboxSrc = '';
+    this.lightboxAlt = '';
   }
 
   trackByIndex = (i: number) => i;
