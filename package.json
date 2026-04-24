@@ -9,6 +9,7 @@
     "start:ng": "npx ng serve",
     "start:totem": "npx ng serve -c totem",
     "start:totem:prodapi": "npx ng serve -c totemProdApi",
+    "start:totem:prodproxy": "npx ng serve -c totemProdProxy",
     "build": "npx ng build",
     "test": "npx ng test",
     "lint": "npx ng lint"

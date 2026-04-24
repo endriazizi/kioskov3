@@ -1,0 +1,14 @@
+{
+  "/api": {
+    "target": "https://api.pizzerialalanterna.it",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "warn"
+  },
+  "/uploads": {
+    "target": "https://api.pizzerialalanterna.it",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "warn"
+  }
+}

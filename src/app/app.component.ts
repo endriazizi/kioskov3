@@ -139,10 +139,7 @@ export class AppComponent implements OnInit {
     });
 
     effect(() => {
-      const loading = this.kioskLoading.loading();
-      // #region agent log
-      fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H1',location:'app.component.ts:constructor:effect',message:'Global loading signal changed',data:{loading,route:this.router.url},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
+      this.kioskLoading.loading();
     });
   }
 
@@ -150,46 +147,8 @@ export class AppComponent implements OnInit {
   @HostListener("document:pointerdown", ["$event"])
   @HostListener("document:keydown", ["$event"])
   @HostListener("document:touchstart", ["$event"])
-  onUserAction(event?: Event) {
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H2',location:'app.component.ts:onUserAction',message:'Global user action captured',data:{eventType:event?.type ?? null,targetTag:(event?.target as HTMLElement | null)?.tagName ?? null,targetClass:(event?.target as HTMLElement | null)?.className ?? null,route:this.router.url},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    this.logTapProbe(event);
+  onUserAction(_event?: Event) {
     this.resetInactivityTimer();
-  }
-
-  private logTapProbe(event?: Event): void {
-    const anyEv = event as (MouseEvent & TouchEvent) | undefined;
-    const x = typeof anyEv?.clientX === "number" ? anyEv.clientX : (anyEv?.touches?.[0]?.clientX ?? null);
-    const y = typeof anyEv?.clientY === "number" ? anyEv.clientY : (anyEv?.touches?.[0]?.clientY ?? null);
-    const topEl = x != null && y != null ? document.elementFromPoint(x, y) as HTMLElement | null : null;
-    const loadingOverlay = document.querySelector(".kiosk-api-loading-overlay") as HTMLElement | null;
-    const clickable = (event?.target as HTMLElement | null)?.closest?.("button, a, ion-button, ion-tab-button, [role='button']");
-    const topStack = x != null && y != null
-      ? document
-          .elementsFromPoint(x, y)
-          .slice(0, 6)
-          .map((el) => {
-            const he = el as HTMLElement;
-            const cs = getComputedStyle(he);
-            return {
-              tag: he.tagName,
-              cls: he.className,
-              pe: cs.pointerEvents,
-              z: cs.zIndex,
-              pos: cs.position,
-              op: cs.opacity,
-            };
-          })
-      : [];
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H4',location:'app.component.ts:logTapProbe',message:'Tap probe with top element and overlay state',data:{eventType:event?.type ?? null,route:this.router.url,coords:{x,y},targetTag:(event?.target as HTMLElement | null)?.tagName ?? null,targetClass:(event?.target as HTMLElement | null)?.className ?? null,topTag:topEl?.tagName ?? null,topClass:topEl?.className ?? null,clickableTag:clickable?.tagName ?? null,clickableClass:clickable?.className ?? null,overlayPresent:!!loadingOverlay,overlayPointerEvents:loadingOverlay ? getComputedStyle(loadingOverlay).pointerEvents : null,overlayDisplay:loadingOverlay ? getComputedStyle(loadingOverlay).display : null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    void this.menu.isOpen().then((isOpen) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H5',location:'app.component.ts:logTapProbe:menu-stack',message:'Tap probe menu and element stack',data:{route:this.router.url,eventType:event?.type ?? null,menuOpen:isOpen,topStack},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-    }).catch(() => {});
   }
 
   // quando la tab torna visibile / finestra rifocalizzata → reset
@@ -236,8 +195,6 @@ export class AppComponent implements OnInit {
     await this.storage.create();
     this.checkLoginStatus();
     this.listenForLoginEvents();
-    document.addEventListener("click", (ev) => this.logTapProbe(ev), true);
-    document.addEventListener("pointerdown", (ev) => this.logTapProbe(ev), true);
 
     // avvia il timer di inattività al boot
     this.resetInactivityTimer();

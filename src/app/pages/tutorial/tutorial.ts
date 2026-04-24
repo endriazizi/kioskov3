@@ -841,9 +841,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
    * Caricamento card: `loadPromoStrip()` → GET `/api/public-kiosk/promo-banners` (se `environment.useKioskPublicApi`).
    */
   onPromoClick(p: PromoAdItem, event: Event): void {
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H6',location:'tutorial.ts:onPromoClick',message:'Promo card click handler fired',data:{blockedExternal:!!p.blockedExternal,hasSlug:!!safeKioskBusinessSlug(p.activitySlug),supportBannerVisible:this.supportBannerVisible,promoFullscreenOpen:this.promoFullscreenOpen},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     event.preventDefault();
     event.stopPropagation();
     if (p.blockedExternal) {
@@ -866,9 +863,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   closePromoFullscreen(ev?: Event, source: string = "unknown"): void {
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H11',location:'tutorial.ts:closePromoFullscreen',message:'Promo fullscreen close handler fired',data:{source,hadItem:!!this.promoFullscreenItem,wasOpen:this.promoFullscreenOpen},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     ev?.stopPropagation();
     if (!this.promoFullscreenOpen) return;
     this.promoFullscreenOpen = false;
@@ -1069,9 +1063,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Chiudi modal promo → opzionale navigazione alla scheda attività. */
   async goPromoDetailFromFullscreen(ev?: Event, source: string = "unknown"): Promise<void> {
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H11',location:'tutorial.ts:goPromoDetailFromFullscreen',message:'Promo fullscreen detail handler fired',data:{source,slug:this.promoFullscreenNavSlug,hadItem:!!this.promoFullscreenItem},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     ev?.stopPropagation();
     ev?.preventDefault?.();
     const slug = this.promoFullscreenNavSlug;
@@ -1089,9 +1080,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }
     const currentUrl = this.router.url;
     if (currentUrl.endsWith(`/app/tabs/speakers/speaker-details/${slug}`)) {
-      // #region agent log
-      fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H11',location:'tutorial.ts:goPromoDetailFromFullscreen',message:'Promo detail tap on same route',data:{slug,currentUrl},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       void this.toastCtrl
         .create({
           message: "Sei gia' sulla scheda attivita'.",
@@ -2037,9 +2025,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
    * Nessun zoom fullscreen né link esterni sulla home kiosk.
    */
   onAdClick(ad: AdItem, event: Event): void {
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H6',location:'tutorial.ts:onAdClick',message:'Poster click handler fired',data:{kind:ad.kind,hasSlug:!!safeKioskBusinessSlug(ad.activitySlug),adsIndex:this.adsIndex,supportBannerVisible:this.supportBannerVisible},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (ad.kind !== "image") return;
     event.preventDefault();
     event.stopPropagation();
@@ -2232,9 +2217,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   dismissSupportBanner() {
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H8',location:'tutorial.ts:dismissSupportBanner',message:'Support banner dismiss handler fired',data:{supportBannerVisibleBefore:this.supportBannerVisible},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     this.supportBannerVisible = false;
   }
 
@@ -2282,9 +2264,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   closeSupportModal(ev?: Event, source: string = "unknown"): void {
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H12',location:'tutorial.ts:closeSupportModal',message:'Support modal close handler fired',data:{source,wasOpen:this.supportModalOpen},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     ev?.stopPropagation?.();
     this.supportModalOpen = false;
   }
@@ -2298,9 +2277,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   startApp() {
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H6',location:'tutorial.ts:startApp',message:'Start app button handler fired',data:{route:'/app/tabs/schedule'},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     this.router
       .navigateByUrl("/app/tabs/schedule", { replaceUrl: true })
       .catch((err) => console.error("Errore durante startApp:", err));
@@ -2316,14 +2292,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   @HostListener("pointerdown", ["$event"])
   @HostListener("touchstart", ["$event"])
   @HostListener("document:keydown", ["$event"])
-  onTutorialHostTap(event: Event): void {
-    const target = event.target as HTMLElement | null;
-    const inPoster = !!target?.closest?.(".ads-item.poster-card");
-    const inPromo = !!target?.closest?.(".kiosk-promo-card");
-    const inSupport = !!target?.closest?.(".kiosk-support-banner");
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H9',location:'tutorial.ts:onTutorialHostTap',message:'Tutorial host received input event',data:{eventType:event.type,targetTag:target?.tagName ?? null,targetClass:target?.className ?? null,inPoster,inPromo,inSupport,supportBannerVisible:this.supportBannerVisible,promoFullscreenOpen:this.promoFullscreenOpen},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
+  onTutorialHostTap(_event: Event): void {
     this.onTutorialInteraction();
   }
 }

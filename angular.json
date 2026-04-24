@@ -30,6 +30,14 @@
                 }
               ]
             },
+            "totemProdProxy": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.totem-prodproxy.ts"
+                }
+              ]
+            },
             "ci": {
               "budgets": [
                 {
@@ -136,6 +144,13 @@
               "buildTarget": "app:build:totemProdApi",
               "host": "0.0.0.0",
               "port": 8200,
+              "allowedHosts": ["all"]
+            },
+            "totemProdProxy": {
+              "buildTarget": "app:build:totemProdProxy",
+              "host": "0.0.0.0",
+              "port": 8200,
+              "proxyConfig": "proxy.prodapi.conf.json",
               "allowedHosts": ["all"]
             },
             "production": {

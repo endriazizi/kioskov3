@@ -123,9 +123,6 @@ export class SpeakerDetailPage {
       .subscribe((sp) => {
         if (sp) {
           this.speaker = sp;
-            // #region agent log
-            fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6f3cc8'},body:JSON.stringify({sessionId:'6f3cc8',runId:'post-fix',hypothesisId:'H12',location:'speaker-detail.ts:subscribe',message:'speaker detail bound image fields',data:{slug:String(this.speaker?.slug||''),logo:String(this.speaker?.logo||''),profilePic:String(this.speaker?.profilePic||''),coverUrl:String(this.speaker?.coverUrl||'')},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
           void this.refreshDetailQr();
           this.galleryCurrentIndex = 0;
           this.startGalleryAutoScroll();
@@ -139,13 +136,6 @@ export class SpeakerDetailPage {
 
   ngOnDestroy(): void {
     this.stopGalleryAutoScroll();
-  }
-
-  onBackTap(event: Event): void {
-    const target = event.target as HTMLElement | null;
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H10',location:'speaker-detail.ts:onBackTap',message:'Speaker detail back button click handler fired',data:{targetTag:target?.tagName ?? null,targetClass:target?.className ?? null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
   }
 
   /** Sfondo hero chiaro: immagine leggermente velata su bianco (no fascia nera) */
@@ -307,9 +297,8 @@ export class SpeakerDetailPage {
   }
 
   onImageLoad(slot: 'avatar' | 'brandLogo', src: string | null | undefined): void {
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6f3cc8'},body:JSON.stringify({sessionId:'6f3cc8',runId:'post-fix',hypothesisId:'H13',location:'speaker-detail.ts:onImageLoad',message:'speaker detail image loaded',data:{slug:String(this.speaker?.slug||''),slot,src:String(src||'')},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
+    void slot;
+    void src;
   }
 
   onImageError(slot: 'avatar' | 'brandLogo', src: string | null | undefined): void {
@@ -321,8 +310,6 @@ export class SpeakerDetailPage {
     if (slot === 'brandLogo' && this.speaker.logo !== fallback) {
       this.speaker = { ...this.speaker, logo: fallback };
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6f3cc8'},body:JSON.stringify({sessionId:'6f3cc8',runId:'post-fix',hypothesisId:'H14',location:'speaker-detail.ts:onImageError',message:'speaker detail image failed',data:{slug:String(this.speaker?.slug||''),slot,src:String(src||'')},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
+    void src;
   }
 }

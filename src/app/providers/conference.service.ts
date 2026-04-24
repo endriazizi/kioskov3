@@ -262,9 +262,6 @@ export class ConferenceService {
     const showInPoi = dto.showInPoi ?? dto.show_in_poi ?? true;
     const showInMap = dto.showInMap ?? dto.show_in_map ?? true;
     const showInHome = dto.showInHome ?? dto.show_in_home ?? (listingTier === 'premium');
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6f3cc8'},body:JSON.stringify({sessionId:'6f3cc8',runId:'post-fix',hypothesisId:'H11',location:'conference.service.ts:mapKioskBusinessToSpeaker',message:'totem dto image mapping',data:{slug:String(dto.slug||''),dtoLogo:String((dto.logo ?? dto.logoUrl ?? '') as string),dtoCover:String((dto.cover ?? dto.coverUrl ?? '') as string),dtoProfilePic:String((dto.profilePic ?? dto.avatarUrl ?? '') as string),mappedLogo:logo||'',mappedCover:cover||'',mappedProfilePic:profilePic||''},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     return {
       name: dto.name ?? '',

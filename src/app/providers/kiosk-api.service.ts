@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
@@ -116,9 +116,6 @@ export class KioskApiService {
 
   getBusinessBySlug(slug: string): Observable<unknown> {
     const s = encodeURIComponent(slug);
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6f3cc8'},body:JSON.stringify({sessionId:'6f3cc8',runId:'pre-fix',hypothesisId:'H7',location:'kiosk-api.service.ts:getBusinessBySlug:request',message:'totem business-by-slug request',data:{slug:s,apiBase:this.apiBase(),url:this.url(`/api/public-kiosk/businesses/${s}`)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     kioskDevLog(`🧭 [KioskAPI] GET /api/public-kiosk/businesses/${s} …`);
     return this.http.get(this.url(`/api/public-kiosk/businesses/${s}`)).pipe(
       catchError((err) => {
@@ -176,6 +173,14 @@ export class KioskApiService {
   getFeedVersion(): Observable<unknown> {
     return this.http.get(this.url('/api/public-kiosk/feed-version')).pipe(
       catchError((err) => {
+        /**
+         * Compat legacy: alcuni deploy non espongono ancora `/feed-version`.
+         * In questo caso evitiamo warning rumorosi e lasciamo attivo il fallback
+         * del refresh periodico lato Tutorial.
+         */
+        if (err?.status === 404) {
+          return of({ ok: false, version: '' });
+        }
         kioskDevWarn('⚠️ [KioskAPI] GET feed-version fallita —', err?.message || err);
         return throwError(() => err);
       })
