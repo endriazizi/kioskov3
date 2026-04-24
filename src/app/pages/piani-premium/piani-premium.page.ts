@@ -22,7 +22,7 @@ import { ToastController } from "@ionic/angular";
 import { addIcons } from "ionicons";
 import { arrowBackOutline } from "ionicons/icons";
 import { firstValueFrom } from "rxjs";
-import { KioskApiService } from "src/app/providers/kiosk-api.service";
+import { KioskApiService } from "../../providers/kiosk-api.service";
 
 @Component({
   standalone: true,
