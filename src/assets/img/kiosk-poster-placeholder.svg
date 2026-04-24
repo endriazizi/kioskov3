@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900" viewBox="0 0 720 900" role="img" aria-label="Poster non disponibile">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8eaef"/>
+      <stop offset="100%" style="stop-color:#d4d8e2"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="900" fill="url(#bg)"/>
+  <rect x="48" y="48" width="624" height="804" fill="none" stroke="#b8c0d0" stroke-width="2" rx="16"/>
+  <text x="360" y="430" text-anchor="middle" fill="#6b7280" font-family="system-ui,sans-serif" font-size="28" font-weight="600">Poster</text>
+  <text x="360" y="480" text-anchor="middle" fill="#9ca3af" font-family="system-ui,sans-serif" font-size="18">Immagine non disponibile</text>
+</svg>

@@ -6,6 +6,8 @@ import {
 } from '@ionic/angular/standalone';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { environment } from '../../../environments/environment';
+import { kioskDevLog } from '../../utils/kiosk-dev-console';
 
 declare var cordova: any;
 
@@ -28,6 +30,12 @@ export class ComuneCastelraimondoPage implements OnInit {
   constructor(private router: Router, private sanitizer: DomSanitizer) {}
 
   ngOnInit() {
+    if (environment.kioskStrictMode) {
+      this.isBrowser = true;
+      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.url);
+      kioskDevLog('🧭 [Comune] kioskStrictMode: iframe in-app');
+      return;
+    }
     // Browser/PWA → iframe
     if (!(window as any).cordova) {
       this.isBrowser = true;
@@ -47,8 +55,7 @@ export class ComuneCastelraimondoPage implements OnInit {
       });
       this.ref?.addEventListener?.('closePressed', () => this.ref?.close?.());
     } catch {
-      // Fallback: browser di sistema
-      window.open(this.url, '_system');
+      console.warn('🔒 [Comune] niente window.open esterno in kiosk');
     }
   }
 

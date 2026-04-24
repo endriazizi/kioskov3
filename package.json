@@ -1,16 +1,17 @@
 {
   "name": "pwa-admin",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Admin PWA (prenotazioni tavoli)",
-"scripts": {
-  "start": "npx ionic serve",
-  "start:ionic": "npx ionic serve",
-  "start:ng": "npx ng serve",
-  "build": "npx ng build",
-  "test": "npx ng test",
-  "lint": "npx ng lint"
-},
+  "scripts": {
+    "start": "npx ionic serve",
+    "start:ionic": "npx ionic serve",
+    "start:ng": "npx ng serve",
+    "start:totem": "npx ng serve -c totem",
+    "build": "npx ng build",
+    "test": "npx ng test",
+    "lint": "npx ng lint"
+  },
   "dependencies": {
     "@angular/animations": "20.3.4",
     "@angular/cli": "20.3.4",
@@ -32,6 +33,7 @@
     "ionicons": "^7.0.0",
     "leaflet": "1.9.4",
     "localforage": "1.10.0",
+    "qrcode": "1.5.4",
     "rxjs": "7.8.1",
     "socket.io-client": "^4.7.5",
     "tslib": "^2.6.2",

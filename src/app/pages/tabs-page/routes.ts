@@ -7,6 +7,11 @@ export const TABS_ROUTES: Routes = [
     component: TabsPage,
     children: [
       {
+        path: 'home',
+        loadComponent: () =>
+          import('../tutorial/tutorial').then(m => m.TutorialPage),
+      },
+      {
         path: 'schedule',
         children: [
           {

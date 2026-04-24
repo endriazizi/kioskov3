@@ -1,4 +1,9 @@
 <ion-app appKioskWhitelist [class.ion-palette-dark]="dark">
+  @if (kioskLoading.loading()) {
+  <div class="kiosk-api-loading-overlay" aria-busy="true" role="status">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
+  }
   <ion-split-pane contentId="main-content">
     <ion-menu contentId="main-content">
       <ion-content>
@@ -12,7 +17,10 @@
               routerDirection="root"
               detail="false"
             >
-              <ion-icon slot="start" [name]="p.icon + '-outline'"></ion-icon>
+              <ion-icon
+                slot="start"
+                [name]="p.icon?.endsWith('-outline') ? p.icon : (p.icon + '-outline')"
+              ></ion-icon>
               <ion-label>
                 {{ p.title }}
               </ion-label>
@@ -110,7 +118,7 @@
           <ion-list-header> Home Page </ion-list-header>
           <ion-menu-toggle autoHide="false">
             <ion-item button (click)="openTutorial()" detail="false">
-              <ion-icon slot="start" name="hammer"></ion-icon>
+              <ion-icon slot="start" name="home-outline"></ion-icon>
               <ion-label>Home Page</ion-label>
             </ion-item>
           </ion-menu-toggle>

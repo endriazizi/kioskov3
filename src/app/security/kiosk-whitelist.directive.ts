@@ -1,6 +1,7 @@
-import { Directive, EffectRef, OnDestroy, OnInit, inject } from '@angular/core';
-import { KioskWhitelistService } from './kiosk-whitelist.service';
+import { Directive, OnDestroy, OnInit, inject } from '@angular/core';
 import { ToastController } from '@ionic/angular';
+
+import { KioskWhitelistService } from './kiosk-whitelist.service';
 
 @Directive({
   selector: '[appKioskWhitelist]',
@@ -17,6 +18,9 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
   private clickHandler = (ev: MouseEvent) => {
     // intercetta solo click primario
     if (ev.defaultPrevented || ev.button !== 0) return;
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H3',location:'kiosk-whitelist.directive.ts:clickHandler:start',message:'Whitelist click handler invoked',data:{targetTag:(ev.target as HTMLElement | null)?.tagName ?? null,defaultPrevented:ev.defaultPrevented,button:ev.button},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     // trova l'anchor più vicino
     const path = ev.composedPath ? ev.composedPath() as HTMLElement[] : [];
     let anchor: HTMLAnchorElement | null = null;
@@ -42,8 +46,12 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
 
     const allowed = this.whitelist.isAllowed(href);
     if (!allowed) {
+      // #region agent log
+      fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H3',location:'kiosk-whitelist.directive.ts:clickHandler:blocked',message:'Whitelist blocked href',data:{href,target:anchor.tagName},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       ev.preventDefault();
       ev.stopPropagation();
+      this.whitelist.logBlockedExternal(href, 'click su <a>');
       this.blockToast();
       return;
     }
@@ -73,6 +81,7 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
       if (!url) return null;
       const href = typeof url === 'string' ? url : url.toString();
       if (!this.whitelist.isAllowed(href)) {
+        this.whitelist.logBlockedExternal(href, 'window.open');
         this.blockToast();
         return null;
       }
@@ -85,6 +94,7 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
     window.location.assign = ((url: string | URL) => {
       const href = typeof url === 'string' ? url : url.toString();
       if (!this.whitelist.isAllowed(href)) {
+        this.whitelist.logBlockedExternal(href, 'location.assign');
         this.blockToast();
         return;
       }
@@ -94,6 +104,7 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
     window.location.replace = ((url: string | URL) => {
       const href = typeof url === 'string' ? url : url.toString();
       if (!this.whitelist.isAllowed(href)) {
+        this.whitelist.logBlockedExternal(href, 'location.replace');
         this.blockToast();
         return;
       }

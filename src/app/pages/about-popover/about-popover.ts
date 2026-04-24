@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { KioskWhitelistService } from '../../security/kiosk-whitelist.service';
 import {
   IonItem,
   IonLabel,
@@ -36,6 +37,7 @@ import {
 export class PopoverPage {
   private router = inject(Router);
   private popoverCtrl = inject(PopoverController);
+  private whitelist = inject(KioskWhitelistService);
 
   support() {
     this.router.navigate(['/support']);
@@ -43,6 +45,11 @@ export class PopoverPage {
   }
 
   close(url: string) {
+    if (!this.whitelist.isAllowed(url)) {
+      this.whitelist.logBlockedExternal(url, 'about-popover');
+      this.popoverCtrl.dismiss();
+      return;
+    }
     window.open(url, '_blank');
     this.popoverCtrl.dismiss();
   }

@@ -1,49 +1,134 @@
-.speaker-card {
-  display: flex;
-
-  flex-direction: column;
+.speaker-list-header ion-toolbar:first-of-type {
+  --background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
 }
 
-/* Due to the fact the cards are inside of columns the margins don't overlap
- * properly so we want to remove the extra margin between cards
- */
+.speaker-list-toolbar-search {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  --padding-bottom: 8px;
+}
+
+.speaker-search {
+  padding: 0;
+  --background: rgba(241, 245, 249, 0.95);
+  --border-radius: 14px;
+  --box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+}
+
+.speaker-list-content {
+  --background: linear-gradient(180deg, #eef2f7 0%, #f8fafc 30%, #fff 100%);
+  --padding-start: var(--app-gutter, 12px);
+  --padding-end: var(--app-gutter, 12px);
+}
+
+.speaker-cat-strip {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 12px 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.speaker-cat-chip {
+  flex-shrink: 0;
+  cursor: pointer;
+  min-height: 36px;
+}
+
+.speaker-list-meta {
+  margin: 0 16px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ion-color-step-650, #4a4d55);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.speaker-grid {
+  padding-bottom: 24px;
+}
+
+.speaker-card {
+  margin: 0 0 14px;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.speaker-card:active {
+  transform: scale(0.985);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
+}
+
+.speaker-card__body {
+  padding: 14px 14px 16px !important;
+}
+
+.speaker-card__media {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.speaker-card__avatar {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border: 2px solid var(--ion-color-primary, #3880ff);
+  box-shadow: 0 6px 18px rgba(56, 128, 255, 0.25);
+}
+
+.speaker-card__avatar img {
+  object-fit: cover;
+}
+
+.speaker-card__name {
+  margin: 0 0 4px;
+  font-size: 1.08rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--ion-text-color, #0f172a);
+}
+
+.speaker-card__cat {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ion-color-primary, #3880ff);
+}
+
+.speaker-card__desc {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  color: var(--ion-color-step-600, #5c5f6a);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.speaker-card__addr {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ion-color-step-550, #6b7280);
+  line-height: 1.35;
+}
+
+.speaker-empty {
+  text-align: center;
+  padding: 32px 20px;
+  color: var(--ion-color-step-600, #5c5f6a);
+}
+
 ion-col:not(:last-of-type) .speaker-card {
   margin-bottom: 0;
-}
-
-.speaker-card .speaker-item {
-  --min-height: 85px;
-}
-
-.speaker-card .speaker-item h2 {
-  font-size: 18px;
-  font-weight: 500;
-
-  letter-spacing: 0.02em;
-}
-
-.speaker-card .speaker-item p {
-  font-size: 13px;
-
-  letter-spacing: 0.02em;
-}
-
-.speaker-card ion-card-header {
-  padding: 0;
-}
-
-.speaker-card ion-card-content {
-  flex: 1 1 auto;
-
-  padding: 0;
-}
-
-.ios ion-list {
-  margin-bottom: 10px;
-}
-
-.md ion-list {
-  padding: 0;
-
-  border-top: 1px solid var(--ion-color-step-150, #d7d8da);
 }

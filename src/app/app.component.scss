@@ -1,3 +1,14 @@
+.kiosk-api-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.28);
+  pointer-events: all;
+}
+
 ion-menu ion-content {
   --padding-top: 20px;
   --padding-bottom: 20px;

@@ -1,96 +1,224 @@
-<ion-header class="ion-no-border">
-  <ion-toolbar class="toolbar-logo">
-    <div class="toolbar-container">
-      <img src="assets/img/logo_comune.png" alt="Comune di Castelraimondo" />
+<!-- Toolbar brand: loghi istituzionali + CTA totem -->
+<ion-header class="ion-no-border kiosk-home-header">
+  <ion-toolbar class="toolbar-logo toolbar-logo--compact kiosk-home-toolbar">
+    <div class="toolbar-container kiosk-home-toolbar__logos">
+      <button
+        type="button"
+        class="kiosk-toolbar-logo-btn"
+        (click)="onToolbarLogoClick($event)"
+        aria-label="Comune di Castelraimondo, informazioni e sito istituzionale"
+      >
+        <img src="assets/img/logo_comune.png" alt="" decoding="async" />
+      </button>
     </div>
 
     <ion-buttons slot="end">
-      <ion-button color="primary" (click)="startApp()" [hidden]="!showSkip">INIZIA ORA!</ion-button>
+      <ion-button color="primary" class="kiosk-cta-start" (click)="startApp()" [hidden]="!showSkip">
+        INIZIA ORA!
+      </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content #pageContent class="kiosk">
+<ion-content
+  #pageContent
+  class="kiosk"
+  [class.kiosk--chrome-tabs]="creditsDockTabsLayout"
+  [class.kiosk--fit-screen]="fitScreenLayout"
+>
   <div class="viewport">
-    <!-- INFO (clock + meteo) -->
-    <div class="info-kiosk">
-      <div class="clock">🕒 {{ currentTime }}</div>
-      <div class="date">📅 {{ currentDate }}</div>
-      <div class="weather" *ngIf="weather">
-        🌤️ {{ weather.name }} - {{ weather.weather[0].description }} ({{ weather.main.temp }}°C)
+    <!-- INFO (clock + meteo): fascia “dashboard” touch-friendly -->
+    <div class="info-kiosk info-kiosk--compact kiosk-live-strip">
+      <div class="kiosk-live-strip__clock" aria-live="polite">
+        <div class="kiosk-live-strip__time-card" role="group" aria-labelledby="kiosk-live-time-label">
+          <span id="kiosk-live-time-label" class="kiosk-live-strip__time-eyebrow">Ora</span>
+          <div class="kiosk-live-strip__time-row">
+            <span class="kiosk-live-strip__clock-icon" aria-hidden="true">🕒</span>
+            <div class="clock">{{ currentTime }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="kiosk-live-strip__meta">
+        <div class="kiosk-live-strip__pill kiosk-live-strip__pill--date">
+          <span class="kiosk-live-strip__emoji" aria-hidden="true">📅</span>
+          <span class="date">{{ currentDate }}</span>
+        </div>
+        <div class="kiosk-live-strip__pill kiosk-live-strip__pill--weather" *ngIf="weather">
+          <div class="weather" role="status" aria-live="polite">
+            <span class="weather__emoji" aria-hidden="true">🌤️</span>
+            <div class="weather__body">
+              <span class="weather__loc">CASTELRAIMONDO</span>
+              <span class="weather__desc">{{ weather.weather[0].description }}</span>
+            </div>
+            <div class="weather__temp-block">
+              <span class="weather__temp-value">{{ weather.main.temp | number: '1.0-1' }}</span>
+              <span class="weather__temp-unit">°C</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- SLIDES -->
     <div class="slide-container">
-      <!-- SLIDE 1: Carosello poster/video -->
+      <!-- SLIDE 1: Carosello poster (1 poster = 1 attività, tap → dettaglio interno) -->
       <section #firstSlide class="slide slide-ads">
-        <div class="ads-carousel">
-          <div
-            #adsTrack
-            class="ads-track"
-            (scroll)="onAdsScroll()"
-            (pointerdown)="$event.stopPropagation()"
-            (touchstart)="$event.stopPropagation()"
-          >
-            <figure
-              class="ads-item"
-              *ngFor="let ad of ads; let i = index"
-              (click)="onAdClick(ad, $event)"
+        <div class="poster-home-shell">
+          <h3 class="poster-home-title" aria-label="Sezione poster home">Poster Home</h3>
+          <!--
+            Linee guida asset poster (per grafica / comunicazione):
+            - Formato consigliato: verticale 4:5 (es. 1440×1800 px)
+            - Minimo accettabile: 1080×1350 px
+            - Safe area interna ~10% dai bordi (testo non attaccato ai bordi)
+            - object-fit: contain nel totem per evitare tagli su immagini leggermente diverse
+          -->
+          <div class="ads-carousel poster-carousel">
+            <div
+              #adsTrack
+              class="ads-track"
+              (scroll)="onAdsScroll()"
+              (pointerdown)="$event.stopPropagation()"
+              (touchstart)="$event.stopPropagation()"
             >
-              <!-- IMMAGINE -->
-              <img
-                *ngIf="ad.kind === 'image'; else videoTpl"
-                [src]="ad.src"
-                (error)="removeBrokenAd(i)"
-                alt="Promozione"
-                loading="eager"
-              />
-
-              <!-- VIDEO -->
-              <ng-template #videoTpl>
-                <video
-                  #adVideo
-                  class="ad-video"
-                  [src]="ad.src"
-                  [poster]="ad.poster || null"
-                  preload="auto"
-                  muted
-                  playsinline
-                  webkit-playsinline
-                  [attr.autoplay]="isClickToPlayVideo(i) ? null : ''"
-                  (loadedmetadata)="onAdVideoMeta(i, $event)"
-                  (ended)="onAdVideoEnded(i)"
-                  (error)="removeBrokenAd(i)"
-                ></video>
+              <figure
+                class="ads-item poster-card"
+                *ngFor="let ad of ads; let i = index"
+                (click)="onAdClick(ad, $event)"
+                (keydown.enter)="onAdClick(ad, $event)"
+                role="button"
+                tabindex="0"
+                [attr.aria-label]="'Poster attività, slide ' + (i + 1) + ' di ' + ads.length"
+              >
+                <!-- IMMAGINE -->
+                <img
+                  *ngIf="ad.kind === 'image'; else videoTpl"
+                  [src]="assetUrl(ad.src)"
+                  (error)="onPosterImageError(i)"
+                  alt="Poster attività"
+                  loading="eager"
+                  decoding="async"
+                  draggable="false"
+                />
                 <div
-                  *ngIf="i === adsIndex && isClickToPlayVideo(i) && adsShowPlayBtn"
-                  class="ads-play-overlay"
-                  (click)="playClickToPlayAd(); $event.stopPropagation()"
+                  class="poster-caption"
+                  *ngIf="ad.kind === 'image' && (ad.businessName || ad.title || ad.subtitle)"
                 >
-                  <ion-button fill="clear" size="large" class="ads-play-btn">
-                    <ion-icon name="play-circle"></ion-icon>
-                  </ion-button>
+                  <span class="poster-caption__name" *ngIf="ad.businessName">{{ ad.businessName }}</span>
+                  <span class="poster-caption__title" *ngIf="showPosterCaptionTitle(ad)">{{ ad.title }}</span>
+                  <span class="poster-caption__sub" *ngIf="showPosterCaptionSubtitle(ad)">{{ ad.subtitle }}</span>
+                  <span class="poster-caption__sub" *ngIf="ad.uploadedBy">upload by: {{ ad.uploadedBy }}</span>
                 </div>
-              </ng-template>
-            </figure>
+
+                <!-- VIDEO (legacy / fallback: raramente usato per i poster home) -->
+                <ng-template #videoTpl>
+                  <video
+                    #adVideo
+                    class="ad-video"
+                    [src]="assetUrl(ad.src)"
+                    [poster]="ad.poster || null"
+                    preload="metadata"
+                    muted
+                    playsinline
+                    webkit-playsinline
+                    [attr.autoplay]="isClickToPlayVideo(i) ? null : ''"
+                    (loadedmetadata)="onAdVideoMeta(i, $event)"
+                    (ended)="onAdVideoEnded(i)"
+                    (error)="removeBrokenAd(i)"
+                  ></video>
+                  <div
+                    *ngIf="i === adsIndex && isClickToPlayVideo(i) && adsShowPlayBtn"
+                    class="ads-play-overlay"
+                    (click)="playClickToPlayAd(); $event.stopPropagation()"
+                  >
+                    <ion-button fill="clear" size="large" class="ads-play-btn">
+                      <ion-icon name="play-circle"></ion-icon>
+                    </ion-button>
+                  </div>
+                </ng-template>
+              </figure>
+            </div>
+
+            <div class="ads-dots ads-dots--elevated ads-dots--lux" *ngIf="ads.length > 1" role="tablist" aria-label="Indicatori poster">
+              <span
+                *ngFor="let _ of ads; let i = index"
+                class="dot"
+                [class.active]="i === adsIndex"
+                (click)="goToAd(i)"
+                role="tab"
+                [attr.aria-selected]="i === adsIndex"
+                [attr.aria-label]="'Slide ' + (i + 1) + ' di ' + ads.length"
+              ></span>
+            </div>
+
+            <div class="ads-cta" *ngIf="showAdsAudioCta">
+              <ion-button size="large" color="primary" (click)="toggleAdsAudio()">
+                🔊 Audio ON
+              </ion-button>
+            </div>
           </div>
 
-          <div class="ads-dots" *ngIf="ads.length > 1">
-            <span
-              *ngFor="let _ of ads; let i = index"
-              class="dot"
-              [class.active]="i === adsIndex"
-              (click)="goToAd(i)"
-            ></span>
+          <!-- Hint nel flusso (sotto poster, sopra “In evidenza”); crediti = dock fisso sopra tab/safe-area -->
+          <div class="kiosk-home-poster-meta">
+            <p class="poster-hint poster-hint--inline" *ngIf="isFirstSlideActive">
+              <span class="poster-hint__icon" aria-hidden="true">👆</span>
+              <span class="poster-hint__text">Tocca il poster per vedere i dettagli dell'attività</span>
+            </p>
           </div>
 
-          <!-- CTA audio (se il browser chiede gesto utente) -->
-          <div class="ads-cta" *ngIf="showAdsAudioCta">
-            <ion-button size="large" color="primary" (click)="toggleAdsAudio()">
-              🔊 Audio ON
-            </ion-button>
-          </div>
+          <!--
+            Banner orizzontali separati (GET /api/public-kiosk/promo-banners quando useKioskPublicApi).
+            Tap → modal a schermo intero; da lì “Scheda attività” se c’è slug interno (CTA esterne senza slug → toast 🔒).
+          -->
+          <section
+            *ngIf="promoAds.length"
+            class="kiosk-promo-strip-wrap"
+            aria-label="Messaggi promozionali dalle attività"
+          >
+            <h3 class="kiosk-promo-strip__title">In evidenza</h3>
+            <div
+              #promoStrip
+              class="kiosk-promo-strip"
+              role="list"
+              (pointerdown)="onPromoStripInteraction(); $event.stopPropagation()"
+              (pointermove)="onPromoStripInteraction(); $event.stopPropagation()"
+              (touchstart)="onPromoStripInteraction(); $event.stopPropagation()"
+              (touchmove)="onPromoStripInteraction(); $event.stopPropagation()"
+              (wheel)="onPromoStripInteraction()"
+            >
+              <button
+                type="button"
+                *ngFor="let p of promoAds"
+                class="kiosk-promo-card"
+                (click)="onPromoClick(p, $event)"
+                role="listitem"
+              >
+                <div class="kiosk-promo-card__frame">
+                  <img [src]="assetUrl(p.src)" alt="" loading="lazy" decoding="async" draggable="false" />
+                </div>
+                <div class="kiosk-promo-card__meta" *ngIf="p.businessName || p.title || p.subtitle">
+                  <span class="kiosk-promo-card__biz" *ngIf="p.businessName">{{ p.businessName }}</span>
+                  <span class="kiosk-promo-card__line" *ngIf="p.title">{{ p.title }}</span>
+                  <span class="kiosk-promo-card__sub" *ngIf="p.subtitle">{{ p.subtitle }}</span>
+                </div>
+              </button>
+            </div>
+            <div
+              class="promo-strip-dots ads-dots ads-dots--elevated ads-dots--lux"
+              *ngIf="promoAds.length > 1"
+              role="tablist"
+              aria-label="Indicatori messaggi in evidenza"
+            >
+              <span
+                *ngFor="let _ of promoAds; let pi = index"
+                class="dot"
+                [class.active]="pi === promoStripActiveIndex"
+                (click)="goToPromoStripIndex(pi)"
+                role="tab"
+                [attr.aria-selected]="pi === promoStripActiveIndex"
+                [attr.aria-label]="'Messaggio ' + (pi + 1) + ' di ' + promoAds.length"
+              ></span>
+            </div>
+          </section>
         </div>
       </section>
 
@@ -128,7 +256,7 @@
         </video>
 
         <div class="video-chrome">
-          <ion-button fill="clear" size="large" (click)="toggleMenu()" aria-label="Apri menu">
+          <ion-button fill="clear" size="large" class="video-touch-btn" (click)="toggleMenu()" aria-label="Apri menu">
             <ion-icon [ios]="'menu-outline'" [md]="'menu-outline'"></ion-icon>
           </ion-button>
         </div>
@@ -150,18 +278,21 @@
       </section>
     </div>
 
-    <!-- FOOTER GRAFICO *DENTRO* IL CONTENT (non è più ion-footer) -->
     <div class="pbc-footer-shell">
       <ion-card class="pbc-card" mode="md">
         <ion-card-content class="pbc-wrap">
-          <img src="assets/img/pbc.png"   alt="PBC - Grafica sito"   class="brand-logo" />
+          <img src="assets/img/pbc.png" alt="PBC - Grafica sito" class="brand-logo" />
           <img src="assets/img/endri.png" alt="Endri - Grafica sito" class="brand-logo" />
         </ion-card-content>
       </ion-card>
+      <div class="pbc-footer-meta" aria-label="Crediti e versione app">
+        <span class="pbc-footer-credit" title="Sviluppatore">Realizzato da Endri Azizi</span>
+        <div class="build-version pbc-footer-build">v{{ appVersion }}</div>
+      </div>
     </div>
   </div>
 
-  <!-- Modal immagine -->
+  <!-- Modal immagine (legacy: non usato dal tap poster; mantenuto per eventuali estensioni) -->
   <ion-modal
     [isOpen]="isImageModalOpen"
     (didDismiss)="closeImageFull()"
@@ -175,53 +306,214 @@
     </ng-template>
   </ion-modal>
 
-  <!-- Modal sito esterno (es. Lanterna – in-app) -->
+  <!-- “In evidenza”: banner orizzontale a schermo intero (promo da GET /promo-banners) -->
   <ion-modal
-    [isOpen]="isWebViewOpen"
-    (didDismiss)="closeWebView()"
-    class="webview-modal"
+    [isOpen]="promoFullscreenOpen"
+    (didDismiss)="closePromoFullscreen()"
+    class="promo-fullscreen-modal"
     backdropDismiss="true"
   >
     <ng-template>
-      <div class="webview-modal-wrap">
-        <div class="webview-toolbar">
-          <ion-button fill="clear" (click)="closeWebView()" class="webview-back">
-            ← Torna all'app
-          </ion-button>
-          <ion-button fill="outline" size="small" (click)="openWebViewInNewTab()" class="webview-newtab">
-            Apri in nuova scheda
-          </ion-button>
+      <div class="promo-fullscreen-shell" role="dialog" aria-modal="true" aria-label="Anteprima messaggio">
+        <button
+          type="button"
+          class="promo-fullscreen-close"
+          (click)="closePromoFullscreen($event, 'chiudi-top')"
+          aria-label="Chiudi"
+        >
+          Chiudi
+        </button>
+        <div
+          class="promo-fullscreen-stage"
+          *ngIf="promoFullscreenItem"
+          (touchstart)="onFullscreenTouchStart($event)"
+          (touchend)="onPromoFullscreenTouchEnd($event)"
+        >
+          <img
+            class="promo-fullscreen-img"
+            [src]="assetUrl(promoFullscreenItem.src)"
+            [alt]="promoFullscreenItem.title || promoFullscreenItem.businessName || 'Banner'"
+            draggable="false"
+          />
         </div>
-        <iframe
-          *ngIf="webViewSafeUrl"
-          [src]="webViewSafeUrl"
-          class="webview-iframe"
-          title="Prenota Pizzeria La Lanterna"
-        ></iframe>
+        <footer class="promo-fullscreen-footer" *ngIf="promoFullscreenItem">
+          <div class="promo-fullscreen-caption">
+            <span class="promo-fullscreen-biz" *ngIf="promoFullscreenItem.businessName">{{
+              promoFullscreenItem.businessName
+            }}</span>
+            <span class="promo-fullscreen-title" *ngIf="promoFullscreenItem.title">{{ promoFullscreenItem.title }}</span>
+            <span class="promo-fullscreen-sub" *ngIf="promoFullscreenItem.subtitle">{{
+              promoFullscreenItem.subtitle
+            }}</span>
+          </div>
+          <div class="promo-fullscreen-btns">
+            <ion-button
+              type="button"
+              expand="block"
+              fill="outline"
+              color="medium"
+              class="promo-fs-btn"
+              (click)="closePromoFullscreen($event, 'esci-footer')"
+              >Esci</ion-button
+            >
+            <ion-button
+              type="button"
+              expand="block"
+              color="primary"
+              class="promo-fs-btn"
+              *ngIf="promoFullscreenNavSlug"
+              (click)="goPromoDetailFromFullscreen($event, 'scheda-attivita-footer')"
+              >Scheda attività</ion-button
+            >
+          </div>
+        </footer>
       </div>
     </ng-template>
   </ion-modal>
 
-  <!-- Modal Assistenza -->
+  <!-- Poster attività: anteprima full screen + accesso alla scheda attività -->
   <ion-modal
-    [isOpen]="supportModalOpen"
-    (didDismiss)="supportModalOpen = false"
-    class="support-modal"
+    [isOpen]="posterFullscreenOpen"
+    (didDismiss)="closePosterFullscreen()"
+    class="promo-fullscreen-modal"
     backdropDismiss="true"
   >
     <ng-template>
-      <div class="support-modal-wrap" (click)="$event.stopPropagation()">
-        <h3>Assistenza</h3>
-        <img [src]="supportQrSrc" alt="QR WhatsApp" class="support-qr" />
-        <p class="support-note">
-          Scansiona il QR con lo smartphone per aprire WhatsApp<br />
-          oppure usa il numero <b>+39 389 986 8381</b>.
-        </p>
-        <div class="support-actions">
-          <ion-button size="small" (click)="copyWhatsAppLink()">Copia link</ion-button>
-          <ion-button size="small" fill="outline" (click)="supportModalOpen = false">Chiudi</ion-button>
+      <div class="promo-fullscreen-shell" role="dialog" aria-modal="true" aria-label="Anteprima poster attività">
+        <button
+          type="button"
+          class="promo-fullscreen-close"
+          (click)="closePosterFullscreen($event)"
+          aria-label="Chiudi"
+        >
+          Chiudi
+        </button>
+        <div
+          class="promo-fullscreen-stage"
+          *ngIf="posterFullscreenItem"
+          (touchstart)="onFullscreenTouchStart($event)"
+          (touchend)="onPosterFullscreenTouchEnd($event)"
+        >
+          <img
+            class="promo-fullscreen-img"
+            [src]="assetUrl(posterFullscreenItem.src)"
+            [alt]="posterFullscreenItem.title || posterFullscreenItem.businessName || 'Poster attività'"
+            draggable="false"
+          />
         </div>
+        <footer class="promo-fullscreen-footer" *ngIf="posterFullscreenItem">
+          <div class="promo-fullscreen-caption">
+            <span class="promo-fullscreen-biz" *ngIf="posterFullscreenItem.businessName">{{
+              posterFullscreenItem.businessName
+            }}</span>
+            <span class="promo-fullscreen-title" *ngIf="posterFullscreenItem.title">{{ posterFullscreenItem.title }}</span>
+            <span class="promo-fullscreen-sub" *ngIf="posterFullscreenItem.subtitle">{{
+              posterFullscreenItem.subtitle
+            }}</span>
+            <span class="promo-fullscreen-sub" *ngIf="posterFullscreenItem.uploadedBy"
+              >upload by: {{ posterFullscreenItem.uploadedBy }}</span
+            >
+          </div>
+          <div class="promo-fullscreen-btns">
+            <ion-button type="button" expand="block" fill="outline" color="medium" class="promo-fs-btn" (click)="closePosterFullscreen($event)"
+              >Esci</ion-button
+            >
+            <ion-button
+              type="button"
+              expand="block"
+              color="primary"
+              class="promo-fs-btn"
+              *ngIf="posterFullscreenNavSlug"
+              (click)="goPosterDetailFromFullscreen($event)"
+              >Scheda attività</ion-button
+            >
+          </div>
+        </footer>
       </div>
     </ng-template>
   </ion-modal>
 </ion-content>
+
+<!--
+  Modal Assistenza WhatsApp: FUORI ion-content così lo stacking copre ion-tab-bar (fratello di ion-router-outlet).
+-->
+<ion-modal
+  [isOpen]="supportModalOpen"
+  (didDismiss)="supportModalOpen = false"
+  class="support-modal"
+  backdropDismiss="true"
+>
+  <ng-template>
+    <div class="support-modal-wrap" (click)="$event.stopPropagation()">
+      <h3>Assistenza WhatsApp</h3>
+      <p class="support-lead">
+        Scansiona il codice QR con il telefono per aprire una chat già impostata.
+      </p>
+      <div class="support-qr-frame">
+        <div class="support-qr-skel" *ngIf="supportQrLoading || !supportQrSrc" aria-hidden="true">
+          <span class="support-qr-skel__pulse"></span>
+          <span class="support-qr-skel__label">Generazione QR…</span>
+        </div>
+        <img
+          *ngIf="supportQrSrc"
+          [src]="supportQrSrc"
+          alt="Codice QR per aprire WhatsApp"
+          class="support-qr"
+          width="240"
+          height="240"
+          decoding="async"
+        />
+      </div>
+      <p class="support-note">
+        Oppure chiama o scrivi al <b>+39 389 986 8381</b>.
+      </p>
+      <div class="support-actions">
+        <ion-button expand="block" size="default" (click)="copyWhatsAppLink()">Copia link chat</ion-button>
+        <ion-button expand="block" size="default" fill="outline" (click)="closeSupportModal($event, 'support-modal-close-btn')">Chiudi</ion-button>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
+
+<!--
+  Fascia WhatsApp + dock crediti: FUORI ion-content così position:fixed è relativo al viewport,
+  non al box scroll (prima il banner appariva “a metà schermo”).
+-->
+<!-- Crediti: sempre visibili (fixed sopra safe-area o tab bar; sale se banner assistenza aperto) -->
+<div
+  class="kiosk-app-credits-dock"
+  [class.kiosk-app-credits-dock--tabs]="creditsDockTabsLayout"
+  [class.kiosk-app-credits-dock--lift-support]="supportBannerVisible"
+>
+  <p class="kiosk-app-credits kiosk-app-credits--fixed" aria-label="Crediti e versione app">
+    Realizzato da <strong>Endri Azizi</strong><span class="kiosk-app-credits__sep" aria-hidden="true"> · </span><span class="kiosk-app-credits__ver">v{{ appVersion }}</span>
+  </p>
+</div>
+
+<!-- Assistenza WhatsApp: fascia sopra tab bar (mobile-first, non toast) -->
+<div
+  class="kiosk-support-banner"
+  *ngIf="supportBannerVisible"
+  role="status"
+  aria-live="polite"
+>
+  <div class="kiosk-support-banner__inner">
+    <p class="kiosk-support-banner__text">
+      <span class="kiosk-support-banner__wa" aria-hidden="true">💬</span>
+      Problemi o errori sul totem? Scrivici su <strong>WhatsApp</strong>
+      <span class="kiosk-support-banner__num">+39 389 986 8381</span>
+    </p>
+    <div class="kiosk-support-banner__actions">
+      <ion-button
+        size="small"
+        class="kiosk-support-banner__btn-primary"
+        (click)="openWhatsAppSafe(); dismissSupportBanner()"
+      >
+        QR codice
+      </ion-button>
+      <ion-button size="small" fill="clear" class="kiosk-support-banner__btn-dismiss" (click)="dismissSupportBanner()">
+        Chiudi
+      </ion-button>
+    </div>
+  </div>
+</div>

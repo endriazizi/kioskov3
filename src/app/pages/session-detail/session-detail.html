@@ -21,6 +21,11 @@
 <ion-content>
   @if (session) {
   <div class="ion-padding">
+    @if (session.posterUrl) {
+    <div class="session-detail-poster">
+      <img [src]="session.posterUrl" [alt]="session.name" />
+    </div>
+    }
     <h1>{{session.name}}</h1>
     @for (track of session?.tracks; track $index) {
     <span [class]="'session-track-'+track.toLowerCase()">{{track}}</span>

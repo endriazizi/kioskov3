@@ -5,19 +5,41 @@ export interface Speaker {
   instagram: string;
   twitter: string;
   about: string;
+  /** Tagline breve (solo alcuni speaker in data.json) */
+  about_1?: string;
   title: string;
   location: string;
   email: string;
   phone: string;
   sito:  string;
-  foto: string;
+  /** legacy / JSON locale: può essere stringa o elenco path */
+  foto: string | string[];
 
   category: string;
   description: string;
   address: string;
-  openingHours: string
+  openingHours: string;
   id: string;
+  /** Slug API / portale business — allineato a enea_be kiosk_businesses.slug */
+  slug?: string;
   sessions?: Session[];
+  /** Copertina hero (API kiosk) */
+  coverUrl?: string;
+  /** Galleria immagini (API kiosk) */
+  gallery?: string[];
+  /** Coordinate mappa (API kiosk / DB) */
+  lat?: number;
+  lng?: number;
+  /** Piano listing (API: free / premium) */
+  listingTier?: string;
+  isPremium?: boolean;
+  /** Immagine carosello home (JSON locale); priorità su foto/gallery */
+  posterUrl?: string;
+  /** Icona marker mappa (API: approvata da admin) */
+  mapMarkerUrl?: string;
+  showInPoi?: boolean;
+  showInMap?: boolean;
+  showInHome?: boolean;
 }
 
 export interface Session {
@@ -31,6 +53,10 @@ export interface Session {
   tracks: string[];
   id: string;
   speakers?: Speaker[];
+  /** Locandina (URL risolto) — eventi comunali da API */
+  posterUrl?: string;
+  eventDateIso?: string;
+  eventDateEndIso?: string;
 }
 
 export interface Group {
@@ -51,11 +77,13 @@ export interface Track {
 }
 
 export interface MapLocation {
+  id?: number;
   name: string;
   lat: number;
   lng: number;
-  center?: boolean;   
-  icon?: string;     
+  center?: boolean;
+  icon?: string;
+  slug?: string;
 }
 
 export interface ConferenceData {
@@ -70,6 +98,9 @@ export interface Location {
   name: string;
   lat: number;
   lng: number;
-  center?: boolean;   
-  icon?: string;      
+  center?: boolean;
+  /** URL logo marker (Leaflet divIcon) */
+  icon?: string;
+  /** Slug per popup → dettaglio */
+  slug?: string;
 }

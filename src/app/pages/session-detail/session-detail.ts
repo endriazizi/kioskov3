@@ -11,7 +11,8 @@ import {
   IonLabel,
   IonList,
   IonText,
-  IonToolbar, IonTitle, IonPopover, IonDatetime } from '@ionic/angular/standalone';
+  IonToolbar,
+} from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   cloudDownload,
@@ -22,6 +23,7 @@ import {
 } from 'ionicons/icons';
 
 import { Session } from '../../interfaces/conference.interfaces';
+import { kioskDevLog } from '../../utils/kiosk-dev-console';
 import { ConferenceService } from '../../providers/conference.service';
 import { UserService } from '../../providers/user.service';
 
@@ -29,7 +31,7 @@ import { UserService } from '../../providers/user.service';
     selector: 'page-session-detail',
     styleUrls: ['./session-detail.scss'],
     templateUrl: 'session-detail.html',
-    imports: [IonDatetime, IonPopover, IonTitle, 
+    imports: [
         IonHeader,
         IonToolbar,
         IonButtons,
@@ -68,7 +70,11 @@ export class SessionDetailPage {
         for (const group of data.schedule[0].groups) {
           if (group && group.sessions) {
             for (const session of group.sessions) {
-              if (session && session.id === sessionId) {
+              if (
+                session &&
+                sessionId != null &&
+                String(session.id) === String(sessionId)
+              ) {
                 this.session = session;
 
                 this.isFavorite = this.userService.hasFavorite(
@@ -89,7 +95,7 @@ export class SessionDetailPage {
   }
 
   sessionClick(item: string) {
-    console.log('Clicked', item);
+    kioskDevLog('🧭 [SessionDetail] click', item);
   }
 
   toggleFavorite() {
@@ -104,6 +110,6 @@ export class SessionDetailPage {
   }
 
   shareSession() {
-    console.log('Clicked share session');
+    kioskDevLog('🧭 [SessionDetail] share click');
   }
 }

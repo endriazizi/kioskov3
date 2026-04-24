@@ -17,7 +17,7 @@
       [(ngModel)]="queryText"
       (ionInput)="updateSchedule()"
       (ionCancel)="showSearchbar = false"
-      placeholder="Search"
+      placeholder="Cerca"
     ></ion-searchbar>
     }
     <ion-buttons slot="end">
@@ -45,15 +45,25 @@
 </ion-header>
 
 <ion-content fullscreen="true">
+  @if (whatsappQrDataUrl) {
+  <div class="wa-suggest-card">
+    <div class="wa-suggest-text">
+      <h3>Segnala un evento</h3>
+      <p>Scansiona il QR con il telefono per inviare una segnalazione WhatsApp al Comune.</p>
+    </div>
+    <img [src]="whatsappQrDataUrl" alt="QR WhatsApp segnalazioni eventi" class="wa-qr" width="220" height="220" />
+  </div>
+  }
+
   <ion-header collapse="condense">
     <ion-toolbar>
-      <ion-title size="large">Schedule</ion-title>
+      <ion-title size="large">Eventi</ion-title>
     </ion-toolbar>
     <ion-toolbar>
       <ion-searchbar
         [(ngModel)]="queryText"
         (ionInput)="updateSchedule()"
-        placeholder="Search"
+        placeholder="Cerca"
       ></ion-searchbar>
     </ion-toolbar>
   </ion-header>
@@ -69,29 +79,40 @@
       <ion-item-sliding
         #slidingItem
         [attr.track]="session.tracks[0] | lowercase"
+        [attr.data-event-date]="session.eventDateIso || null"
+        [attr.data-session-scroll]="session.id"
+        [class.event-today]="isTodaySession(session)"
+        [class.event-next-up]="highlightUpcomingSessionId === session.id"
         [hidden]="session.hide"
       >
-        <!--
-          INTERVENTO: disattivo il click sulle card dell’elenco.
-          - NIENTE routerLink (rimosso)
-          - Forzo la rimozione della freccia: [detail]="false"
-          - Impedisco qualsiasi tap: (click) con preventDefault + stopPropagation
-          - Mantengo lo sliding e le opzioni a destra (Favorite/Remove)
-          Per riattivare in futuro, sostituisci questo <ion-item> con:
-            <ion-item [routerLink]="['/app/tabs/schedule/session', session.id]">
-        -->
         <ion-item
           class="session-row"
-          [detail]="false"
-          [button]="false"
-          (click)="$event.preventDefault(); $event.stopPropagation(); false"
+          [detail]="true"
+          [button]="true"
+          (click)="openSessionDetail(session)"
         >
+          <div class="session-poster" slot="start">
+            @if (session.posterUrl) {
+            <img [src]="session.posterUrl" alt="" />
+            } @else {
+            <img
+              src="assets/img/kiosk-poster-placeholder.svg"
+              alt=""
+            />
+            }
+          </div>
           <ion-label>
             <h3>{{session.name}}</h3>
-            <p>
-              {{session.timeStart}} &mdash; {{session.timeEnd}}:
-              {{session.location}}
+            <p class="session-meta">
+              <span class="session-time">{{ session.timeStart }}</span>
+              @if (session.timeEnd) {
+              <span> — {{ session.timeEnd }}</span>
+              }
+              <span> · {{ session.location }}</span>
             </p>
+            @if (session.description) {
+            <p class="session-desc">{{ session.description }}</p>
+            }
           </ion-label>
         </ion-item>
 
@@ -119,26 +140,6 @@
   </ion-list>
 
   <ion-list-header [hidden]="shownSessions > 0">
-    No Sessions Found
+    Nessun evento in elenco
   </ion-list-header>
-
-  <ion-fab slot="fixed" vertical="bottom" horizontal="end" #fab>
-    <ion-fab-button>
-      <ion-icon name="share-social"></ion-icon>
-    </ion-fab-button>
-    <ion-fab-list side="top">
-      <ion-fab-button color="vimeo" (click)="openSocial('Vimeo', fab)">
-        <ion-icon name="logo-vimeo"></ion-icon>
-      </ion-fab-button>
-      <ion-fab-button color="instagram" (click)="openSocial('Instagram', fab)">
-        <ion-icon name="logo-instagram"></ion-icon>
-      </ion-fab-button>
-      <ion-fab-button color="twitter" (click)="openSocial('Twitter', fab)">
-        <ion-icon name="logo-twitter"></ion-icon>
-      </ion-fab-button>
-      <ion-fab-button color="facebook" (click)="openSocial('Facebook', fab)">
-        <ion-icon name="logo-facebook"></ion-icon>
-      </ion-fab-button>
-    </ion-fab-list>
-  </ion-fab>
 </ion-content>

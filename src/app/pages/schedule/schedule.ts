@@ -1,18 +1,10 @@
-import { Component, OnInit, ViewChild, inject } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-
+import { Component, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import QRCode from 'qrcode';
 import { addIcons } from 'ionicons';
-import {
-  logoFacebook,
-  logoInstagram,
-  logoTwitter,
-  logoVimeo,
-  options,
-  search,
-  shareSocial,
-} from 'ionicons/icons';
+import { options, search } from 'ionicons/icons';
 
 import { LowerCasePipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
   AlertController,
@@ -20,9 +12,6 @@ import {
   IonButton,
   IonButtons,
   IonContent,
-  IonFab,
-  IonFabButton,
-  IonFabList,
   IonHeader,
   IonIcon,
   IonItemDivider,
@@ -40,19 +29,20 @@ import {
   IonSegmentButton,
   IonTitle,
   IonToolbar,
-  LoadingController,
   ModalController,
   ToastController, IonItem } from '@ionic/angular/standalone';
 import { Group, Session } from '../../interfaces/conference.interfaces';
 import { ConferenceService } from '../../providers/conference.service';
 import { UserService } from '../../providers/user.service';
 import { ScheduleFilterPage } from '../schedule-filter/schedule-filter';
+import { environment } from '../../../environments/environment';
+import { kioskDevWarn } from '../../utils/kiosk-dev-console';
 
 @Component({
     selector: 'page-schedule',
     templateUrl: 'schedule.html',
     styleUrls: ['./schedule.scss'],
-    imports: [IonItem, 
+    imports: [IonItem,
         IonHeader,
         IonToolbar,
         IonButtons,
@@ -65,35 +55,28 @@ import { ScheduleFilterPage } from '../schedule-filter/schedule-filter';
         IonIcon,
         IonList,
         IonListHeader,
-        IonFab,
-        IonFabButton,
-        IonFabList,
         FormsModule,
         IonItemSliding,
         LowerCasePipe,
-        RouterLink,
         IonItemGroup,
         IonItemDivider,
         IonItemOption,
         IonItemOptions,
         IonLabel,
         IonMenuButton,
-        IonItem
     ],
     providers: [
         ModalController,
         AlertController,
-        LoadingController,
         ToastController,
         Config,
     ]
 })
 export class SchedulePage implements OnInit {
+  private router = inject(Router);
   alertCtrl = inject(AlertController);
   confService = inject(ConferenceService);
-  loadingCtrl = inject(LoadingController);
   modalCtrl = inject(ModalController);
-  router = inject(Router);
   routerOutlet = inject(IonRouterOutlet);
   toastCtrl = inject(ToastController);
   user = inject(UserService);
@@ -111,22 +94,98 @@ export class SchedulePage implements OnInit {
   groups: Group[] = [];
   confDate: string;
   showSearchbar: boolean;
+  /** QR wa.me per segnalazioni eventi (se `eventsWhatsAppNumber` è configurato). */
+  whatsappQrDataUrl = '';
+  /** Primo evento con data ≥ oggi (locale), tra le righe attualmente visibili (filtri/segmento). */
+  highlightUpcomingSessionId: string | null = null;
+  private scrollFirstUpcomingTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    addIcons({
-      search,
-      options,
-      shareSocial,
-      logoVimeo,
-      logoInstagram,
-      logoTwitter,
-      logoFacebook,
-    });
+    addIcons({ search, options });
   }
 
   ngOnInit() {
     this.updateSchedule();
     this.ios = this.config.get('mode') === 'ios';
+    void this.buildWhatsappQr();
+  }
+
+  /** Navigazione esplicita: evita edge case routerLink/anchor vs whitelist kiosk su totem touch. */
+  openSessionDetail(session: Session): void {
+    void this.router.navigate(['/app/tabs/schedule/session', session.id]);
+  }
+
+  ngOnDestroy(): void {
+    if (this.scrollFirstUpcomingTimer) {
+      clearTimeout(this.scrollFirstUpcomingTimer);
+      this.scrollFirstUpcomingTimer = null;
+    }
+  }
+
+  private whatsAppSuggestUrl(): string {
+    const raw = String(environment.eventsWhatsAppNumber || '').replace(/\D/g, '');
+    if (!raw.length) return '';
+    const text = encodeURIComponent(
+      environment.eventsWhatsAppPrefillText ||
+        'Segnala un evento per il calendario comunale: '
+    );
+    return `https://wa.me/${raw}?text=${text}`;
+  }
+
+  private async buildWhatsappQr(): Promise<void> {
+    const url = this.whatsAppSuggestUrl();
+    if (!url) return;
+    try {
+      this.whatsappQrDataUrl = await QRCode.toDataURL(url, {
+        width: 220,
+        margin: 1,
+        color: { dark: '#075e54ff', light: '#ffffffff' },
+      });
+    } catch (e) {
+      kioskDevWarn('⚠️ [Schedule] QR WhatsApp', e);
+    }
+  }
+
+  private todayIsoLocal(): string {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  isTodaySession(session: Session): boolean {
+    return !!session.eventDateIso && session.eventDateIso === this.todayIsoLocal();
+  }
+
+  /**
+   * Primo evento “disponibile”: prima data ISO ≥ oggi (timezone locale), rispettando l’ordine
+   * dei gruppi (giorni) e delle sessioni nel gruppo (già ordinato per ora).
+   */
+  private findFirstUpcomingSessionId(groups: Group[]): string | null {
+    const today = this.todayIsoLocal();
+    for (const g of groups) {
+      if (g.hide) continue;
+      for (const s of g.sessions) {
+        if (s.hide) continue;
+        const d = s.eventDateIso;
+        if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+        if (d >= today) return s.id;
+      }
+    }
+    return null;
+  }
+
+  private scheduleScrollToFirstUpcoming(): void {
+    if (this.scrollFirstUpcomingTimer) clearTimeout(this.scrollFirstUpcomingTimer);
+    this.scrollFirstUpcomingTimer = setTimeout(() => {
+      const id = this.highlightUpcomingSessionId;
+      if (!id) return;
+      const el = document.querySelector(
+        `ion-item-sliding[data-session-scroll="${CSS.escape(id)}"]`
+      ) as HTMLElement | null;
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 520);
   }
 
   updateSchedule() {
@@ -142,9 +201,11 @@ export class SchedulePage implements OnInit {
         this.excludeTrackNames,
         this.segment
       )
-      .subscribe(data => {
+      .subscribe((data) => {
         this.shownSessions = data.shownSessions;
         this.groups = data.groups;
+        this.highlightUpcomingSessionId = this.findFirstUpcomingSessionId(data.groups);
+        this.scheduleScrollToFirstUpcoming();
       });
   }
 
@@ -223,15 +284,5 @@ export class SchedulePage implements OnInit {
     });
     // now present the alert on top of all other content
     await alert.present();
-  }
-
-  async openSocial(network: string, fab: IonFab) {
-    const loading = await this.loadingCtrl.create({
-      message: `Posting to ${network}`,
-      duration: Math.random() * 1000 + 500,
-    });
-    await loading.present();
-    await loading.onWillDismiss();
-    fab.close();
   }
 }

@@ -1,7 +1,60 @@
+/* Tab bar totem: altezza generosa, icone leggibili, etichette compatte */
+
+:host {
+  /* Safe area sullo strato crediti sotto; qui solo altezza pulsanti */
+  --kiosk-tab-h: max(60px, 56px);
+}
+
+.kiosk-tab-bar {
+  /* Sopra la striscia crediti (safe area è nel blocco crediti sotto) */
+  bottom: var(--kiosk-credits-strip-total, calc(32px + env(safe-area-inset-bottom, 0px)));
+  height: var(--kiosk-tab-h);
+  min-height: var(--kiosk-tab-h);
+  --background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, #f1f5f9 100%);
+  --border: 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 -12px 36px rgba(15, 23, 42, 0.07);
+  padding-bottom: 6px;
+  z-index: 25;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.kiosk-tab-bar ion-tab-button {
+  --padding-top: 6px;
+  --padding-bottom: 4px;
+  min-height: 56px;
+  max-width: none;
+  flex: 1 1 0;
+}
+
+.kiosk-tab-bar ion-icon {
+  font-size: 24px;
+  margin-bottom: 2px;
+}
+
+.kiosk-tab-bar ion-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  white-space: normal;
+  max-width: 72px;
+  text-align: center;
+}
+
 .tabbar {
   justify-content: center;
 }
 
 .tab-button {
-  max-width: 200px;
+  max-width: none;
+}
+
+@media (min-width: 600px) {
+  .kiosk-tab-bar ion-label {
+    font-size: 11px;
+    max-width: 100px;
+  }
 }

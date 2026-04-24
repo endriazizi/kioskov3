@@ -11,6 +11,8 @@ import {
 } from '@ionic/angular/standalone';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { environment } from '../../../environments/environment';
+import { kioskDevLog } from '../../utils/kiosk-dev-console';
 
 declare var cordova: any;
 
@@ -45,6 +47,13 @@ export class TurismoPage implements OnInit {
   constructor(private router: Router, private sanitizer: DomSanitizer) {}
 
   ngOnInit() {
+    // In kiosk strict non usciamo mai verso browser di sistema: stesso percorso “iframe” anche su device
+    if (environment.kioskStrictMode) {
+      this.isBrowser = true;
+      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.url);
+      kioskDevLog('🧭 [Turismo] kioskStrictMode: iframe in-app, niente ThemeableBrowser/window.open');
+      return;
+    }
     // Browser/PWA → iframe con URL "sanitized"
     if (!(window as any).cordova) {
       this.isBrowser = true;
@@ -81,8 +90,7 @@ export class TurismoPage implements OnInit {
         }
       });
     } catch (e) {
-      // Fallback: se ThemeableBrowser non è disponibile
-      window.open(this.url, '_system');
+      console.warn('🔒 [Turismo] ThemeableBrowser non disponibile — niente window.open in kiosk');
     }
   }
 

@@ -1,26 +1,34 @@
 <ion-tabs>
-  <ion-tab-bar slot="bottom">
-    <ion-tab-button tab="schedule">
+  <!-- Outlet obbligatorio per le route figlie (/home, /schedule, /speakers, …) — senza questo il contenuto può non apparire e la tab bar si comporta in modo errato -->
+  <ion-router-outlet></ion-router-outlet>
+
+  <ion-tab-bar slot="bottom" class="kiosk-tab-bar">
+    <ion-tab-button tab="home" (click)="onTabTap('home', $event)">
+      <ion-icon name="home-outline"></ion-icon>
+      <ion-label>Home Page</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="schedule" (click)="onTabTap('schedule', $event)">
       <ion-icon name="calendar"></ion-icon>
       <ion-label>Eventi</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="speakers">
+    <ion-tab-button tab="speakers" (click)="onTabTap('speakers', $event)">
       <ion-icon name="people"></ion-icon>
       <ion-label>Attività</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="map">
+    <ion-tab-button tab="map" (click)="onTabTap('map', $event)">
       <ion-icon name="location"></ion-icon>
       <ion-label>Mappa</ion-label>
     </ion-tab-button>
 
-        <ion-tab-button tab="turismo">
+    <ion-tab-button tab="turismo" (click)="onTabTap('turismo', $event)">
       <ion-icon name="information-circle"></ion-icon>
       <ion-label>Turismo</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="infiorata">
+    <ion-tab-button tab="infiorata" (click)="onTabTap('infiorata', $event)">
       <ion-icon name="information-circle"></ion-icon>
       <ion-label>Infiorata</ion-label>
     </ion-tab-button>

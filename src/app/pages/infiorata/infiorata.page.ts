@@ -6,6 +6,8 @@ import {
 } from '@ionic/angular/standalone';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { environment } from '../../../environments/environment';
+import { kioskDevLog } from '../../utils/kiosk-dev-console';
 
 declare var cordova: any;
 
@@ -41,6 +43,12 @@ export class InfiorataPage implements OnInit {
   constructor(private router: Router, private sanitizer: DomSanitizer) {}
 
   ngOnInit() {
+    if (environment.kioskStrictMode) {
+      this.isBrowser = true;
+      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.url);
+      kioskDevLog('🧭 [Infiorata] kioskStrictMode: iframe in-app');
+      return;
+    }
     // Browser/PWA → iframe con URL "sanitized"
     if (!(window as any).cordova) {
       this.isBrowser = true;
@@ -79,8 +87,7 @@ export class InfiorataPage implements OnInit {
         }
       });
     } catch (e) {
-      // Fallback: se ThemeableBrowser non è disponibile
-      window.open(this.url, '_system');
+      console.warn('🔒 [Infiorata] niente window.open esterno in modalità kiosk');
     }
   }
 

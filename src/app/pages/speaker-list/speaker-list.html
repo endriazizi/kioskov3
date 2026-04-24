@@ -1,70 +1,89 @@
-<ion-header>
+<ion-header class="speaker-list-header">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-title>Attività</ion-title>
   </ion-toolbar>
+  <ion-toolbar class="speaker-list-toolbar-search">
+    <ion-searchbar
+      class="speaker-search"
+      placeholder="Cerca attività, indirizzo, categoria…"
+      [debounce]="120"
+      [animated]="true"
+      (ionInput)="onSearch($event)"
+      (ionClear)="clearFilters()"
+      enterkeyhint="search"
+      inputmode="search"
+    ></ion-searchbar>
+  </ion-toolbar>
 </ion-header>
 
-<ion-content fullscreen="true">
+<ion-content fullscreen class="speaker-list-content">
   <ion-header collapse="condense">
     <ion-toolbar>
       <ion-title size="large">Attività</ion-title>
     </ion-toolbar>
   </ion-header>
 
-  <ion-grid fixed>
+  <div class="speaker-cat-strip">
+    <ion-chip
+      [color]="categoryFilter === null ? 'primary' : 'medium'"
+      (click)="setCategory(null)"
+      class="speaker-cat-chip"
+    >
+      <ion-icon name="storefront-outline"></ion-icon>
+      <ion-label>Tutte</ion-label>
+      <ion-badge *ngIf="allSpeakers.length">{{ allSpeakers.length }}</ion-badge>
+    </ion-chip>
+    <ion-chip
+      *ngFor="let cat of categories; trackBy: trackCat"
+      [color]="categoryFilter === cat ? 'primary' : 'medium'"
+      (click)="setCategory(cat)"
+      class="speaker-cat-chip"
+    >
+      <ion-label>{{ cat }}</ion-label>
+    </ion-chip>
+  </div>
+
+  <p class="speaker-list-meta" *ngIf="filteredSpeakers.length !== allSpeakers.length || searchText || categoryFilter">
+    <ion-icon name="filter-outline" aria-hidden="true"></ion-icon>
+    {{ filteredSpeakers.length }} risultat{{ filteredSpeakers.length === 1 ? 'o' : 'i' }}
+  </p>
+
+  <ion-grid fixed class="speaker-grid">
     <ion-row>
-      @for (speaker of speakers; track speaker.id) {
-      <ion-col size="12" size-md="6">
-        <ion-card class="speaker-card">
-          <ion-card-header>
-            <ion-item
-              detail="false"
-              lines="none"
-              class="speaker-item"
-              routerLink="/app/tabs/speakers/speaker-details/{{speaker.id}}"
-            >
-              <ion-avatar slot="start">
-                <img
-                  [src]="speaker.profilePic"
-                  [alt]="speaker.name + ' profile picture'"
-                />
-              </ion-avatar>
-              <ion-label>
-                <h2>{{speaker.name}}</h2>
-                <p>{{speaker.category}}</p>
-              </ion-label>
-            </ion-item>
-          </ion-card-header>
-
-          <ion-card-content>
-            <ion-list lines="none">
-              @for (session of speaker.sessions; track session.id) {
-              <ion-item
-                detail="false"
-                routerLink="/app/tabs/speakers/session/{{session.id}}"
-              >
-                <ion-label>
-                  <h3>{{session.name}}</h3>
-                </ion-label>
-              </ion-item>
-              }
-
-              <ion-item
-                detail="false"
-                routerLink="/app/tabs/speakers/speaker-details/{{speaker.id}}"
-              >
-                <ion-label>
-                  <h3>{{speaker.name}}</h3>
-                </ion-label>
-              </ion-item>
-            </ion-list>
-          </ion-card-content>
-        </ion-card>
-      </ion-col>
+      @for (speaker of filteredSpeakers; track trackSpeaker($index, speaker)) {
+        <ion-col size="12" size-md="6" size-lg="4">
+          <ion-card
+            class="speaker-card"
+            [routerLink]="['/app/tabs/speakers/speaker-details', speaker.slug || speaker.id]"
+          >
+            <ion-card-content class="speaker-card__body">
+              <div class="speaker-card__media">
+                <ion-avatar class="speaker-card__avatar" aria-hidden="true">
+                  <img [src]="speaker.profilePic" [alt]="''" />
+                </ion-avatar>
+                <div class="speaker-card__text">
+                  <h2 class="speaker-card__name">{{ speaker.name }}</h2>
+                  <p class="speaker-card__cat" *ngIf="speaker.category">{{ speaker.category }}</p>
+                  <p class="speaker-card__desc" *ngIf="speaker.description">{{ speaker.description }}</p>
+                  <p class="speaker-card__addr" *ngIf="speaker.address">{{ speaker.address }}</p>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </ion-col>
       }
     </ion-row>
   </ion-grid>
+
+  <div class="speaker-empty" *ngIf="!filteredSpeakers.length && allSpeakers.length">
+    <p>Nessuna attività corrisponde ai filtri.</p>
+    <ion-button fill="outline" (click)="clearFilters()">Reimposta ricerca</ion-button>
+  </div>
+
+  <div class="speaker-empty" *ngIf="!allSpeakers.length">
+    <p>Caricamento attività…</p>
+  </div>
 </ion-content>

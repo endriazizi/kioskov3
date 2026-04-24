@@ -1,5 +1,7 @@
 import { Injectable, InjectionToken, Inject, Optional } from '@angular/core';
 
+import { environment } from '../../environments/environment';
+
 export type WhitelistRule = string | RegExp;
 
 /** Extend ALLOW rules from modules/environments */
@@ -14,7 +16,7 @@ export class KioskWhitelistService {
   /** Allowed URL schemes (keep tight for kiosk use) */
   private readonly allowedSchemes = new Set(['http:', 'https:', 'tel:', 'mailto:']);
 
-  /** Base allow rules (merge with injected extras) */
+  /** Base allow rules (merge with injected extras) — usati solo se kioskStrictMode=false */
   private readonly baseAllow: WhitelistRule[] = [
     // Your sites
     'castelraimondoturismo.it',
@@ -54,12 +56,19 @@ export class KioskWhitelistService {
     this.denyRules = [...(extraDeny ?? [])];
   }
 
+  /** True se la policy “solo interno” è attiva (blocca tutti gli http/https esterni). */
+  isStrictInternalOnly(): boolean {
+    return !!environment.kioskStrictMode;
+  }
+
   /**
    * Returns true if the URL is permitted by:
    * 1) scheme check
    * 2) deny rules (first; any hit = blocked)
    * 3) allow rules (string = host/subdomain OR absolute URL prefix; regex = full href test)
    * 4) same-origin bypass (optional)
+   *
+   * In **kioskStrictMode** (environment): solo stesso origin, tel/mail (se consentiti), niente altri http/https.
    */
   isAllowed(rawUrl: string): boolean {
     const url = this.tryParseUrl(rawUrl);
@@ -71,7 +80,19 @@ export class KioskWhitelistService {
     // 2) DENY first
     if (this.matchesAny(url, this.denyRules)) return false;
 
-    // 3) ALLOW
+    // ─── Policy centralizzata “internal-only” (totem kiosk) ───
+    if (environment.kioskStrictMode) {
+      if (url.protocol === 'tel:' || url.protocol === 'mailto:') {
+        return environment.kioskAllowTelMailto !== false;
+      }
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        const appOrigin = this.safeAppOrigin();
+        return !!appOrigin && url.origin === appOrigin;
+      }
+      return false;
+    }
+
+    // 3) ALLOW (legacy whitelist domini quando non in strict mode)
     if (this.matchesAny(url, this.allowRules)) return true;
 
     // 4) Same-origin bypass (optional)
@@ -81,6 +102,16 @@ export class KioskWhitelistService {
     }
 
     return false;
+  }
+
+  /**
+   * Usato da Browser.open / window.open / handler: se false, logga in console e non navigare.
+   */
+  logBlockedExternal(rawUrl: string, reason: string): void {
+    console.warn(
+      `🔒 [Kiosk] Uscita verso URL esterno bloccata (${reason}):`,
+      rawUrl
+    );
   }
 
   /** Optionally add rules at runtime (e.g., admin UI) */

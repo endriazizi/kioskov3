@@ -14,6 +14,14 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "configurations": {
+            "totem": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.totem.ts"
+                }
+              ]
+            },
             "ci": {
               "budgets": [
                 {
@@ -54,7 +62,7 @@
           },
           "defaultConfiguration": "",
           "options": {
-            "allowedCommonJsDependencies": ["localforage", "leaflet"],
+            "allowedCommonJsDependencies": ["localforage", "leaflet", "qrcode", "dijkstrajs"],
             "assets": [
               {
                 "glob": "**/*",
@@ -103,13 +111,26 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "ci": {},
+            "development": {
+              "buildTarget": "app:build",
+              "host": "0.0.0.0",
+              "port": 8200,
+              "proxyConfig": "proxy.conf.json",
+              "allowedHosts": ["all"]
+            },
+            "totem": {
+              "buildTarget": "app:build:totem",
+              "host": "0.0.0.0",
+              "port": 8200,
+              "allowedHosts": ["all"]
+            },
             "production": {
               "buildTarget": "app:build:production"
             }
           },
           "options": {
             "buildTarget": "app:build",
-            "disableHostCheck": true
+            "proxyConfig": "proxy.conf.json"
           }
         },
         "test": {

@@ -2,12 +2,10 @@ import { DatePipe, NgStyle } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
-  IonButton,
   IonButtons,
   IonContent,
   IonDatetime,
   IonHeader,
-  IonIcon,
   IonItem,
   IonLabel,
   IonList,
@@ -36,8 +34,6 @@ import { PopoverPage } from '../about-popover/about-popover';
         IonToolbar,
         IonButtons,
         IonMenuButton,
-        IonButton,
-        IonIcon,
         IonList,
         IonItem,
         IonLabel,

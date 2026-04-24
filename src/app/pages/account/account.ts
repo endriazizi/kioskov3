@@ -14,6 +14,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { UserService } from '../../providers/user.service';
+import { kioskDevLog } from '../../utils/kiosk-dev-console';
 
 @Component({
     selector: 'page-account',
@@ -44,7 +45,7 @@ export class AccountPage implements AfterViewInit {
   }
 
   updatePicture() {
-    console.log('Clicked to update picture');
+    kioskDevLog('🧭 [Account] update picture (stub)');
   }
 
   // Present an alert with the current username populated
@@ -82,7 +83,7 @@ export class AccountPage implements AfterViewInit {
   }
 
   changePassword() {
-    console.log('Clicked to change password');
+    kioskDevLog('🧭 [Account] change password (stub)');
   }
 
   logout() {

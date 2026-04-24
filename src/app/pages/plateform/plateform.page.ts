@@ -2,7 +2,7 @@ import { Component, inject, OnInit, AfterViewInit, Renderer2 } from "@angular/co
 import { NgIf } from "@angular/common";
 import {
   IonContent, IonHeader, IonToolbar, IonTitle,
-  IonButtons, IonButton, IonIcon, IonNote
+  IonButtons, IonButton, IonIcon
 } from "@ionic/angular/standalone";
 import { Router, ActivatedRoute } from "@angular/router";
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from "@angular/platform-browser";
@@ -10,6 +10,9 @@ import { isPlatform, ToastController } from "@ionic/angular";
 import { Browser } from "@capacitor/browser";
 import { Speaker } from "../../interfaces/conference.interfaces";
 import { ConferenceService } from "../../providers/conference.service";
+import { KioskWhitelistService } from "../../security/kiosk-whitelist.service";
+import { environment } from "../../../environments/environment";
+import { kioskDevLog } from "../../utils/kiosk-dev-console";
 
 declare var cordova: any;
 
@@ -18,7 +21,7 @@ declare var cordova: any;
   templateUrl: "./plateform.page.html",
   styleUrls: ["./plateform.page.scss"],
   standalone: true,
-  imports: [IonNote, NgIf, IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon],
+  imports: [NgIf, IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon],
 })
 export class PlateformPage implements OnInit, AfterViewInit {
   isBrowser = false;
@@ -26,6 +29,7 @@ export class PlateformPage implements OnInit, AfterViewInit {
 
   private confData = inject(ConferenceService);
   private toastCtrl = inject(ToastController);
+  private whitelist = inject(KioskWhitelistService);
   speakers: Speaker[] = [];
 
   url = "";
@@ -59,19 +63,20 @@ export class PlateformPage implements OnInit, AfterViewInit {
 
   ngOnInit() {
     const encoded = this.route.snapshot.paramMap.get("id");
-    console.debug("[Plateform] route param id =", encoded);
+    kioskDevLog("[Plateform] route param id =", encoded);
 
     if (encoded === "feed") {
       this.canIframeFeed = true;
       this.ensureElfsightPlatformLoaded().then(() => {
-        console.debug("[Plateform] platform.js loaded");
+        kioskDevLog("[Plateform] platform.js loaded");
         setTimeout(() => (window as any).eapps?.initialize?.(), 0);
       });
     } else {
-      this.url = decodeURIComponent(encoded || "https://ludwigstrasse.plateform.app/");
-      console.debug("[Plateform] url =", this.url);
+      const rawUrl = decodeURIComponent(encoded || "https://ludwigstrasse.plateform.app/");
+      this.url = this.sanitizeIncomingUrl(rawUrl);
+      kioskDevLog("[Plateform] url =", this.url);
 
-      if (this.BLOCK_RX.test(this.url)) {
+      if (this.url && this.BLOCK_RX.test(this.url)) {
         this.blockedUrl = true;
         console.warn("[Plateform] blocked by policy:", this.url);
         this.toast("Navigation blocked by kiosk policy.");
@@ -87,7 +92,7 @@ export class PlateformPage implements OnInit, AfterViewInit {
     }
 
     this.isBrowser = !("cordova" in (window as any));
-    console.debug("[Plateform] isBrowser =", this.isBrowser);
+    kioskDevLog("[Plateform] isBrowser =", this.isBrowser);
 
     // Intercetta click su <a> (web/PWA)
     if (this.isBrowser) {
@@ -130,7 +135,7 @@ export class PlateformPage implements OnInit, AfterViewInit {
     return new Promise((resolve) => {
       const already = document.querySelector("script[data-elfsight-platform]");
       if (already) {
-        console.debug("[Plateform] platform.js already present");
+        kioskDevLog("[Plateform] platform.js already present");
         resolve();
         return;
       }
@@ -157,9 +162,22 @@ export class PlateformPage implements OnInit, AfterViewInit {
       return;
     }
 
+    // Totem strict: niente Browser.open / finestra esterna verso altri origin
+    if (environment.kioskStrictMode && this.isGoingOutOfApp(url)) {
+      this.whitelist.logBlockedExternal(url, "Plateform Browser.open/window strict");
+      await this.toast("Navigation blocked in kiosk.");
+      return;
+    }
+
     // FIX: blocca le uscite dall’app SOLO nel ramo else (site mode)
     if (this.siteModeActive && this.isGoingOutOfApp(url)) { // FIX
       console.warn("[Plateform] blocked openExternal (external origin):", url);
+      await this.toast("Navigation blocked in kiosk.");
+      return;
+    }
+
+    if (!this.whitelist.isAllowed(url)) {
+      this.whitelist.logBlockedExternal(url, "Plateform openExternal");
       await this.toast("Navigation blocked in kiosk.");
       return;
     }
@@ -191,6 +209,36 @@ export class PlateformPage implements OnInit, AfterViewInit {
     } catch {
       return true; // se non parsabile, blocca per sicurezza
     }
+  }
+
+  /**
+   * Hardening URL iframe:
+   * - consente solo http/https ben formati
+   * - applica whitelist centralizzata prima del bypassSecurityTrustResourceUrl
+   * - blocca valori non parseabili o schemi non ammessi
+   */
+  private sanitizeIncomingUrl(raw: string): string {
+    const input = String(raw || "").trim();
+    if (!input) return "";
+    let parsed: URL;
+    try {
+      parsed = new URL(input, window.location.href);
+    } catch {
+      console.warn("[Plateform] invalid URL param:", input);
+      void this.toast("URL non valida.");
+      return "";
+    }
+    if (!(parsed.protocol === "http:" || parsed.protocol === "https:")) {
+      console.warn("[Plateform] blocked non-http(s) URL param:", parsed.href);
+      void this.toast("Schema URL non consentito.");
+      return "";
+    }
+    if (!this.whitelist.isAllowed(parsed.href)) {
+      this.whitelist.logBlockedExternal(parsed.href, "Plateform route param");
+      void this.toast("Navigation blocked in kiosk.");
+      return "";
+    }
+    return parsed.href;
   }
 
   goBack() {

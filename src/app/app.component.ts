@@ -1,5 +1,6 @@
 import {
   Component,
+  effect,
   HostListener,
   inject,
   OnInit,
@@ -28,8 +29,8 @@ import {
   IonMenu,
   IonMenuToggle,
   IonRouterOutlet,
+  IonSpinner,
   IonSplitPane,
-  IonToggle,
   MenuController,
   Platform,
   ToastController,
@@ -37,8 +38,8 @@ import {
 import {
   arrowBackOutline,
   calendarOutline,
-  hammer,
   help,
+  homeOutline,
   informationCircleOutline,
   logIn,
   logoInstagram,
@@ -57,6 +58,8 @@ import {
   
 } from "ionicons/icons";
 import { UserService } from "./providers/user.service";
+import { KioskLoadingService } from "./providers/kiosk-loading.service";
+import { kioskDevLog } from "./utils/kiosk-dev-console";
 
 @Component({
   selector: "app-root",
@@ -69,7 +72,6 @@ import { UserService } from "./providers/user.service";
     IonLabel,
     IonIcon,
     IonMenuToggle,
-    IonToggle,
     IonList,
     IonListHeader,
     IonItem,
@@ -77,6 +79,7 @@ import { UserService } from "./providers/user.service";
     IonMenu,
     IonSplitPane,
     IonApp,
+    IonSpinner,
     FormsModule,
   ],
   providers: [MenuController, ToastController],
@@ -90,10 +93,11 @@ export class AppComponent implements OnInit {
   private toastCtrl = inject(ToastController);
   private menu = inject(MenuController);
   private platform = inject(Platform);
+  readonly kioskLoading = inject(KioskLoadingService);
 
         // { title: "About", url: "/app/tabs/about", icon: "information-circle" },
   appPages = [
-    // { title: "Eventi", url: "/app/tabs/schedule", icon: "calendar" },
+    { title: "Eventi", url: "/app/tabs/schedule", icon: "calendar-outline" },
     { title: "Attività", url: "/app/tabs/speakers", icon: "people" },
     { title: "Map", url: "/app/tabs/map", icon: "map" },
 
@@ -109,7 +113,7 @@ export class AppComponent implements OnInit {
   dark = false;
 
   private inactivityTimer: any;
-  private readonly TIMEOUT = 60000 // 20 secondi reali
+  private readonly TIMEOUT = 10000; // 10 secondi reali
 
   constructor() {
     addIcons({
@@ -123,7 +127,7 @@ export class AppComponent implements OnInit {
       logIn,
       personAdd,
       moonOutline,
-      hammer,
+      homeOutline,
       logoInstagram,
       informationCircle,
       arrowBackOutline,
@@ -132,14 +136,59 @@ export class AppComponent implements OnInit {
       informationCircleSharp,
       leaf,leafOutline
     });
+
+    effect(() => {
+      const loading = this.kioskLoading.loading();
+      // #region agent log
+      fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H1',location:'app.component.ts:constructor:effect',message:'Global loading signal changed',data:{loading,route:this.router.url},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+    });
   }
 
   // ========== Inattività: ascolta SOLO gesti reali, non lo scroll ==========
-  @HostListener("document:pointerdown")
-  @HostListener("document:keydown")
-  @HostListener("document:touchstart")
-  onUserAction() {
+  @HostListener("document:pointerdown", ["$event"])
+  @HostListener("document:keydown", ["$event"])
+  @HostListener("document:touchstart", ["$event"])
+  onUserAction(event?: Event) {
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H2',location:'app.component.ts:onUserAction',message:'Global user action captured',data:{eventType:event?.type ?? null,targetTag:(event?.target as HTMLElement | null)?.tagName ?? null,targetClass:(event?.target as HTMLElement | null)?.className ?? null,route:this.router.url},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    this.logTapProbe(event);
     this.resetInactivityTimer();
+  }
+
+  private logTapProbe(event?: Event): void {
+    const anyEv = event as (MouseEvent & TouchEvent) | undefined;
+    const x = typeof anyEv?.clientX === "number" ? anyEv.clientX : (anyEv?.touches?.[0]?.clientX ?? null);
+    const y = typeof anyEv?.clientY === "number" ? anyEv.clientY : (anyEv?.touches?.[0]?.clientY ?? null);
+    const topEl = x != null && y != null ? document.elementFromPoint(x, y) as HTMLElement | null : null;
+    const loadingOverlay = document.querySelector(".kiosk-api-loading-overlay") as HTMLElement | null;
+    const clickable = (event?.target as HTMLElement | null)?.closest?.("button, a, ion-button, ion-tab-button, [role='button']");
+    const topStack = x != null && y != null
+      ? document
+          .elementsFromPoint(x, y)
+          .slice(0, 6)
+          .map((el) => {
+            const he = el as HTMLElement;
+            const cs = getComputedStyle(he);
+            return {
+              tag: he.tagName,
+              cls: he.className,
+              pe: cs.pointerEvents,
+              z: cs.zIndex,
+              pos: cs.position,
+              op: cs.opacity,
+            };
+          })
+      : [];
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H4',location:'app.component.ts:logTapProbe',message:'Tap probe with top element and overlay state',data:{eventType:event?.type ?? null,route:this.router.url,coords:{x,y},targetTag:(event?.target as HTMLElement | null)?.tagName ?? null,targetClass:(event?.target as HTMLElement | null)?.className ?? null,topTag:topEl?.tagName ?? null,topClass:topEl?.className ?? null,clickableTag:clickable?.tagName ?? null,clickableClass:clickable?.className ?? null,overlayPresent:!!loadingOverlay,overlayPointerEvents:loadingOverlay ? getComputedStyle(loadingOverlay).pointerEvents : null,overlayDisplay:loadingOverlay ? getComputedStyle(loadingOverlay).display : null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    void this.menu.isOpen().then((isOpen) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H5',location:'app.component.ts:logTapProbe:menu-stack',message:'Tap probe menu and element stack',data:{route:this.router.url,eventType:event?.type ?? null,menuOpen:isOpen,topStack},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+    }).catch(() => {});
   }
 
   // quando la tab torna visibile / finestra rifocalizzata → reset
@@ -161,12 +210,11 @@ export class AppComponent implements OnInit {
     }
 
     this.inactivityTimer = setTimeout(() => {
-      // evita redirect se sei già su /tutorial
+      // evita redirect se sei già sulla home / tutorial
       if (this.isOnTutorial()) return;
 
-      console.log("⏳ Timeout di inattività, torno al tutorial");
-      this.router.navigateByUrl("/tutorial", { replaceUrl: true })
-        .catch(() => {});
+      kioskDevLog("⏳ Timeout di inattività, torno alla Home Page");
+      void this.router.navigateByUrl("/app/tabs/home", { replaceUrl: true }).catch(() => {});
     }, this.TIMEOUT);
   }
 
@@ -177,7 +225,7 @@ export class AppComponent implements OnInit {
       "/" +
       (tree.root.children["primary"]?.segments.map((s) => s.path).join("/") ??
         "");
-    return current === "/tutorial";
+    return current === "/tutorial" || current === "/app/tabs/home";
   }
 
   // ========================================================================
@@ -187,6 +235,8 @@ export class AppComponent implements OnInit {
     await this.storage.create();
     this.checkLoginStatus();
     this.listenForLoginEvents();
+    document.addEventListener("click", (ev) => this.logTapProbe(ev), true);
+    document.addEventListener("pointerdown", (ev) => this.logTapProbe(ev), true);
 
     // avvia il timer di inattività al boot
     this.resetInactivityTimer();
@@ -241,8 +291,7 @@ export class AppComponent implements OnInit {
 
   openTutorial() {
     this.menu.enable(false);
-    this.storage.set("ion_did_tutorial", false);
-    this.router.navigateByUrl("/tutorial");
+    void this.router.navigateByUrl("/app/tabs/home");
   }
 
   toggleDarkMode() {

@@ -1,17 +1,60 @@
 .map-canvas {
   position: absolute;
-
   width: 100%;
-
   height: 100%;
-
   transition: opacity 150ms ease-in;
-
   background-color: transparent;
-
   opacity: 0;
 }
 
 .show-map {
   opacity: 1;
+}
+
+::ng-deep .kiosk-map-divicon {
+  background: transparent;
+  border: none;
+}
+
+::ng-deep .kiosk-map-pin {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #fff;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.35);
+  background: #f1f5f9;
+}
+
+::ng-deep .kiosk-map-pin img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+::ng-deep .kiosk-map-pin--fallback {
+  width: 28px;
+  height: 28px;
+  margin: 12px;
+  border-radius: 50%;
+  border: 3px solid var(--ion-color-primary, #3880ff);
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(56, 128, 255, 0.45);
+}
+
+::ng-deep .kiosk-map-popup .leaflet-popup-content {
+  margin: 10px 12px;
+  min-width: 140px;
+}
+
+::ng-deep .kiosk-map-popup__inner {
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+::ng-deep .kiosk-map-popup__link {
+  color: var(--ion-color-primary, #3880ff);
+  font-weight: 700;
+  text-decoration: none;
 }

@@ -8,8 +8,20 @@ import {
   ElementRef,
   QueryList,
   inject,
+  HostBinding,
+  HostListener,
+  ChangeDetectorRef,
 } from "@angular/core";
-import { Router, RouterLink } from "@angular/router";
+import { NavigationEnd, Router, RouterLink } from "@angular/router";
+import {
+  catchError,
+  EMPTY,
+  filter,
+  map,
+  Subscription,
+  switchMap,
+  take,
+} from "rxjs";
 import {
   IonHeader,
   IonToolbar,
@@ -29,11 +41,103 @@ import { addIcons } from "ionicons";
 import { arrowForward, close, menuOutline, playCircle } from "ionicons/icons";
 import { HttpClient } from "@angular/common/http";
 import { CommonModule } from "@angular/common";
-import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser";
 import { bindKioskUiTopAuto } from "../../shared/kiosk-ui-top";
+import { KioskApiService } from "../../providers/kiosk-api.service";
+import { ConferenceService } from "../../providers/conference.service";
+import type { KioskBannerDto, KioskPublicBusinessDto } from "../../interfaces/kiosk-api.interfaces";
+import type { Speaker } from "../../interfaces/conference.interfaces";
+import { environment } from "../../../environments/environment";
+import { kioskDevInfo, kioskDevLog, kioskDevWarn } from "../../utils/kiosk-dev-console";
 
-/** Item del carosello (internalRoute = pagina in-app come Vivere Camerino; externalUrl = modal webview) */
-type AdItem = { kind: "image" | "video"; src: string; poster?: string; externalUrl?: string; internalRoute?: string };
+/**
+ * Slide carosello home kiosk: ogni attività ha al massimo 1 poster.
+ * Tap → dettaglio interno `/app/tabs/speakers/speaker-details/:activitySlug` (param route: `speakerId`).
+ * Nessun URL esterno: eventuali link dal backend vengono scartati con log 🔒.
+ */
+type AdItem = {
+  kind: "image" | "video";
+  src: string;
+  fallbackSrc?: string;
+  poster?: string;
+  /** Slug attività (da business_slug / slug API) → solo `/speaker-details/:slug` */
+  activitySlug?: string;
+  businessName?: string;
+  title?: string;
+  subtitle?: string;
+  uploadedBy?: string;
+};
+
+/**
+ * Banner promozionali orizzontali (`/promo-banners`): separati dai poster 4:5.
+ * Tap ammesso solo verso dettaglio interno attività; CTA http(s) esterne → bloccate con log 🔒.
+ */
+type PromoAdItem = {
+  src: string;
+  title?: string;
+  subtitle?: string;
+  businessName?: string;
+  /** Se assente o esterno bloccato, il tap mostra solo feedback (nessuna uscita dal totem). */
+  activitySlug?: string;
+  blockedExternal?: boolean;
+};
+
+/**
+ * Slug ammessi per `/speaker-details/:slug` (stesso vincolo backend `isValidPublicSlug`).
+ * Blocca path injection, `..`, segmenti con caratteri strani — solo navigazione interna sicura.
+ */
+function safeKioskBusinessSlug(raw: string | null | undefined): string | null {
+  const s = String(raw ?? "").trim().toLowerCase();
+  if (!s || s.length > 160) return null;
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(s)) return null;
+  return s;
+}
+
+/**
+ * Normalizza candidate slug provenienti da payload eterogenei:
+ * - slug puro: "la-lanterna"
+ * - route interna: "/app/tabs/speakers/speaker-details/la-lanterna"
+ * - URL assoluto con query/hash
+ */
+function normalizeKioskBusinessSlugCandidate(raw: string | null | undefined): string | null {
+  const input = String(raw ?? "").trim();
+  if (!input) return null;
+
+  const trySlug = (v: string): string | null => {
+    try {
+      return safeKioskBusinessSlug(decodeURIComponent(v));
+    } catch {
+      return safeKioskBusinessSlug(v);
+    }
+  };
+
+  const direct = trySlug(input);
+  if (direct) return direct;
+
+  let pathLike = input;
+  if (/^https?:\/\//i.test(pathLike)) {
+    try {
+      const u = new URL(pathLike);
+      pathLike = `${u.pathname || ""}`.trim();
+    } catch {
+      // fallback: uso stringa originale
+    }
+  }
+
+  pathLike = pathLike.split("#")[0].split("?")[0].replace(/\\/g, "/");
+  const segs = pathLike
+    .split("/")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!segs.length) return null;
+
+  const idx = segs.findIndex((s) => s.toLowerCase() === "speaker-details");
+  if (idx >= 0 && segs[idx + 1]) {
+    const fromRoute = trySlug(segs[idx + 1]);
+    if (fromRoute) return fromRoute;
+  }
+
+  return trySlug(segs[segs.length - 1] || "");
+}
 
 @Component({
   standalone: true,
@@ -55,23 +159,35 @@ type AdItem = { kind: "image" | "video"; src: string; poster?: string; externalU
   ],
 })
 export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
+  /** Per CSS: dock crediti duplicato nascosto in layout fit-screen (crediti restano nel footer scroll). */
+  @HostBinding("class.kiosk-tutorial--fit-screen")
+  fitScreenLayout = true;
+
   // Services
   private menu = inject(MenuController);
   private router = inject(Router);
   private storage = inject(Storage);
   private http = inject(HttpClient);
   private toastCtrl = inject(ToastController);
-  private sanitizer = inject(DomSanitizer);
+  private kioskApi = inject(KioskApiService);
+  private confService = inject(ConferenceService);
+  private cdr = inject(ChangeDetectorRef);
 
   // Header / UI
   showSkip = true;
+  readonly appVersion = environment.appVersion || '0';
+
+  /**
+   * Home kiosk in `/app/tabs/*`: c’è ion-tab-bar → il dock crediti si ancorà sopra di essa.
+   * Su `/tutorial` (redirect root) la tab bar non c’è → ancoraggio solo su safe-area.
+   */
+  creditsDockTabsLayout = false;
+  private creditsDockNavSub?: Subscription;
 
   // Clock / Weather
   currentTime!: string;
   currentDate = "";
   weather: any;
-  private weatherApiKey = "41266f28a33c8ef363049edf9b38275e";
-  private weatherCity = "Castelraimondo";
   private clockInterval?: any;
 
   // View refs
@@ -82,43 +198,32 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   // Slide 1: Carosello
   @ViewChild("adsTrack", { static: false })
   adsTrack!: ElementRef<HTMLDivElement>;
+  @ViewChild("promoStrip", { static: false })
+  promoStripRef?: ElementRef<HTMLDivElement>;
   @ViewChildren("adVideo") adVideoEls!: QueryList<ElementRef<HTMLVideoElement>>;
 
-  ads: AdItem[] = [
-
-    { kind: "image", src: "assets/poster/a3_01.jpg" },
-    { kind: "image", src: "assets/poster/a3_02.jpg" },
-
-    { kind: "image", src: "assets/poster/a3_03.jpg" },
-    // { kind: "image", src: "assets/poster/a3_04.jpg" },
-    // { kind: "image", src: "assets/poster/lanterna.jpg", internalRoute: "/app/tabs/prenota-lanterna" },
-
-        { kind: "image", src: "assets/poster/a3_05.jpg" },
-    // { kind: "image", src: "assets/poster/a3_06.jpg" },
-
-    { kind: "image", src: "assets/poster/a3_07.jpg" },
-    { kind: "image", src: "assets/poster/a3_08.jpg" },
-
-
-    // { kind: "image", src: "assets/poster/a3_10.jpg" },
-    { kind: "image", src: "assets/poster/a3_11.jpg" },
-   
-    { kind: "image", src: "assets/poster/a3_12.jpg" },
-   
-    { kind: "image", src: "assets/poster/a3_13.jpg" },
-   
-    { kind: "image", src: "assets/poster/a3_14.jpg" },
-    // { kind: "image", src: "assets/poster/a3_15.jpg" },
-    // { kind: "image", src: "assets/poster/a3_16.jpg" },
-   
-   
-    { kind: "video", src: "assets/poster/eclissi.mp4" }, // video carosello centrale_video.mp4
-    { kind: "video", src: "assets/poster/bar centrale_TikTok.mp4" },
-  ];
+  /** Poster home verticali: primario GET `/banners`, poi fallback /home, /home-posters, businesses, JSON locale. */
+  ads: AdItem[] = [];
+  /** Striscia opzionale sotto il carosello: GET `/promo-banners` (CTA orizzontali, non mescolati ai 4:5). */
+  promoAds: PromoAdItem[] = [];
   adsIndex = 0;
 
+  /** Avanzamento automatico poster (immagini); i video non-click-to-play bloccano il tick fino a fine clip. */
   private readonly ADS_DURATION_MS = 10_000;
   private adsTimer?: any;
+  private readonly IDLE_POSTER_TIMEOUT_MS = 10_000;
+  private readonly IDLE_POSTER_ROTATION_MS = 10_000;
+  private idlePosterMode = false;
+  private idlePosterTimer?: ReturnType<typeof setTimeout>;
+  private idlePosterRotateTimer?: ReturnType<typeof setInterval>;
+
+  /** Strip “In evidenza” (promo-banners): scroll orizzontale automatico (stesso intervallo del poster `ADS_DURATION_MS`). */
+  private promoAutoTimer?: ReturnType<typeof setInterval>;
+  private promoAutoIndex = 0;
+  /** Indice card evidenziata (dots + animazione); allineato a `promoAutoIndex` dopo ogni avanzamento. */
+  promoStripActiveIndex = 0;
+  /** Dopo interazione utente sulla strip, pausa auto-scroll (ms epoch). */
+  private promoStripPauseUntil = 0;
   private adsUserPause = false;
   private adsScrollDebounce?: any;
 
@@ -139,11 +244,14 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   modalImageSrc = "";
   private modalAutoCloseTimer?: any;
 
-  // Modal sito esterno (es. lanterna – in-app webview)
-  isWebViewOpen = false;
-  webViewUrl = "";
-  /** URL sanitizzato (cached): evita getter che crea nuovo oggetto ogni CD → iframe reload loop → Chrome throttling */
-  webViewSafeUrl: SafeResourceUrl | null = null;
+  /** “In evidenza”: anteprima banner a schermo intero (tap sulla card). */
+  promoFullscreenOpen = false;
+  promoFullscreenItem: PromoAdItem | null = null;
+  posterFullscreenOpen = false;
+  posterFullscreenItem: AdItem | null = null;
+
+  /** Immagine neutra se il poster API manca o fallisce il caricamento (ratio ~4:5, vedi commenti SCSS). */
+  private readonly POSTER_PLACEHOLDER = "assets/img/kiosk-poster-placeholder.svg";
 
   // Slide 3: Video principale
   @ViewChild("slideVideo", { static: true })
@@ -190,16 +298,30 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.forceUnlockAudio(); // per la slide video principale se attiva
   };
 
-  // Toast assistenza
+  // Assistenza home (banner sopra tab bar + modal QR)
   private ioFirst?: IntersectionObserver;
-  isFirstSlideActive = false;
+  /** Slide poster visibile: hint dock fisso + padding scroll (default true per prima paint). */
+  isFirstSlideActive = true;
   supportModalOpen = false;
   supportWhatsappLink = "";
   supportQrSrc = "";
+  supportQrLoading = false;
+  /** Banner “contattaci WhatsApp” dopo delay sulla slide poster */
+  supportBannerVisible = false;
+  /** Cache-buster immagini: cambia a ogni reload feed poster/promo. */
+  private assetCacheVersion = Date.now();
+  /** Polling feed pubblico: confronto versione server per refresh banner/promo solo quando cambia. */
+  private readonly FEED_VERSION_POLL_MS = 30_000;
+  private feedVersionPollTimer?: ReturnType<typeof setInterval>;
+  private feedVersionInFlight = false;
+  private lastFeedVersion = "";
+  private fullscreenSwipeStartX: number | null = null;
+  private fullscreenSwipeStartY: number | null = null;
+  private readonly FULLSCREEN_SWIPE_THRESHOLD_PX = 42;
+  private readonly FULLSCREEN_SWIPE_MAX_OFF_AXIS_PX = 72;
   private supportDelayTimer?: any;
-  private supportToastShown = false;
-  private readonly SUPPORT_TOAST_DELAY_MS = 6_000;
-  private readonly SUPPORT_TOAST_DURATION_MS = 12_000;
+  private supportAssistPromptShown = false;
+  private readonly SUPPORT_BANNER_DELAY_MS = 6_000;
 
   // Top dinamico (header + box meteo)
   private unbindKiosk?: () => void;
@@ -218,9 +340,24 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   // Lifecycle
   ngOnInit() {
+    this.syncCreditsDockTabsLayout();
+    this.creditsDockNavSub = this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe(() => {
+        this.syncCreditsDockTabsLayout();
+        // Se cambio route mentre una fullscreen è aperta, la richiudo sempre
+        // per evitare overlay residui sopra la nuova pagina.
+        if (this.posterFullscreenOpen) this.closePosterFullscreen();
+        if (this.promoFullscreenOpen) this.closePromoFullscreen(undefined, "router-nav");
+      });
+
     this.updateTimeAndDate();
     this.clockInterval = setInterval(() => this.updateTimeAndDate(), 1000);
     this.fetchWeather();
+    /** Carosello poster e strip promo sono indipendenti: due GET paralleli quando l’API è attiva. */
+    this.loadBannerCarousel();
+    this.loadPromoStrip();
+    this.startFeedVersionPolling();
   }
 
   async ngAfterViewInit() {
@@ -228,9 +365,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       await this.pageContent.getScrollElement();
     } catch {}
 
-    // Carosello
-    setTimeout(() => this.goToAd(this.adsIndex, "auto"), 0);
-    this.startAdsCarousel();
+    // Carosello: parte solo se gli slide sono già stati caricati (altrimenti dopo GET banners)
+    if (this.ads.length) {
+      setTimeout(() => this.goToAd(this.adsIndex, "auto"), 0);
+      this.startAdsCarousel();
+    }
 
     // Slide video principale
     this.setupIntersectionObserverForVideo();
@@ -264,12 +403,15 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       cssVarName: "--kiosk-ui-top",
       log: false,
     });
+
+    this.scheduleIdlePosterMode();
   }
 
   ngOnDestroy() {
     if (this.clockInterval) clearInterval(this.clockInterval);
 
     this.stopAdsCarousel();
+    this.stopPromoStripAuto();
     this.clearVideoAdAdvance();
     this.clearAdsPlayBtnTimer();
 
@@ -287,8 +429,18 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.pauseVideo(true);
     this.menu.enable(true);
     this.clearSupportTimers();
-    this.supportToastShown = false;
+    this.supportAssistPromptShown = false;
+    this.supportBannerVisible = false;
     this.unbindKiosk?.();
+    this.creditsDockNavSub?.unsubscribe();
+    this.clearIdlePosterTimers();
+    this.stopFeedVersionPolling();
+  }
+
+  private syncCreditsDockTabsLayout(): void {
+    const path = (this.router.url.split("?")[0] ?? "").toLowerCase();
+    this.creditsDockTabsLayout = path.includes("/app/tabs");
+    this.fitScreenLayout = path === "/tutorial" || path === "/app/tabs/home";
   }
 
   // ========= CLOCK / METEO =========
@@ -307,16 +459,956 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   fetchWeather() {
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${this.weatherCity}&appid=${this.weatherApiKey}&units=metric&lang=it`;
-    this.http.get(url).subscribe({
-      next: (data) => (this.weather = data),
-      error: (err) => console.error("Errore meteo:", err),
+    const key = environment.weatherOpenWeatherApiKey?.trim();
+    const city = environment.weatherCity?.trim() || "Castelraimondo,it";
+    if (key) {
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${key}&units=metric&lang=it`;
+      this.http.get(url).subscribe({
+        next: (data) => (this.weather = data),
+        error: (err) => kioskDevWarn("🌤️⚠️ [Tutorial] OpenWeather KO:", err?.message || err),
+      });
+      return;
+    }
+    this.fetchWeatherOpenMeteo(city);
+  }
+
+  /**
+   * Meteo senza API key: Open-Meteo (geocoding + current_weather, CORS ok dal browser).
+   * Stesso shape di OpenWeather usato dal template (`name`, `weather[0].description`, `main.temp`).
+   */
+  private fetchWeatherOpenMeteo(cityQuery: string): void {
+    const cityName = cityQuery.split(",")[0]?.trim() || cityQuery;
+    const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=it&format=json`;
+    this.http
+      .get<{
+        results?: Array<{ name: string; latitude: number; longitude: number }>;
+      }>(geoUrl)
+      .pipe(
+        switchMap((geo) => {
+          const r = geo?.results?.[0];
+          if (!r) {
+            kioskDevWarn("🌤️⚠️ [Tutorial] Open-Meteo geocoding: nessun risultato per", cityName);
+            return EMPTY;
+          }
+          const fwUrl =
+            `https://api.open-meteo.com/v1/forecast?latitude=${r.latitude}&longitude=${r.longitude}` +
+            `&current_weather=true&timezone=Europe%2FRome`;
+          return this.http
+            .get<{ current_weather?: { temperature: number; weathercode: number } }>(fwUrl)
+            .pipe(map((fw) => ({ r, fw })));
+        }),
+        catchError((e) => {
+          kioskDevWarn("🌤️⚠️ [Tutorial] Open-Meteo KO:", e?.message || e);
+          return EMPTY;
+        })
+      )
+      .subscribe((pair) => {
+        if (!pair) return;
+        const cw = pair.fw?.current_weather;
+        if (!cw) {
+          kioskDevWarn("🌤️⚠️ [Tutorial] Open-Meteo: current_weather assente");
+          return;
+        }
+        this.weather = {
+          name: pair.r.name || cityName,
+          weather: [{ description: this.describeWmoWeatherCodeIt(cw.weathercode) }],
+          main: { temp: cw.temperature },
+        };
+      });
+  }
+
+  /** Codici WMO come restituiti da Open-Meteo `current_weather.weathercode` (testi brevi IT). */
+  private describeWmoWeatherCodeIt(code: number): string {
+    const m: Record<number, string> = {
+      0: "Cielo sereno",
+      1: "Prevalentemente sereno",
+      2: "Parzialmente nuvoloso",
+      3: "Coperto",
+      45: "Nebbia",
+      48: "Nebbia con brina",
+      51: "Pioggerella leggera",
+      53: "Pioggerella moderata",
+      55: "Pioggerella intensa",
+      56: "Pioggerella congelantesi leggera",
+      57: "Pioggerella congelantesi intensa",
+      61: "Pioggia leggera",
+      63: "Pioggia moderata",
+      65: "Pioggia forte",
+      66: "Pioggia congelantesi leggera",
+      67: "Pioggia congelantesi forte",
+      71: "Nevicata leggera",
+      73: "Nevicata moderata",
+      75: "Nevicata forte",
+      77: "Granelli di neve",
+      80: "Rovesci leggeri",
+      81: "Rovesci moderati",
+      82: "Rovesci violenti",
+      85: "Rovesci di neve leggeri",
+      86: "Rovesci di neve forti",
+      95: "Temporale",
+      96: "Temporale con grandine leggera",
+      99: "Temporale con grandine forte",
+    };
+    return m[code] ?? `Condizioni (codice ${code})`;
+  }
+
+  /**
+   * Carosello poster home verticali (4:5): 1 slide per attività, tap → dettaglio interno.
+   * Ordine backend concordato: **GET /banners** come sorgente primaria (stesso feed di `homePosters` in GET /home),
+   * poi GET /home, /home-posters, lista businesses, infine JSON locale.
+   */
+  private loadBannerCarousel(): void {
+    if (!environment.useKioskPublicApi) {
+      kioskDevLog(
+        "📁 [Tutorial] useKioskPublicApi=false — poster home da data.json (solo listingTier premium)"
+      );
+      this.loadFallbackBannersJson();
+      return;
+    }
+    this.kioskApi.getBanners().subscribe({
+      next: (raw) => {
+        const mapped = this.buildAdsFromBannerPayload(raw);
+        const ready = this.dedupeAndSortPosters(mapped);
+        if (ready.length) {
+          this.ads = ready;
+          kioskDevLog(
+            "✅ [Tutorial] Poster home da GET /api/public-kiosk/banners —",
+            this.ads.length,
+            "attività"
+          );
+          this.afterBannerAdsLoaded();
+          return;
+        }
+        kioskDevLog(
+          "📎 [Tutorial] GET /banners vuoto — fallback GET /api/public-kiosk/home (homePosters/banners)"
+        );
+        this.loadHomeFallbackSequence();
+      },
+      error: () => {
+        kioskDevWarn(
+          "⚠️ [Tutorial] GET /banners KO — fallback GET /api/public-kiosk/home"
+        );
+        this.loadHomeFallbackSequence();
+      },
     });
+  }
+
+  /** Dopo `/banners` vuoto o errore: stesso elenco poster dentro GET `/home`, poi catena leggera. */
+  private loadHomeFallbackSequence(): void {
+    this.kioskApi.getHome().subscribe({
+      next: (raw) => {
+        const mapped = this.buildAdsFromBannerDtos(
+          this.kioskApi.unwrapHomePosters(raw)
+        );
+        const ready = this.dedupeAndSortPosters(mapped);
+        if (ready.length) {
+          this.ads = ready;
+          kioskDevLog(
+            "✅ [Tutorial] Poster home da GET /api/public-kiosk/home —",
+            this.ads.length,
+            "attività"
+          );
+          this.afterBannerAdsLoaded();
+          return;
+        }
+        kioskDevLog(
+          "📎 [Tutorial] Nessun poster eleggibile in /home — provo GET /api/public-kiosk/home-posters"
+        );
+        this.loadHomePostersFromApi();
+      },
+      error: () => {
+        kioskDevWarn(
+          "⚠️ [Tutorial] GET home KO — provo GET /api/public-kiosk/home-posters"
+        );
+        this.loadHomePostersFromApi();
+      },
+    });
+  }
+
+  /** Endpoint dedicato stesso payload dei poster (evita parsing di wrapper diversi). */
+  private loadHomePostersFromApi(): void {
+    this.kioskApi.getHomePosters().subscribe({
+      next: (raw) => {
+        const items = this.kioskApi.unwrapHomePostersItems(raw);
+        const mapped = this.buildAdsFromBannerDtos(items);
+        const ready = this.dedupeAndSortPosters(mapped);
+        if (ready.length) {
+          this.ads = ready;
+          kioskDevLog(
+            "✅ [Tutorial] Poster home da GET /api/public-kiosk/home-posters —",
+            ready.length,
+            "attività"
+          );
+          this.afterBannerAdsLoaded();
+          return;
+        }
+        kioskDevWarn(
+          "⚠️ [Tutorial] home-posters vuoto — provo GET /api/public-kiosk/businesses"
+        );
+        this.tryLoadPostersFromBusinesses();
+      },
+      error: () => {
+        kioskDevWarn(
+          "⚠️ [Tutorial] GET home-posters KO — provo lista attività"
+        );
+        this.tryLoadPostersFromBusinesses();
+      },
+    });
+  }
+
+  /**
+   * Banner orizzontali promozionali: feed separato; non sostituisce mai i poster 4:5.
+   * Se l’API fallisce, la home resta utilizzabile senza strip promo.
+   */
+  private loadPromoStrip(): void {
+    if (!environment.useKioskPublicApi) {
+      this.promoAds = [];
+      this.stopPromoStripAuto();
+      return;
+    }
+    this.kioskApi.getPromoBanners().subscribe({
+      next: (raw) => {
+        this.promoAds = this.buildPromoAdsFromPayload(raw);
+        this.bumpAssetCacheVersion();
+        kioskDevLog(
+          "🖼️✅ [Tutorial] Promo banner orizzontali caricati —",
+          this.promoAds.length,
+          "elementi"
+        );
+        this.schedulePromoStripLayoutRefresh();
+      },
+      error: () => {
+        kioskDevWarn(
+          "⚠️ [Tutorial] GET promo-banners KO — strip promo disattivata (home ok)"
+        );
+        this.promoAds = [];
+        this.stopPromoStripAuto();
+      },
+    });
+  }
+
+  private startFeedVersionPolling(): void {
+    if (!environment.useKioskPublicApi) return;
+    this.stopFeedVersionPolling();
+    this.checkFeedVersionAndRefresh(true);
+    this.feedVersionPollTimer = setInterval(() => {
+      this.checkFeedVersionAndRefresh(false);
+    }, this.FEED_VERSION_POLL_MS);
+  }
+
+  private stopFeedVersionPolling(): void {
+    if (this.feedVersionPollTimer) {
+      clearInterval(this.feedVersionPollTimer);
+      this.feedVersionPollTimer = undefined;
+    }
+    this.feedVersionInFlight = false;
+  }
+
+  private checkFeedVersionAndRefresh(bootstrap: boolean): void {
+    if (this.feedVersionInFlight) return;
+    this.feedVersionInFlight = true;
+    this.kioskApi
+      .getFeedVersion()
+      .pipe(take(1))
+      .subscribe({
+        next: (raw) => {
+          this.feedVersionInFlight = false;
+          const obj = (raw as Record<string, unknown> | null) ?? null;
+          const version = String(
+            (obj?.version as string | undefined) ??
+              ((obj?.data as Record<string, unknown> | undefined)?.version as string | undefined) ??
+              ""
+          ).trim();
+          if (!version) return;
+          if (!this.lastFeedVersion) {
+            this.lastFeedVersion = version;
+            if (bootstrap) {
+              kioskDevLog("🛰️ [Tutorial] Feed version bootstrap:", version.slice(0, 18));
+            }
+            return;
+          }
+          if (version === this.lastFeedVersion) return;
+          const prev = this.lastFeedVersion;
+          this.lastFeedVersion = version;
+          kioskDevLog(
+            "🔄 [Tutorial] Feed version changed — refresh poster/promo",
+            `${prev.slice(0, 8)} -> ${version.slice(0, 8)}`
+          );
+          this.loadBannerCarousel();
+          this.loadPromoStrip();
+        },
+        error: () => {
+          this.feedVersionInFlight = false;
+        },
+      });
+  }
+
+  /** Mappa risposta `/promo-banners` → item UI; blocca tap su CTA esterne (log 🔒). */
+  private buildPromoAdsFromPayload(raw: unknown): PromoAdItem[] {
+    const items = this.kioskApi.unwrapPromoBanners(raw);
+    const out: PromoAdItem[] = [];
+    for (const b of items) {
+      const p = this.mapPromoBannerRow(b);
+      if (p?.src) out.push(p);
+    }
+    return out;
+  }
+
+  private mapPromoBannerRow(b: KioskBannerDto): PromoAdItem | null {
+    const o = b as Record<string, unknown>;
+    const rawImg = String(
+      b.image_url ?? b.imageUrl ?? b.src ?? ""
+    ).trim();
+    const src = rawImg ? this.kioskApi.resolveAssetUrl(rawImg) : "";
+    const ctaVal = String(o.cta_value ?? b.cta_value ?? "").trim();
+    const ctaType = String(o.cta_type ?? b.cta_type ?? "").toLowerCase();
+    /** Priorità: sempre dettaglio attività interno se conosciamo lo slug business (regola prodotto poster/totem). */
+    const businessSlug = String(
+      o.business_slug ?? b.business_slug ?? b.businessSlug ?? b.slug ?? ""
+    ).trim();
+    let activitySlug: string | undefined = businessSlug || undefined;
+    if (!activitySlug && ctaVal && !/^https?:\/\//i.test(ctaVal)) {
+      if (
+        ctaType === "business_detail" ||
+        ctaType === "business" ||
+        ctaType === "internal" ||
+        ctaType === "speaker" ||
+        !ctaType
+      ) {
+        activitySlug = ctaVal;
+      }
+    }
+    /** Solo se non abbiamo alcuno slug interno e la CTA è un URL http(s), il tap non deve simulare un “browser”. */
+    let blockedExternal = false;
+    if (!activitySlug && /^https?:\/\//i.test(ctaVal)) {
+      blockedExternal = true;
+      kioskDevWarn(
+        "🔒 [Tutorial] Promo: solo CTA esterna — nessuno slug attività, tap non naviga fuori dal totem —",
+        ctaVal.slice(0, 72)
+      );
+    }
+    if (!activitySlug && (ctaType === "external" || ctaType === "external_url")) {
+      blockedExternal = true;
+      kioskDevWarn("🔒 [Tutorial] Promo: tipo CTA esterno senza slug locale —", ctaType);
+    }
+    const bn = [b.businessName, b.business_name]
+      .map((x) => (x == null ? "" : String(x).trim()))
+      .find((s) => s.length > 0);
+    const title = (b.title != null ? String(b.title).trim() : "") || undefined;
+    const subtitle =
+      (b.subtitle != null ? String(b.subtitle).trim() : "") || undefined;
+    return {
+      src: src || this.POSTER_PLACEHOLDER,
+      title,
+      subtitle,
+      businessName: bn,
+      activitySlug,
+      blockedExternal,
+    };
+  }
+
+  /**
+   * Tap sulla strip “In evidenza”: prima anteprima a schermo intero; da lì si può aprire la scheda attività se c’è uno slug.
+   * Caricamento card: `loadPromoStrip()` → GET `/api/public-kiosk/promo-banners` (se `environment.useKioskPublicApi`).
+   */
+  onPromoClick(p: PromoAdItem, event: Event): void {
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H6',location:'tutorial.ts:onPromoClick',message:'Promo card click handler fired',data:{blockedExternal:!!p.blockedExternal,hasSlug:!!safeKioskBusinessSlug(p.activitySlug),supportBannerVisible:this.supportBannerVisible,promoFullscreenOpen:this.promoFullscreenOpen},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    event.preventDefault();
+    event.stopPropagation();
+    if (p.blockedExternal) {
+      kioskDevWarn("🔒 [Tutorial] Tap promo — CTA esterna; solo anteprima, nessuna navigazione");
+      void this.toastCtrl
+        .create({
+          message: "Anteprima banner. Questo messaggio non è collegato a una scheda attività sul totem.",
+          duration: 2600,
+          position: "bottom",
+          color: "medium",
+        })
+        .then((t) => t.present());
+    }
+    this.openPromoFullscreen(p);
+  }
+
+  openPromoFullscreen(p: PromoAdItem): void {
+    this.promoFullscreenItem = p;
+    this.promoFullscreenOpen = true;
+  }
+
+  closePromoFullscreen(ev?: Event, source: string = "unknown"): void {
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H11',location:'tutorial.ts:closePromoFullscreen',message:'Promo fullscreen close handler fired',data:{source,hadItem:!!this.promoFullscreenItem,wasOpen:this.promoFullscreenOpen},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    ev?.stopPropagation();
+    if (!this.promoFullscreenOpen) return;
+    this.promoFullscreenOpen = false;
+    this.promoFullscreenItem = null;
+  }
+
+  /** Slug sicuro per il pulsante “Scheda attività” (dettaglio interno). */
+  get promoFullscreenNavSlug(): string | null {
+    const p = this.promoFullscreenItem;
+    if (!p || p.blockedExternal) return null;
+    return safeKioskBusinessSlug(p.activitySlug);
+  }
+
+  get posterFullscreenNavSlug(): string | null {
+    const p = this.posterFullscreenItem;
+    if (!p) return null;
+    return normalizeKioskBusinessSlugCandidate(p.activitySlug);
+  }
+
+  openPosterFullscreen(ad: AdItem): void {
+    this.posterFullscreenItem = ad;
+    this.posterFullscreenOpen = true;
+  }
+
+  closePosterFullscreen(ev?: Event): void {
+    ev?.stopPropagation();
+    if (this.idlePosterMode) {
+      this.exitIdlePosterMode();
+    }
+    if (!this.posterFullscreenOpen) return;
+    this.posterFullscreenOpen = false;
+    this.posterFullscreenItem = null;
+  }
+
+  onFullscreenTouchStart(ev: TouchEvent): void {
+    const t = ev.changedTouches?.[0];
+    if (!t) return;
+    this.fullscreenSwipeStartX = t.clientX;
+    this.fullscreenSwipeStartY = t.clientY;
+  }
+
+  onPosterFullscreenTouchEnd(ev: TouchEvent): void {
+    const step = this.consumeFullscreenSwipeStep(ev);
+    if (!step) return;
+    this.stepPosterFullscreen(step);
+  }
+
+  onPromoFullscreenTouchEnd(ev: TouchEvent): void {
+    const step = this.consumeFullscreenSwipeStep(ev);
+    if (!step) return;
+    this.stepPromoFullscreen(step);
+  }
+
+  private consumeFullscreenSwipeStep(ev: TouchEvent): -1 | 0 | 1 {
+    const sx = this.fullscreenSwipeStartX;
+    const sy = this.fullscreenSwipeStartY;
+    this.fullscreenSwipeStartX = null;
+    this.fullscreenSwipeStartY = null;
+    const t = ev.changedTouches?.[0];
+    if (!t || sx == null || sy == null) return 0;
+
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+    if (Math.abs(dx) < this.FULLSCREEN_SWIPE_THRESHOLD_PX) return 0;
+    if (Math.abs(dy) > this.FULLSCREEN_SWIPE_MAX_OFF_AXIS_PX && Math.abs(dy) > Math.abs(dx)) return 0;
+    return dx < 0 ? 1 : -1;
+  }
+
+  private stepPosterFullscreen(step: -1 | 1): void {
+    if (!this.posterFullscreenOpen || !this.posterFullscreenItem || !this.ads.length) return;
+    const imageIndices: number[] = [];
+    for (let i = 0; i < this.ads.length; i++) {
+      if (this.ads[i]?.kind === "image") imageIndices.push(i);
+    }
+    if (!imageIndices.length) return;
+
+    let currentPos = imageIndices.findIndex((idx) => this.ads[idx] === this.posterFullscreenItem);
+    if (currentPos < 0) {
+      currentPos = imageIndices.findIndex((idx) => this.ads[idx]?.src === this.posterFullscreenItem?.src);
+    }
+    if (currentPos < 0) currentPos = 0;
+
+    const nextPos = (currentPos + step + imageIndices.length) % imageIndices.length;
+    const nextAdsIndex = imageIndices[nextPos];
+    this.adsIndex = nextAdsIndex;
+    this.goToAd(nextAdsIndex, "smooth");
+    this.posterFullscreenItem = this.ads[nextAdsIndex];
+  }
+
+  private stepPromoFullscreen(step: -1 | 1): void {
+    if (!this.promoFullscreenOpen || !this.promoFullscreenItem || !this.promoAds.length) return;
+    let idx = this.promoAds.findIndex((p) => p === this.promoFullscreenItem);
+    if (idx < 0) idx = this.promoAds.findIndex((p) => p.src === this.promoFullscreenItem?.src);
+    if (idx < 0) idx = 0;
+    const next = (idx + step + this.promoAds.length) % this.promoAds.length;
+    this.promoFullscreenItem = this.promoAds[next];
+    this.promoStripActiveIndex = next;
+    this.scrollPromoToIndex(next, "smooth");
+  }
+
+  private scheduleIdlePosterMode(): void {
+    this.clearIdlePosterTimers();
+    this.idlePosterTimer = setTimeout(() => this.enterIdlePosterMode(), this.IDLE_POSTER_TIMEOUT_MS);
+  }
+
+  private clearIdlePosterTimers(): void {
+    if (this.idlePosterTimer) {
+      clearTimeout(this.idlePosterTimer);
+      this.idlePosterTimer = undefined;
+    }
+    if (this.idlePosterRotateTimer) {
+      clearInterval(this.idlePosterRotateTimer);
+      this.idlePosterRotateTimer = undefined;
+    }
+  }
+
+  private onTutorialInteraction(): void {
+    if (this.idlePosterMode) {
+      this.exitIdlePosterMode();
+    }
+    this.scheduleIdlePosterMode();
+  }
+
+  private firstImageAdIndex(startIndex = this.adsIndex): number {
+    if (!this.ads.length) return -1;
+    for (let offset = 0; offset < this.ads.length; offset++) {
+      const i = (startIndex + offset) % this.ads.length;
+      if (this.ads[i]?.kind === "image") return i;
+    }
+    return -1;
+  }
+
+  private enterIdlePosterMode(): void {
+    if (this.idlePosterMode || !this.ads.length) return;
+    const firstPosterIndex = this.firstImageAdIndex(this.adsIndex);
+    if (firstPosterIndex < 0) return;
+
+    this.idlePosterMode = true;
+    this.stopAdsCarousel();
+    this.clearVideoAdAdvance();
+    this.pauseAllAdVideos(false);
+    this.goToAd(firstPosterIndex, "auto");
+    this.openPosterFullscreen(this.ads[firstPosterIndex]);
+
+    this.idlePosterRotateTimer = setInterval(() => {
+      const nextPosterIndex = this.firstImageAdIndex(this.adsIndex + 1);
+      if (nextPosterIndex < 0) return;
+      this.goToAd(nextPosterIndex, "auto");
+      this.posterFullscreenItem = this.ads[nextPosterIndex];
+    }, this.IDLE_POSTER_ROTATION_MS);
+  }
+
+  private exitIdlePosterMode(): void {
+    this.idlePosterMode = false;
+    this.clearIdlePosterTimers();
+    if (this.posterFullscreenOpen) {
+      this.posterFullscreenOpen = false;
+      this.posterFullscreenItem = null;
+    }
+    this.startAdsCarousel();
+  }
+
+  /**
+   * Evita overlay fullscreen "appeso" durante cambio route:
+   * chiude modal + aspetta almeno un frame prima della navigate.
+   */
+  private async flushFullscreenBeforeNavigate(): Promise<void> {
+    if (this.posterFullscreenOpen) this.closePosterFullscreen();
+    if (this.promoFullscreenOpen) this.closePromoFullscreen(undefined, "pre-nav");
+    this.cdr.detectChanges();
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+  }
+
+  async goPosterDetailFromFullscreen(ev?: Event): Promise<void> {
+    ev?.stopPropagation();
+    ev?.preventDefault?.();
+    const slug = this.posterFullscreenNavSlug;
+    await this.flushFullscreenBeforeNavigate();
+    if (!slug) {
+      void this.toastCtrl
+        .create({
+          message: "Questo poster non ha una scheda attivita' disponibile.",
+          duration: 1800,
+          position: "bottom",
+          color: "medium",
+        })
+        .then((t) => t.present());
+      return;
+    }
+    await this.router
+      .navigate(["/app/tabs/speakers/speaker-details", slug], {
+        replaceUrl: false,
+      })
+      .catch(() => {});
+  }
+
+  /** Chiudi modal promo → opzionale navigazione alla scheda attività. */
+  async goPromoDetailFromFullscreen(ev?: Event, source: string = "unknown"): Promise<void> {
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H11',location:'tutorial.ts:goPromoDetailFromFullscreen',message:'Promo fullscreen detail handler fired',data:{source,slug:this.promoFullscreenNavSlug,hadItem:!!this.promoFullscreenItem},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    ev?.stopPropagation();
+    ev?.preventDefault?.();
+    const slug = this.promoFullscreenNavSlug;
+    await this.flushFullscreenBeforeNavigate();
+    if (!slug) {
+      void this.toastCtrl
+        .create({
+          message: "Questa promo non ha una scheda attivita' disponibile.",
+          duration: 1800,
+          position: "bottom",
+          color: "medium",
+        })
+        .then((t) => t.present());
+      return;
+    }
+    const currentUrl = this.router.url;
+    if (currentUrl.endsWith(`/app/tabs/speakers/speaker-details/${slug}`)) {
+      // #region agent log
+      fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H11',location:'tutorial.ts:goPromoDetailFromFullscreen',message:'Promo detail tap on same route',data:{slug,currentUrl},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      void this.toastCtrl
+        .create({
+          message: "Sei gia' sulla scheda attivita'.",
+          duration: 1600,
+          position: "bottom",
+          color: "medium",
+        })
+        .then((t) => t.present());
+      return;
+    }
+    kioskDevLog("🧭 [Tutorial] Promo fullscreen → dettaglio attività — slug:", slug);
+    await this.router
+      .navigate(["/app/tabs/speakers/speaker-details", slug], { replaceUrl: false })
+      .catch(() => {});
+  }
+
+  /** Seconda chance: costruisce 1 poster per ogni business (cover → logo → avatar). */
+  private tryLoadPostersFromBusinesses(): void {
+    this.kioskApi.getBusinesses().subscribe({
+      next: (raw) => {
+        const built = this.buildAdsFromBusinessesPayload(raw);
+        const ready = this.dedupeAndSortPosters(built);
+        if (ready.length) {
+          this.ads = ready;
+          kioskDevLog(
+            "✅ [Tutorial] Poster home da GET /api/public-kiosk/businesses —",
+            this.ads.length,
+            "attività"
+          );
+          this.afterBannerAdsLoaded();
+          return;
+        }
+        kioskDevWarn("⚠️ [Tutorial] Anche businesses vuoto — fallback JSON locale");
+        this.loadFallbackBannersJson();
+      },
+      error: () => {
+        kioskDevWarn("⚠️ [Tutorial] GET businesses KO — fallback JSON locale");
+        this.loadFallbackBannersJson();
+      },
+    });
+  }
+
+  /**
+   * JSON locale: carosello solo da `data.json` → speakers premium. Immagine carosello:
+   * `logo` (banner/logotipo) → `coverUrl` → `posterUrl` → prima `foto` → avatar.
+   */
+  private loadFallbackBannersJson(): void {
+    this.confService
+      .load()
+      .pipe(take(1))
+      .subscribe({
+        next: (data) => {
+          const built = this.buildAdsFromLocalJsonSpeakers(data.speakers ?? []);
+          const ready = this.dedupeAndSortPosters(
+            built.length ? built : this.minimalBannerFallback()
+          );
+          this.ads = ready;
+          if (!built.length) {
+            kioskDevWarn(
+              "⚠️ [Tutorial] Nessun speaker premium in data.json — poster minimo o carosello vuoto dopo dedup"
+            );
+          } else {
+            kioskDevLog(
+              "📁 [Tutorial] Poster home da data.json (solo premium) —",
+              ready.length,
+              "attività"
+            );
+          }
+          this.afterBannerAdsLoaded();
+        },
+        error: () => {
+          this.ads = this.dedupeAndSortPosters(this.minimalBannerFallback());
+          kioskDevWarn(
+            "⚠️ [Tutorial] data.json non caricato — poster minimo con slug di esempio"
+          );
+          this.afterBannerAdsLoaded();
+        },
+      });
+  }
+
+  /** Allineato a `KioskApiService.isPremiumTotemBusiness` per oggetti `Speaker` da JSON. */
+  private isPremiumLocalSpeaker(s: Speaker): boolean {
+    if (s.isPremium === true) return true;
+    const t = String(s.listingTier ?? (s as { listing_tier?: string }).listing_tier ?? "")
+      .trim()
+      .toLowerCase();
+    return t === "premium";
+  }
+
+  private buildAdsFromLocalJsonSpeakers(speakers: Speaker[]): AdItem[] {
+    const out: AdItem[] = [];
+    for (const s of speakers) {
+      if (!this.isPremiumLocalSpeaker(s)) continue;
+      const slug = String(s.slug ?? "").trim();
+      if (!slug) {
+        kioskDevWarn(
+          "⚠️ [Tutorial] Speaker premium senza slug — escluso dal carosello:",
+          s.name || s.id
+        );
+        continue;
+      }
+      const fotos = Array.isArray(s.foto)
+        ? s.foto
+        : s.foto
+          ? [String(s.foto)]
+          : [];
+      /* Carosello poster home: prima il “logo” banner (JSON `logo`), poi poster promozionale */
+      const rawImg =
+        (s.logo && String(s.logo).trim()) ||
+        (s.coverUrl && String(s.coverUrl).trim()) ||
+        s.posterUrl ||
+        fotos[0] ||
+        s.profilePic ||
+        "";
+      const resolved = rawImg
+        ? this.kioskApi.resolveAssetUrl(String(rawImg))
+        : "";
+      out.push({
+        kind: "image",
+        src: resolved || this.POSTER_PLACEHOLDER,
+        activitySlug: slug,
+        businessName: s.name?.trim() || undefined,
+        uploadedBy: undefined,
+      });
+    }
+    return out;
+  }
+
+  private minimalBannerFallback(): AdItem[] {
+    return [
+      {
+        kind: "image",
+        src: "assets/img/speakers/agos_banner.png",
+        activitySlug: "agos",
+      },
+    ];
+  }
+
+  private buildAdsFromBannerPayload(raw: unknown): AdItem[] {
+    return this.buildAdsFromBannerDtos(this.kioskApi.unwrapBanners(raw));
+  }
+
+  /** Filtra per regole kiosk (approvazioni + attivo + solo premium), poi mappa in AdItem. */
+  private buildAdsFromBannerDtos(items: KioskBannerDto[]): AdItem[] {
+    const eligible = items.filter((b) => this.kioskApi.isEligibleKioskHomePoster(b));
+    const premium = eligible.filter((b) => this.kioskApi.isPremiumKioskHomePoster(b));
+    if (eligible.length && !premium.length) {
+      kioskDevInfo(
+        "⭐ [Tutorial] Poster home: nessuna attività premium tra i candidati — carosello vuoto (solo listing premium)."
+      );
+    }
+    return premium
+      .map((b) => this.mapBannerDtoToPoster(b))
+      .filter((x): x is AdItem => !!x);
+  }
+
+  private buildAdsFromBusinessesPayload(raw: unknown): AdItem[] {
+    const list = this.kioskApi
+      .filterPublishedForKiosk(this.kioskApi.unwrapBusinessList(raw))
+      .filter((dto) => this.kioskApi.isPremiumTotemBusiness(dto));
+    const out: AdItem[] = [];
+    for (const dto of list) {
+      const slug = this.extractSlugFromBusiness(dto);
+      if (!slug) {
+        kioskDevWarn(
+          "⚠️ [Tutorial] Attività senza slug/id — poster home escluso:",
+          dto.name || "(senza nome)"
+        );
+        continue;
+      }
+      const rawImg =
+        dto.cover ||
+        dto.coverUrl ||
+        dto.logo ||
+        dto.logoUrl ||
+        dto.profilePic ||
+        dto.avatarUrl;
+      const resolved = rawImg
+        ? this.kioskApi.resolveAssetUrl(rawImg as string)
+        : "";
+      out.push({
+        kind: "image",
+        src: resolved || this.POSTER_PLACEHOLDER,
+        activitySlug: slug,
+      });
+    }
+    return out;
+  }
+
+  private extractSlugFromBusiness(dto: KioskPublicBusinessDto): string {
+    const s = dto.slug ?? dto.id;
+    return s != null ? String(s).trim() : "";
+  }
+
+  /**
+   * Un solo poster per chiave attività; ordinamento alfabetico sullo slug per stabilità tra refresh.
+   */
+  private dedupeAndSortPosters(items: AdItem[]): AdItem[] {
+    const map = new Map<string, AdItem>();
+    for (const it of items) {
+      const key = this.posterDedupeKey(it);
+      if (!key) {
+        kioskDevWarn("⚠️ [Tutorial] Slide poster senza chiave dedup — ignorata", it.src);
+        continue;
+      }
+      if (map.has(key)) {
+        kioskDevWarn(
+          "⚠️ [Tutorial] Poster duplicato per la stessa attività — uso il primo:",
+          key
+        );
+        continue;
+      }
+      map.set(key, it);
+    }
+    return [...map.values()].sort((a, b) =>
+      this.posterSortKey(a).localeCompare(this.posterSortKey(b), "it")
+    );
+  }
+
+  private isMultiPosterBusinessSlug(slug: string | undefined): boolean {
+    const s = String(slug || "").trim().toLowerCase();
+    return s === "comune-castelraimondo";
+  }
+
+  private posterDedupeKey(it: AdItem): string {
+    const slug = it.activitySlug?.trim();
+    if (slug) {
+      if (this.isMultiPosterBusinessSlug(slug)) {
+        const src = String(it.src || "").trim();
+        const title = String(it.title || "").trim();
+        const subtitle = String(it.subtitle || "").trim();
+        return `slug-multi:${slug}:${src}:${title}:${subtitle}`;
+      }
+      return `slug:${slug}`;
+    }
+    if (it.src?.trim()) return `src:${it.src.trim()}`;
+    return "";
+  }
+
+  private posterSortKey(it: AdItem): string {
+    return it.activitySlug || it.src || "";
+  }
+
+  private mapBannerDtoToPoster(b: KioskBannerDto): AdItem | null {
+    const mt = (b.mediaType || "").toLowerCase();
+    if (mt === "video") {
+      kioskDevLog("🎬 [Tutorial] Banner video escluso dal carosello poster (solo immagini)");
+      return null;
+    }
+    const ext = b.externalUrl || b.linkUrl;
+    if (ext && String(ext).trim().match(/^https?:\/\//i)) {
+      kioskDevWarn(
+        "🔒 [Tutorial] URL esterno su banner ignorato (home kiosk solo navigazione interna):",
+        ext
+      );
+    }
+    const slug = this.extractActivitySlugFromBanner(b);
+    const nested = b.poster;
+    const rawSrc =
+      b.homePosterUrl ||
+      b.posterUrl ||
+      b.imageUrl ||
+      nested?.imageUrl ||
+      nested?.image_url ||
+      b.image_url ||
+      b.src ||
+      b.url;
+    const resolved = rawSrc ? this.kioskApi.resolveAssetUrl(String(rawSrc)) : "";
+    const fallbackRaw =
+      b.business_cover_url ||
+      b.business_logo_url ||
+      "";
+    const fallbackResolved = fallbackRaw
+      ? this.kioskApi.resolveAssetUrl(String(fallbackRaw))
+      : "";
+    const bn = [b.businessName, b.business_name]
+      .map((x) => (x == null ? "" : String(x).trim()))
+      .find((s) => s.length > 0);
+    const title = (b.title != null ? String(b.title).trim() : "") || undefined;
+    const subtitle =
+      (b.subtitle != null ? String(b.subtitle).trim() : "") || undefined;
+    const uploadedBy =
+      String(b.uploadedBy ?? "").trim() ||
+      (String(b.uploaded_by_type ?? "").toLowerCase() === "admin"
+        ? "admin"
+        : String(b.uploaded_by_email ?? "").trim()) ||
+      undefined;
+    return {
+      kind: "image",
+      src: resolved || this.POSTER_PLACEHOLDER,
+      fallbackSrc: fallbackResolved || undefined,
+      activitySlug: slug || undefined,
+      businessName: bn,
+      title,
+      subtitle,
+      uploadedBy,
+    };
+  }
+
+  private extractActivitySlugFromBanner(b: KioskBannerDto): string {
+    const o = b as Record<string, unknown>;
+    const targetType = String(
+      b.target_type ?? o.target_type ?? o.targetType ?? ""
+    ).toLowerCase();
+    const targetVal = String(
+      b.target_value ?? o.target_value ?? o.targetValue ?? ""
+    ).trim();
+    if (targetVal && (targetType === "business_detail" || targetType === "speaker" || targetType === "")) {
+      const normalized = normalizeKioskBusinessSlugCandidate(targetVal);
+      if (normalized) return normalized;
+    }
+
+    const ctaType = String(b.cta_type ?? o.cta_type ?? "").toLowerCase();
+    const ctaVal = String(b.cta_value ?? o.cta_value ?? "").trim();
+    if (ctaVal && (ctaType === "business_detail" || ctaType === "business" || ctaType === "internal")) {
+      const normalized = normalizeKioskBusinessSlugCandidate(ctaVal);
+      if (normalized) return normalized;
+    }
+
+    const x = b as KioskBannerDto & { activitySlug?: string };
+    const cand =
+      x.business_slug ||
+      x.businessSlug ||
+      x.activitySlug ||
+      b.slug ||
+      b.speakerId ||
+      (b.id != null ? String(b.id) : "");
+    return normalizeKioskBusinessSlugCandidate(String(cand || "").trim()) || "";
+  }
+
+  /** Dopo aver impostato `ads`: riallinea indici video e avvia carosello */
+  private afterBannerAdsLoaded(): void {
+    this.bumpAssetCacheVersion();
+    this.rebuildVideoAdIndexes();
+    setTimeout(() => {
+      if (!this.ads.length) return;
+      this.goToAd(this.adsIndex, "auto");
+      this.startAdsCarousel();
+      this.bindAdVideoObserver();
+    }, 0);
   }
 
   // ========= CAROSELLO POSTER / VIDEO =========
   startAdsCarousel() {
-    if (!this.ads.length || this.adsTimer) return;
+    if (!this.ads.length) return;
+    this.stopAdsCarousel();
     this.adsTimer = setInterval(() => {
       if (this.adsUserPause) return;
       const current = this.ads[this.adsIndex];
@@ -326,11 +1418,93 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }, this.ADS_DURATION_MS);
   }
 
+  /** Appende query `v` alle immagini per evitare cache stale su URL invariata. */
+  assetUrl(url: string | null | undefined): string {
+    const raw = String(url || "").trim();
+    if (!raw) return "";
+    if (/^(data:|blob:)/i.test(raw)) return raw;
+    const sep = raw.includes("?") ? "&" : "?";
+    return `${raw}${sep}v=${this.assetCacheVersion}`;
+  }
+
+  private bumpAssetCacheVersion(): void {
+    this.assetCacheVersion = Date.now();
+  }
+
   stopAdsCarousel() {
     if (this.adsTimer) {
       clearInterval(this.adsTimer);
       this.adsTimer = undefined;
     }
+  }
+
+  /**
+   * Dopo GET promo: il `#promoStrip` è dentro *ngIf — serve un ciclo di change detection + layout
+   * prima di scroll/timer (altrimenti ViewChild e offsetWidth sono inconsistenti).
+   */
+  private schedulePromoStripLayoutRefresh(): void {
+    this.stopPromoStripAuto();
+    this.promoAutoIndex = 0;
+    this.promoStripActiveIndex = 0;
+    this.cdr.detectChanges();
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!this.promoAds?.length) return;
+          this.scrollPromoToIndex(0, "auto");
+          this.startPromoStripAuto();
+        });
+      });
+    });
+  }
+
+  /** Scroll orizzontale automatico sulla strip “In evidenza” (2+ card). */
+  private startPromoStripAuto(): void {
+    this.stopPromoStripAuto();
+    if (!this.promoAds?.length || this.promoAds.length < 2) return;
+    this.promoAutoTimer = setInterval(() => {
+      if (this.promoFullscreenOpen) return;
+      if (Date.now() < this.promoStripPauseUntil) return;
+      this.promoAutoIndex = (this.promoAutoIndex + 1) % this.promoAds.length;
+      this.scrollPromoToIndex(this.promoAutoIndex, "smooth");
+    }, this.ADS_DURATION_MS);
+  }
+
+  private stopPromoStripAuto(): void {
+    if (this.promoAutoTimer) {
+      clearInterval(this.promoAutoTimer);
+      this.promoAutoTimer = undefined;
+    }
+  }
+
+  /** Centra la card nella viewport orizzontale della strip (più affidabile di scrollIntoView nel flex overflow). */
+  private scrollPromoToIndex(i: number, behavior: ScrollBehavior = "smooth"): void {
+    const strip = this.promoStripRef?.nativeElement;
+    if (!strip) return;
+    const cards = strip.querySelectorAll("button.kiosk-promo-card");
+    const el = cards[i] as HTMLElement | undefined;
+    if (!el) return;
+    const maxScroll = Math.max(0, strip.scrollWidth - strip.clientWidth);
+    const ideal =
+      el.offsetLeft - (strip.clientWidth - el.offsetWidth) / 2;
+    strip.scrollTo({
+      left: Math.max(0, Math.min(maxScroll, ideal)),
+      behavior,
+    });
+    this.promoStripActiveIndex = i;
+  }
+
+  /** Tap sui dots “In evidenza” (stesso schema del poster). */
+  goToPromoStripIndex(i: number): void {
+    if (i < 0 || !this.promoAds?.length || i >= this.promoAds.length) return;
+    this.promoAutoIndex = i;
+    this.onPromoStripInteraction();
+    this.scrollPromoToIndex(i, "smooth");
+  }
+
+  /** Pausa breve auto-scroll dopo tocco / scroll manuale sulla strip. */
+  onPromoStripInteraction(): void {
+    this.promoStripPauseUntil = Date.now() + 6_000;
   }
 
   // ===== INIZIO MODIFICA =====
@@ -587,6 +1761,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   goToAd(i: number, behavior: ScrollBehavior = "smooth") {
+    if (!this.ads.length) return;
     const prev = this.ads[this.adsIndex];
     if (prev?.kind === "video") this.leaveVideoAd();
     if (this.isClickToPlayVideo(this.adsIndex)) {
@@ -631,11 +1806,12 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     // se siamo su un video e l’utente ha già “sbloccato” il device, mostro CTA
     this.adsShowUnmuteBtn = this.adsAudioUnlocked && this.isCurrentAdVideo;
     // ===== FINE MODIFICA =====
+    this.preloadAdjacentPosters();
   }
 
   onAdsScroll() {
     const track = this.adsTrack?.nativeElement;
-    if (!track) return;
+    if (!track || !this.ads.length) return;
     const w = track.clientWidth || 1;
     const idx = Math.round(track.scrollLeft / w);
     if (idx !== this.adsIndex) {
@@ -676,6 +1852,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       this.syncAdVideos();
       this.adsShowUnmuteBtn = this.adsAudioUnlocked && this.isCurrentAdVideo;
       // ===== FINE MODIFICA =====
+      this.preloadAdjacentPosters();
     }
 
     this.pauseAdsCarousel();
@@ -711,7 +1888,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   removeBrokenAd(i: number) {
     const missing = this.ads[i]?.src;
-    console.warn("[Carosello] Media mancante: rimuovo", missing);
+    kioskDevWarn("[Carosello] Media mancante: rimuovo", missing);
 
     // ===== INIZIO MODIFICA =====
     // se rimuovo un elemento, devo ricostruire la cache videoAdIndexes
@@ -796,50 +1973,81 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /** Click su slide del carosello: pagina in-app (es. Prenota Lanterna), sito in modal, o immagine a tutto schermo */
+  /** Seconda riga sotto il nome: mostra solo se non duplica il nome attività (mobile: leggibilità). */
+  showPosterCaptionTitle(ad: AdItem): boolean {
+    const t = String(ad.title ?? "").trim();
+    if (!t) return false;
+    const b = String(ad.businessName ?? "").trim();
+    if (!b) return true;
+    return t.toLowerCase() !== b.toLowerCase();
+  }
+
+  /** Sottotitolo: nascondi se uguale a nome o titolo. */
+  showPosterCaptionSubtitle(ad: AdItem): boolean {
+    const s = String(ad.subtitle ?? "").trim();
+    if (!s) return false;
+    const low = s.toLowerCase();
+    const b = String(ad.businessName ?? "").trim().toLowerCase();
+    const t = String(ad.title ?? "").trim().toLowerCase();
+    if (b && low === b) return false;
+    if (t && low === t) return false;
+    return true;
+  }
+
+  /** Logo Comune nell’header → pagina istituzionale interna al totem. */
+  onToolbarLogoClick(ev: Event): void {
+    ev.preventDefault?.();
+    void this.router
+      .navigate(["/app/tabs/comune-castelraimondo"])
+      .catch(() => {});
+  }
+
+  /**
+   * Tap sul poster: solo navigazione interna verso il dettaglio attività (o route esplicita).
+   * Nessun zoom fullscreen né link esterni sulla home kiosk.
+   */
   onAdClick(ad: AdItem, event: Event): void {
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H6',location:'tutorial.ts:onAdClick',message:'Poster click handler fired',data:{kind:ad.kind,hasSlug:!!safeKioskBusinessSlug(ad.activitySlug),adsIndex:this.adsIndex,supportBannerVisible:this.supportBannerVisible},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (ad.kind !== "image") return;
     event.preventDefault();
     event.stopPropagation();
-    if (ad.internalRoute) {
-      this.stopAdsCarousel();
-      this.router.navigateByUrl(ad.internalRoute);
+    this.stopAdsCarousel();
+
+    this.openPosterFullscreen(ad);
+  }
+
+  /** Errore caricamento immagine poster: sostituisce con placeholder senza rimuovere la slide. */
+  onPosterImageError(index: number): void {
+    const ad = this.ads[index];
+    if (!ad || ad.kind !== "image") return;
+    const fallback = String(ad.fallbackSrc || "").trim();
+    if (fallback && fallback !== ad.src) {
+      kioskDevWarn(
+        "⚠️ [Tutorial] Poster non caricato — fallback a cover/logo attività:",
+        ad.src
+      );
+      ad.src = fallback;
+      this.ads = [...this.ads];
       return;
     }
-    if (ad.externalUrl) {
-      this.openExternalSite(ad.externalUrl);
-    } else {
-      this.openImageFull(ad.src);
-    }
+    kioskDevWarn(
+      "⚠️ [Tutorial] Poster non caricato — uso placeholder kiosk:",
+      ad.src
+    );
+    ad.src = this.POSTER_PLACEHOLDER;
+    this.ads = [...this.ads];
   }
 
-  /** Apre il sito sempre in-app (webview modal): resta dentro Ionic, nessuna navigazione al browser esterno */
-  openExternalSite(url: string): void {
-    this.stopAdsCarousel();
-    this.openWebViewModal(url);
-    setTimeout(() => {
-      if (this.webViewUrl && !this.isWebViewOpen) {
-        this.isWebViewOpen = true;
-      }
-    }, 0);
-  }
-
-  private openWebViewModal(url: string): void {
-    this.webViewUrl = url;
-    this.webViewSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
-    this.isWebViewOpen = true;
-  }
-
-  closeWebView(): void {
-    this.isWebViewOpen = false;
-    this.webViewUrl = "";
-    this.webViewSafeUrl = null;
-    setTimeout(() => this.goToAd(this.adsIndex, "auto"), 100);
-  }
-
-  /** Fallback: apri il sito in nuova scheda (se l'iframe è bloccato dal sito) */
-  openWebViewInNewTab(): void {
-    if (this.webViewUrl) window.open(this.webViewUrl, "_blank", "noopener");
+  /** Pre-carica leggero la slide successiva per scroll più fluido (solo immagini). */
+  private preloadAdjacentPosters(): void {
+    if (this.ads.length < 2) return;
+    const next = (this.adsIndex + 1) % this.ads.length;
+    const src = this.ads[next]?.src;
+    if (!src || src.endsWith(".svg")) return;
+    const img = new Image();
+    img.src = src;
   }
 
   // ========= SLIDE 3: VIDEO PRINCIPALE =========
@@ -946,10 +2154,15 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
           "Il video non è disponibile. Se il problema persiste, contattaci su WhatsApp: +39 389 986 8381",
         duration: 7_000,
         position: "bottom",
+        cssClass: "toast-green",
+        color: "success",
         buttons: [
           {
             text: "QR WhatsApp",
-            handler: () => this.openWhatsAppSafe(),
+            handler: () => {
+              void this.openWhatsAppSafe();
+              return true;
+            },
           },
         ],
       })
@@ -972,12 +2185,12 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   private startSupportTimers() {
     this.clearSupportTimers();
-    if (this.supportToastShown) return;
-    this.supportDelayTimer = setTimeout(async () => {
-      if (!this.isFirstSlideActive || this.supportToastShown) return;
-      await this.showSupportToast();
-      this.supportToastShown = true;
-    }, this.SUPPORT_TOAST_DELAY_MS);
+    if (this.supportAssistPromptShown) return;
+    this.supportDelayTimer = setTimeout(() => {
+      if (!this.isFirstSlideActive || this.supportAssistPromptShown) return;
+      this.supportAssistPromptShown = true;
+      this.supportBannerVisible = true;
+    }, this.SUPPORT_BANNER_DELAY_MS);
   }
 
   private clearSupportTimers() {
@@ -985,33 +2198,38 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       clearTimeout(this.supportDelayTimer);
       this.supportDelayTimer = undefined;
     }
+    this.supportBannerVisible = false;
   }
 
-  private async showSupportToast() {
-    const toast = await this.toastCtrl.create({
-      message:
-        "Se noti malfunzionamenti o errori nel totem, contattaci su WhatsApp: +39 389 986 8381",
-      position: "bottom",
-      duration: this.SUPPORT_TOAST_DURATION_MS,
-      cssClass: "toast-green",
-      color: "success",
-      buttons: [
-        { text: "QR WhatsApp", handler: () => this.openWhatsAppSafe() },
-        { text: "Chiudi", role: "cancel" },
-      ],
-    });
-    await toast.present();
+  dismissSupportBanner() {
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H8',location:'tutorial.ts:dismissSupportBanner',message:'Support banner dismiss handler fired',data:{supportBannerVisibleBefore:this.supportBannerVisible},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    this.supportBannerVisible = false;
   }
 
-  // WhatsApp
-  openWhatsAppSafe() {
+  // WhatsApp — QR generato in-app (nessuna API esterna; ok con kioskStrictMode)
+  async openWhatsAppSafe() {
     const msg = "Ciao, nel totem ho notato un problema. Potete verificare?";
     const link = `https://wa.me/393899868381?text=${encodeURIComponent(msg)}`;
     this.supportWhatsappLink = link;
-    this.supportQrSrc =
-      "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" +
-      encodeURIComponent(link);
+    this.supportQrSrc = "";
+    this.supportQrLoading = true;
     this.supportModalOpen = true;
+    try {
+      const QRCode = (await import("qrcode")).default;
+      this.supportQrSrc = await QRCode.toDataURL(link, {
+        width: 240,
+        margin: 2,
+        errorCorrectionLevel: "M",
+        color: { dark: "#0f172a", light: "#ffffff" },
+      });
+    } catch (e) {
+      kioskDevWarn("[Tutorial] QR WhatsApp non generato:", e);
+      this.supportQrSrc = "";
+    } finally {
+      this.supportQrLoading = false;
+    }
   }
 
   async copyWhatsAppLink() {
@@ -1033,6 +2251,14 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  closeSupportModal(ev?: Event, source: string = "unknown"): void {
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H12',location:'tutorial.ts:closeSupportModal',message:'Support modal close handler fired',data:{source,wasOpen:this.supportModalOpen},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    ev?.stopPropagation?.();
+    this.supportModalOpen = false;
+  }
+
   // Menu & Nav
   async toggleMenu() {
     try {
@@ -1041,8 +2267,26 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   startApp() {
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H6',location:'tutorial.ts:startApp',message:'Start app button handler fired',data:{route:'/app/tabs/schedule'},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     this.router
       .navigateByUrl("/app/tabs/schedule", { replaceUrl: true })
       .catch((err) => console.error("Errore durante startApp:", err));
+  }
+
+  @HostListener("click", ["$event"])
+  @HostListener("pointerdown", ["$event"])
+  @HostListener("touchstart", ["$event"])
+  @HostListener("document:keydown", ["$event"])
+  onTutorialHostTap(event: Event): void {
+    const target = event.target as HTMLElement | null;
+    const inPoster = !!target?.closest?.(".ads-item.poster-card");
+    const inPromo = !!target?.closest?.(".kiosk-promo-card");
+    const inSupport = !!target?.closest?.(".kiosk-support-banner");
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'378a0a'},body:JSON.stringify({sessionId:'378a0a',runId:'pre-fix',hypothesisId:'H9',location:'tutorial.ts:onTutorialHostTap',message:'Tutorial host received input event',data:{eventType:event.type,targetTag:target?.tagName ?? null,targetClass:target?.className ?? null,inPoster,inPromo,inSupport,supportBannerVisible:this.supportBannerVisible,promoFullscreenOpen:this.promoFullscreenOpen},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    this.onTutorialInteraction();
   }
 }

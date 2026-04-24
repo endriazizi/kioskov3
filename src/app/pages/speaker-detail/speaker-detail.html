@@ -1,92 +1,188 @@
-<ion-content class="speaker-detail">
-  <ion-header class="ion-no-border">
-    <ion-toolbar>
-      <ion-buttons slot="start">
-        <ion-back-button defaultHref="/app/tabs/speakers"></ion-back-button>
-      </ion-buttons>
+<ion-header class="ion-no-border speaker-detail-header">
+  <ion-toolbar class="speaker-detail-toolbar">
+    <ion-buttons slot="start">
+      <ion-back-button
+        defaultHref="/app/tabs/speakers"
+        text=""
+        class="kiosk-back-fab"
+        (click)="onBackTap($event)"
+      ></ion-back-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
 
-      @if (speaker) {
-      <ion-buttons slot="end">
-        <!-- <ion-button (click)="openContact(speaker)">
-          <ion-icon slot="icon-only" [ios]="'call-outline'" [md]="'call-sharp'"></ion-icon>
-        </ion-button>
-        <ion-button (click)="openSpeakerShare(speaker)">
-          <ion-icon slot="icon-only" [ios]="'share-outline'" [md]="'share-sharp'"></ion-icon>
-        </ion-button> -->
-      </ion-buttons>
+<ion-content class="speaker-detail-content" [fullscreen]="true">
+
+  <!-- Hero: nome e categoria leggibili a distanza (totem) -->
+  <section class="speaker-hero" [ngStyle]="coverBgStyle()" aria-label="Intestazione attività">
+    <div class="speaker-hero__overlay" aria-hidden="true"></div>
+    <div class="speaker-hero__inner">
+      <img
+        class="speaker-hero__avatar"
+        [src]="speaker?.profilePic || 'assets/img/kiosk-poster-placeholder.svg'"
+        [alt]="speaker?.name ? 'Logo ' + speaker.name : 'Attività'"
+        (load)="onImageLoad('avatar', speaker?.profilePic || 'assets/img/kiosk-poster-placeholder.svg')"
+        (error)="onImageError('avatar', speaker?.profilePic || 'assets/img/kiosk-poster-placeholder.svg')"
+        width="112"
+        height="112"
+        priority
+      />
+      @if (speaker?.category) {
+        <p class="speaker-hero__category">{{ speaker!.category }}</p>
       }
-    </ion-toolbar>
-  </ion-header>
+      <h1 class="speaker-hero__title">{{ speaker?.name ?? "Caricamento…" }}</h1>
+    </div>
+  </section>
 
-  <div class="speaker-background">
-    <img
-      [ngSrc]="speaker?.profilePic || 'assets/placeholder.jpg'"
-      [alt]="speaker?.name || 'Speaker profile'"
-      width="70"
-      height="70"
-      priority
-    />
-    <h2 class="custom-title">{{ speaker?.name ?? 'Loading...' }}</h2>
-  </div>
+  @if (speaker && showDetailQrBlock()) {
+    <section
+      class="website-qr-block website-qr-block--global"
+      aria-labelledby="qr-heading"
+    >
+      <p id="qr-heading" class="website-qr-title">Continua dal tuo telefono</p>
+      <p class="website-qr-sub">{{ detailQrHint() }}</p>
+      <div class="website-qr-wrap">
+        <img
+          [src]="detailQrImageSrc()"
+          alt="Codice QR contatto"
+          class="website-qr-img"
+          width="220"
+          height="220"
+          loading="lazy"
+        />
+      </div>
+    </section>
+  }
 
-  <!-- === CASO SPECIALE: GELATERIA CENTRALE ================================ -->
-  @if (speaker?.name === 'Gelateria Centrale') {
+  @if (speaker?.name === "Gelateria Centrale") {
     <app-gelateria-centrale
       [name]="speaker?.name!"
       [logo]="speaker?.logo!"
       [profilePic]="speaker?.profilePic!"
       [address]="speaker?.address!"
       [phone]="speaker?.phone!"
-      [websiteUrl]="'https://grancaffegelateriacentralecastelraimondo.my.canva.site/i-nostri-servizi'">
+      [websiteUrl]="speaker?.sito"
+    >
     </app-gelateria-centrale>
-  }
-  @else {
-    <!-- === CONTENUTO STANDARD (tutti gli altri) ========================== -->
-    <div class="ion-padding speaker-detail">
-      <img [src]="speaker?.logo" style="max-height:150px; display:block; margin:auto;">
-
-      @if (speaker?.name === 'Ludwig' || speaker?.name === 'Gelateria Carnevali') {
-        <div class="ion-padding">
-          <ion-button
-            expand="block"
-            color="primary"
-            [routerLink]="['/app/tabs/plateform', speaker?.sito]"
-          >
-            VISITA IL NOSTRO SITO!
-          </ion-button>
+  } @else {
+    <main class="speaker-detail-main" lang="it">
+      @if (speaker?.logo) {
+        <div class="activity-brand">
+          <img
+            class="activity-brand__logo"
+            [src]="speaker?.logo"
+            alt="Logo {{ speaker?.name }}"
+            (load)="onImageLoad('brandLogo', speaker?.logo)"
+            (error)="onImageError('brandLogo', speaker?.logo)"
+            loading="eager"
+          />
         </div>
       }
 
-      <!-- (qui restano la tua about, la social bar, ecc.) -->
-      <div class="about-text" [innerHTML]="speaker?.about || 'Loading biography...'"></div>
+      <article class="speaker-detail-story">
+        @if (speaker?.description) {
+          <p class="activity-lead">{{ speaker?.description }}</p>
+        }
 
-      <hr />
+        <div
+          class="about-text kiosk-prose"
+          [innerHTML]="speaker?.about || '…'"
+        ></div>
+      </article>
 
-      @if (speaker) {
+      @if (speaker && (speaker.instagram || speaker.twitter)) {
         <div class="social-links">
-          <ion-chip color="twitter" button>
-            <ion-icon name="logo-twitter"></ion-icon>
-            <ion-label>Twitter</ion-label>
-          </ion-chip>
-
-          <ion-chip color="dark" button>
-            <ion-icon name="logo-facebook"></ion-icon>
-            <ion-label>Facebook</ion-label>
-          </ion-chip>
-
-          <ion-chip color="instagram" button>
-            <ion-icon name="logo-instagram"></ion-icon>
-            <ion-label>Instagram</ion-label>
-          </ion-chip>
+          @if (speaker.instagram) {
+            <ion-chip color="instagram">
+              <ion-icon name="logo-instagram"></ion-icon>
+              <ion-label>Instagram</ion-label>
+            </ion-chip>
+          }
+          @if (speaker.twitter) {
+            <ion-chip color="twitter">
+              <ion-icon name="logo-twitter"></ion-icon>
+              <ion-label>Twitter</ion-label>
+            </ion-chip>
+          }
         </div>
       }
 
-      <h2>{{ speaker?.category }}</h2>
-      <p>{{ speaker?.description }}</p>
+      @if (galleryImages().length) {
+        <section class="gallery-section" aria-label="Galleria fotografica">
+          <h2 class="kiosk-section-title">Foto</h2>
+          <div class="activity-gallery" #galleryStrip>
+            @for (img of galleryImages(); track img) {
+              <div class="activity-gallery-item">
+                <img
+                  [src]="img"
+                  [attr.alt]="'Foto — ' + (speaker?.name || 'attività')"
+                  (click)="openGalleryFullscreen(img)"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            }
+          </div>
+        </section>
+      }
 
-      <ion-item><ion-label>📍 {{ speaker?.address }}</ion-label></ion-item>
-      <ion-item><ion-label>📞 {{ speaker?.phone }}</ion-label></ion-item>
-      <ion-item><ion-label>🕒 {{ speaker?.openingHours }}</ion-label></ion-item>
-    </div>
+      @if (speaker?.address || speaker?.phone || speaker?.email || speaker?.openingHours) {
+      <section class="contact-section" aria-labelledby="contatti-title">
+        <h2 id="contatti-title" class="kiosk-section-title">Contatti</h2>
+        <ion-list class="kiosk-contact-list" lines="none">
+          @if (speaker?.address) {
+            <ion-item class="kiosk-contact-item" lines="none">
+              <ion-icon name="location-outline" slot="start" class="kiosk-contact-icon"></ion-icon>
+              <ion-label class="kiosk-contact-label">{{ speaker?.address }}</ion-label>
+            </ion-item>
+          }
+          @if (speaker?.phone) {
+            <ion-item class="kiosk-contact-item" button="true" (click)="openTelSafe()">
+              <ion-icon name="call-outline" slot="start" class="kiosk-contact-icon"></ion-icon>
+              <ion-label class="kiosk-contact-label">{{ speaker?.phone }}</ion-label>
+            </ion-item>
+          }
+          @if (speaker?.email) {
+            <ion-item class="kiosk-contact-item" button="true" (click)="openMailtoSafe()">
+              <ion-icon name="mail-outline" slot="start" class="kiosk-contact-icon"></ion-icon>
+              <ion-label class="kiosk-contact-label">{{ speaker?.email }}</ion-label>
+            </ion-item>
+          }
+          @if (speaker?.openingHours) {
+            <ion-item class="kiosk-contact-item kiosk-contact-item--hours" lines="none">
+              <ion-icon name="time-outline" slot="start" class="kiosk-contact-icon"></ion-icon>
+              <ion-label class="kiosk-contact-label kiosk-contact-label--multiline">{{
+                speaker?.openingHours
+              }}</ion-label>
+            </ion-item>
+          }
+        </ion-list>
+      </section>
+      }
+    </main>
   }
 </ion-content>
+
+<ion-modal
+  [isOpen]="galleryFullscreenOpen"
+  (didDismiss)="closeGalleryFullscreen()"
+  class="promo-fullscreen-modal gallery-fullscreen-modal"
+>
+  <ng-template>
+    <div class="promo-fullscreen-shell" role="dialog" aria-modal="true" aria-label="Foto a schermo intero">
+      <ion-button
+        fill="clear"
+        class="promo-fullscreen-close"
+        aria-label="Chiudi foto"
+        (click)="closeGalleryFullscreen()"
+      >
+        <ion-icon name="close-outline"></ion-icon>
+      </ion-button>
+      @if (galleryFullscreenSrc) {
+        <div class="promo-fullscreen-stage">
+          <img class="promo-fullscreen-img" [src]="galleryFullscreenSrc" alt="Foto attività" />
+        </div>
+      }
+    </div>
+  </ng-template>
+</ion-modal>

@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "image",
+    "src": "assets/img/speakers/centrale_banner.png",
+    "activitySlug": "7"
+  },
+  {
+    "kind": "image",
+    "src": "assets/img/speakers/pizza_banner.png",
+    "activitySlug": "8"
+  },
+  {
+    "kind": "image",
+    "src": "assets/img/speakers/conad_banner.png",
+    "activitySlug": "10"
+  },
+  {
+    "kind": "image",
+    "src": "assets/img/speakers/lanterna_banner.png",
+    "activitySlug": "11"
+  }
+]

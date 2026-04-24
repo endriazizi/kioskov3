@@ -19,6 +19,7 @@ import * as L from 'leaflet';
 import { firstValueFrom } from 'rxjs';
 import { Location } from '../../interfaces/conference.interfaces';
 import { LocationService } from '../../providers/location.service';
+import { KioskApiService } from '../../providers/kiosk-api.service';
 
 @Component({
   selector: 'page-map',
@@ -49,6 +50,7 @@ import { LocationService } from '../../providers/location.service';
 })
 export class MapPage implements AfterViewInit {
   private locationService = inject(LocationService);
+  private kioskApi = inject(KioskApiService);
   private destroyRef = inject(DestroyRef);
 
   private map: L.Map | null = null;
@@ -97,7 +99,9 @@ export class MapPage implements AfterViewInit {
       // 👇 Disattivo il controllo di attribuzione di default (niente link "Leaflet")
       this.map = L.map(mapEle, {
         center: [centerLocation.lat, centerLocation.lng],
-        zoom: 16,
+        zoom: 17,
+        minZoom: 12,
+        maxZoom: 19,
         preferCanvas: true,
         attributionControl: false,   // <<< fondamentale
       });
@@ -115,8 +119,8 @@ export class MapPage implements AfterViewInit {
 
       // Tile layer (attribution testuale, non link)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        // puoi tenere l’attribution anche qui (non sarà un link)
-        attribution: '© OpenStreetMap contributors'
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors',
       }).addTo(this.map);
 
       // 👇 Attribution control CUSTOM senza prefix/link "Leaflet"
@@ -127,13 +131,13 @@ export class MapPage implements AfterViewInit {
       .addAttribution('© OpenStreetMap contributors') // testo liscio
       .addTo(this.map);
 
-      // Markers
       const locations = await firstValueFrom(this.locationService.getLocations());
       if (this.map && locations?.length) {
         locations.forEach((location: Location) => {
-          const marker = L.marker([location.lat, location.lng])
+          const icon = this.buildMarkerIcon(location);
+          const marker = L.marker([location.lat, location.lng], { icon })
             .addTo(this.map as L.Map)
-            .bindPopup(`${location.name}`, { className: 'location-popup' });
+            .bindPopup(this.popupHtml(location), { className: 'kiosk-map-popup' });
           this.markers.push(marker);
         });
       }
@@ -145,5 +149,39 @@ export class MapPage implements AfterViewInit {
     } catch (err) {
       console.error('Error initializing map:', err);
     }
+  }
+
+  private escapeHtml(s: string): string {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  private popupHtml(loc: Location): string {
+    const name = this.escapeHtml(loc.name);
+    const slug = (loc.slug || '').trim();
+    const detail =
+      slug &&
+      `/app/tabs/speakers/speaker-details/${encodeURIComponent(slug)}`;
+    const link = detail
+      ? `<a class="kiosk-map-popup__link" href="${detail}">Apri scheda</a>`
+      : '';
+    return `<div class="kiosk-map-popup__inner"><strong>${name}</strong>${link ? `<br/>${link}` : ''}</div>`;
+  }
+
+  private buildMarkerIcon(loc: Location): L.DivIcon {
+    const url = loc.icon ? this.kioskApi.resolveAssetUrl(loc.icon) : '';
+    const html = url
+      ? `<div class="kiosk-map-pin"><img src="${this.escapeHtml(url)}" alt="" referrerpolicy="no-referrer" /></div>`
+      : `<div class="kiosk-map-pin kiosk-map-pin--fallback"></div>`;
+    return L.divIcon({
+      html,
+      className: 'kiosk-map-divicon',
+      iconSize: [56, 56],
+      iconAnchor: [28, 56],
+      popupAnchor: [0, -50],
+    });
   }
 }

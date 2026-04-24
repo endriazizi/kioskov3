@@ -1,13 +1,11 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Infiorata di Castelraimondo</ion-title>
-
-    <ion-buttons slot="end">
-      <ion-button color="danger" (click)="goBack()">
-        <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
-        Torna indietro
+    <ion-buttons slot="start">
+      <ion-button class="kiosk-toolbar-back" fill="clear" (click)="goBack()" aria-label="Torna indietro">
+        <ion-icon slot="icon-only" ios="chevron-back-outline" md="arrow-back-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
+    <ion-title>Infiorata di Castelraimondo</ion-title>
   </ion-toolbar>
 </ion-header>
 

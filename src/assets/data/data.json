@@ -15,9 +15,7 @@
               ],
               "timeStart": "Domenica 12 ore 9.30",
               "timeEnd": "",
-              "tracks": [
-                "Ionic"
-              ],
+              "tracks": [              ],
               "id": "2"
             },
             {
@@ -86,7 +84,12 @@
       "phone": "+39 0737 640318",
       "openingHours": "orario continuato dalle 10:00 alle 23:00",
       "foto": [],
-      "id": "1"
+      "id": "1",
+      "slug": "agos",
+      "listingTier": "premium",
+      "posterUrl": "/assets/img/speakers/agos_banner.png",
+      "lat": 43.2086056,
+      "lng": 13.0572415
     },
     {
       "name": "Ludwig",
@@ -105,7 +108,12 @@
       "openingHours": "pranzo 12:00-15:30 - cena 12:00-22:30",
       "sito": "https://ludwigstrasse.plateform.app",
       "foto": ["assets/poster/a3_10.jpg","assets/poster/a3_11.jpg"],
-      "id": "2"
+      "id": "2",
+      "slug": "ludwig",
+      "listingTier": "premium",
+      "posterUrl": "/assets/img/speakers/ludwig_banner.png",
+      "lat": 43.2080547,
+      "lng": 13.0569176
     },
     {
       "name": "Bar L'eclissi",
@@ -124,7 +132,12 @@
       "openingHours": "pranzo 12:00-15:30 - cena 12:00-22:30",
       "foto": [],
       "sito": "feed",
-      "id": "3"
+      "id": "3",
+      "slug": "bar-leclissi",
+      "listingTier": "premium",
+      "posterUrl": "/assets/img/speakers/eclissi_banner.png",
+      "lat": 43.2073555,
+      "lng": 13.0560769
     },
     {
       "name": "Gelateria Carnevali",
@@ -141,7 +154,12 @@
       "openingHours": "pranzo 12:00-15:30 - cena 12:00-22:30",
       "sito": "https://www.gelateriacarnevali.com",
       "foto": [],
-      "id": "4"
+      "id": "4",
+      "slug": "gelateria-carnevali",
+      "listingTier": "premium",
+      "posterUrl": "/assets/img/speakers/carnevali_banner.png",
+      "lat": 43.208212,
+      "lng": 13.05701
     },
     {
       "name": "Tabaccheria Cerqueti",
@@ -158,7 +176,12 @@
       "phone": "+39 0737 641436",
       "openingHours": "Dal lunedì al martedì 07:15–13, 15:30–20 | domenica 08:30–13:00",
       "foto": [],
-      "id": "5"
+      "id": "5",
+      "slug": "tabaccheria-cerqueti",
+      "listingTier": "premium",
+      "posterUrl": "/assets/img/speakers/tabaccheria_cerqueti_banner.png",
+      "lat": 43.207681,
+      "lng": 13.056698
     },
     {
       "name": "Ristorante Nuovo Mondo",
@@ -175,7 +198,12 @@
       "phone": "+39 0737 640099",
       "openingHours": "Dalle 12:30 alle 14:30 e dalle 19:30 alle 22:00 - Mercoledì chiuso",
       "foto": [],
-      "id": "6"
+      "id": "6",
+      "slug": "ristorante-nuovo-mondo",
+      "listingTier": "premium",
+      "posterUrl": "/assets/img/speakers/nuovomondo_banner.png",
+      "lat": 43.207951,
+      "lng": 13.0559477
     },
     {
       "name": "Gelateria Centrale",
@@ -193,7 +221,12 @@
       "openingHours": "16:30, 21:00",
        "sito": "https://grancaffegelateriacentralecastelraimondo.my.canva.site",
        "foto": [],
-      "id": "7"
+      "id": "7",
+      "slug": "gelateria-centrale",
+      "listingTier": "premium",
+      "posterUrl": "/assets/img/speakers/centrale_banner.png",
+      "lat": 43.20892,
+      "lng": 13.057426
     },
     {
       "name": "Pizza El Pedro",
@@ -210,7 +243,12 @@
       "phone": "+39 +39 348 3824257",
       "openingHours": "16:30 - 21:00",
       "foto": [],
-      "id": "8"
+      "id": "8",
+      "slug": "pizza-el-pedro",
+      "listingTier": "premium",
+      "posterUrl": "/assets/img/speakers/pizza_banner.png",
+      "lat": 43.206459,
+      "lng": 13.05598
     },
     {
       "name": "CONAD CITY",
@@ -227,114 +265,393 @@
       "phone": "+39 0737 641418",
       "openingHours": "08:30 - 20:00",
       "foto": [],
-      "id": "10"
+      "id": "10",
+      "slug": "conad-city",
+      "listingTier": "premium",
+      "posterUrl": "/assets/img/speakers/conad_banner.png",
+      "lat": 43.211478,
+      "lng": 13.0521545
     },
     {
-      "name": "Pizzera La Lanterna",
+      "name": "Ristorante Pizzeria La Lanterna",
       "logo": "/assets/img/speakers/lanterna_banner.png",
       "profilePic": "/assets/img/speakers/lanterna_pizza_avatar.png",
       "instagram": "ionicframework",
       "twitter": "ionicframework",
-      "about": "🍕 La Lanterna, da oltre 16 anni, mette al primo posto la qualità e la soddisfazione dei propri clienti.\n\nLa Pizzeria Ristorante è gestita a conduzione familiare da Hajri Azizi, capofamiglia e titolare, insieme alla moglie Vera e ai figli Nadia ed Endri.\n\n🏠 Il locale è composto da una sala principale e da una caratteristica taverna con soffitto a volta, che regala un’atmosfera accogliente e conviviale, dove la regina del menù è la pizza.\n\n🔥 La pizza è preparata rigorosamente con forno a legna: sana, leggera, croccante, friabile e molto digeribile grazie alla lievitazione naturale con lievito madre e all'utilizzo di ingredienti freschi e genuini.\n\n🍝 Oltre alla pizza si possono gustare primi, secondi piatti e dolci della tradizione culinaria italiana.\n\n✨ Assaporare, ascoltare, riconoscere, apprezzare: l’arte della meditazione culinaria trova nel Ristorante Pizzeria La Lanterna uno dei suoi templi d’eccellenza. Qui il rito della pizza e della cucina sana è officiato ogni giorno nella splendida atmosfera interna e nelle accoglienti sale dalla famiglia Azizi.\n\n🤝 Punto d’incontro per un’élite locale e internazionale, La Lanterna offre il contesto ideale per una pizza, un pranzo, una cena o uno stuzzichino (aperitivo, happy hour, ecc.), accompagnato da un’accoglienza familiare e un servizio personalizzato.",
+      "about": "La Lanterna, da oltre 16 anni, mette al primo posto la qualità e la soddisfazione dei clienti. La pizzeria ristorante è gestita a conduzione familiare da Hajri Azizi, titolare, con Vera e i figli Nadia ed Endri. Il locale offre sala principale e taverna con soffitto a volta; la pizza è cotta a legna con lievito madre e ingredienti freschi. Oltre alla pizza: primi, secondi e dolci della tradizione italiana. Accoglienza familiare e servizio attento.",
       "title": "Software Engineer",
-      "category": "Pizzeri Ristorante",
-      "location": "Everywhere",
-      "address": "Largo della Libertà 4, 62022 Castelraimondo MC",
-      "email": "eva@example.com",
+      "category": "Pizzeria Ristorante",
+      "description": "Da oltre sedici anni a Castelraimondo: pizza a legna e lievito madre, sala e taverna accoglienti, cucina italiana tradizionale. Conduzione familiare.",
+      "location": "Castelraimondo (MC)",
+      "address": "Largo della Libertà 4, Castelraimondo (MC)",
+      "email": "info@pizzerialalanterna.it",
       "phone": "+39 0737 642142",
-      "openingHours": "18:30 - 02:00",
+      "openingHours": "18:30 - 02:00 — Orari indicativi; confermare in sede.",
+      "sito": "https://www.pizzerialalanterna.it",
       "foto": [],
-      "id": "11"
+      "id": "11",
+      "slug": "la-lanterna",
+      "posterUrl": "/assets/img/speakers/lanterna_banner.png",
+      "listingTier": "premium",
+      "lat": 43.2074813,
+      "lng": 13.0573017
+    },
+    {
+      "name": "Torre del Cassero",
+      "logo": "/assets/img/kiosk-poster-placeholder.svg",
+      "profilePic": "/assets/img/kiosk-poster-placeholder.svg",
+      "instagram": "",
+      "facebook": "",
+      "about": "Torre medievale del XIV secolo (1382–1385), simbolo di Castelraimondo, collegata alle fortificazioni dei Da Varano. Il complesso affianca l’ex Palazzo Comunale e domina piazza della Repubblica: un punto di riferimento per la storia locale e la panoramica sul centro storico.",
+      "title": "",
+      "location": "Castelraimondo (MC)",
+      "email": "",
+      "category": "Monumenti e patrimonio",
+      "description": "Torre medievale e simbolo cittadino in piazza della Repubblica.",
+      "address": "Piazza della Repubblica, 62022 Castelraimondo MC",
+      "phone": "",
+      "openingHours": "Esterno sempre visibile; visite interne/rialzo torre in occasione di aperture (informarsi presso Comune o Pro Loco).",
+      "sito": "https://castelraimondoturismo.it/",
+      "foto": [],
+      "id": "12",
+      "slug": "torre-del-cassero",
+      "lat": 43.20758,
+      "lng": 13.0565
+    },
+    {
+      "name": "Museo Nazionale del Costume Folcloristico",
+      "logo": "/assets/img/kiosk-poster-placeholder.svg",
+      "profilePic": "/assets/img/kiosk-poster-placeholder.svg",
+      "instagram": "",
+      "facebook": "",
+      "about": "Museo dedicato al folclore italiano contemporaneo: costumi ancora in uso, donati dai gruppi folkloristici da tutta Italia. Progetto sviluppato con la F.A.F.It. e il Comune per raccontare danza, musica e identità collettive oltre lo stereotipo di “folklore da museo”.",
+      "title": "",
+      "location": "Castelraimondo (MC)",
+      "email": "",
+      "category": "Musei e cultura",
+      "description": "Collezione nazionale su musica, danza e costumi del folclore italiano.",
+      "address": "Via della Croce 6, 62022 Castelraimondo MC",
+      "phone": "",
+      "openingHours": "Orari in rinnovamento dopo riapertura post-sisma; verificare sul sito o in loco.",
+      "sito": "https://www.gruppofolk.it/museo/",
+      "foto": [],
+      "id": "13",
+      "slug": "museo-costume-folcloristico",
+      "lat": 43.2099748,
+      "lng": 13.0581396
+    },
+    {
+      "name": "Chiesa di San Biagio",
+      "logo": "/assets/img/kiosk-poster-placeholder.svg",
+      "profilePic": "/assets/img/kiosk-poster-placeholder.svg",
+      "instagram": "",
+      "facebook": "",
+      "about": "Chiesa del centro storico, legata al borgo fortificato: navata unica, storia segnata dai restauri dopo il terremoto del 1799 e l’incendio del 1906. Dal sagrato si godono scorci su corso e piazza della Repubblica.",
+      "title": "",
+      "location": "Castelraimondo (MC)",
+      "email": "",
+      "category": "Luoghi di culto",
+      "description": "Parrocchia urbano-storica nel cuore del paese.",
+      "address": "Piazza della Repubblica / adiacenze corso, 62022 Castelraimondo MC",
+      "phone": "",
+      "openingHours": "In ore liturgiche; sagrato accessibile in orario diurno.",
+      "sito": "https://www.diocesimacerata.it/",
+      "foto": [],
+      "id": "14",
+      "slug": "chiesa-san-biagio",
+      "lat": 43.20752,
+      "lng": 13.05635
+    },
+    {
+      "name": "Castello di Lanciano",
+      "logo": "/assets/img/kiosk-poster-placeholder.svg",
+      "profilePic": "/assets/img/kiosk-poster-placeholder.svg",
+      "instagram": "",
+      "facebook": "",
+      "about": "Fortezza medievale sulla riva sinistra del Potenza (Località Lanciano), legata alla Signoria di Camerino e oggi dimora storica con parco secolare. Architettura e storia dei Varano e dei successivi cantieri (anche rinascimentali). Coordinate su dati cartografici pubblici (es. Wikidata).",
+      "title": "",
+      "location": "Castelraimondo (MC)",
+      "email": "castellolanciano@gmail.com",
+      "category": "Monumenti e patrimonio",
+      "description": "Castello storico e parco nella frazione Lanciano.",
+      "address": "Località Lanciano 3, 62022 Castelraimondo MC",
+      "phone": "+39 0737 641663",
+      "openingHours": "Visite su calendario stagionale / eventi; prenotazione consigliata.",
+      "sito": "https://castellodilanciano.wordpress.com/",
+      "foto": [],
+      "id": "15",
+      "slug": "castello-di-lanciano",
+      "lat": 43.19007,
+      "lng": 13.036989
+    },
+    {
+      "name": "Hotel Bellavista",
+      "logo": "/assets/img/kiosk-poster-placeholder.svg",
+      "profilePic": "/assets/img/kiosk-poster-placeholder.svg",
+      "instagram": "",
+      "facebook": "",
+      "about": "Hotel tre stelle con ristorante, bar e parcheggio vicino al centro: base comoda per visitare Cassero, musei e colline marchigiane.",
+      "title": "",
+      "location": "Castelraimondo (MC)",
+      "email": "posta@hotelbellavista.info",
+      "category": "Hotel e ospitalità",
+      "description": "Albergo con ristorante — Via Sant’Anna.",
+      "address": "Via Sant'Anna, 11, 62022 Castelraimondo MC",
+      "phone": "+39 0737 640717",
+      "openingHours": "Reception e orari camere secondo policy hotel; ristorante su prenotazione.",
+      "sito": "https://hotel-bellavista-castelraimondo.vivehotels.com/",
+      "foto": [],
+      "id": "16",
+      "slug": "hotel-bellavista",
+      "lat": 43.206589,
+      "lng": 13.04725
+    },
+    {
+      "name": "Hotel Ristorante Panorama (Crispiero)",
+      "logo": "/assets/img/kiosk-poster-placeholder.svg",
+      "profilePic": "/assets/img/kiosk-poster-placeholder.svg",
+      "instagram": "",
+      "facebook": "",
+      "about": "Struttura in frazione Crispiero con ristorante tipico marchigiano, camere panoramiche e servizio per gruppi; punto di appoggio tra borghi e Appennino.",
+      "title": "",
+      "location": "Crispiero (Castelraimondo MC)",
+      "email": "",
+      "category": "Hotel e ospitalità",
+      "description": "Hotel ristorante in collina — frazione Crispiero.",
+      "address": "Via del Colle 7, 62022 Castelraimondo MC",
+      "phone": "+39 0737 642642",
+      "openingHours": "Front office e cucina secondo stagione — confermare in struttura.",
+      "sito": "https://castelraimondoturismo.it/",
+      "foto": [],
+      "id": "17",
+      "slug": "hotel-panorama-crispiero",
+      "lat": 43.1948416,
+      "lng": 13.0987272
+    },
+    {
+      "name": "Hotel Le Magnolie",
+      "logo": "/assets/img/kiosk-poster-placeholder.svg",
+      "profilePic": "/assets/img/kiosk-poster-placeholder.svg",
+      "instagram": "",
+      "facebook": "",
+      "about": "Grande struttura ricettiva (camere e appartamenti) sulla direttrice di Via Enrico Mattei: ideale per soggiorni di lavoro e gruppi in tour nel Maceratese.",
+      "title": "",
+      "location": "Castelraimondo (MC)",
+      "email": "",
+      "category": "Hotel e ospitalità",
+      "description": "Hotel e residence — zona industriale/commerciale.",
+      "address": "Via Enrico Mattei, 75, 62022 Castelraimondo MC",
+      "phone": "+39 0737 643161",
+      "openingHours": "24 h su ricezione — verificare disponibilità.",
+      "sito": "https://www.campusmagnolie.it/",
+      "foto": [],
+      "id": "18",
+      "slug": "hotel-le-magnolie",
+      "lat": 43.2117,
+      "lng": 13.0524
+    },
+    {
+      "name": "Relais Borgo Lanciano",
+      "logo": "/assets/img/kiosk-poster-placeholder.svg",
+      "profilePic": "/assets/img/kiosk-poster-placeholder.svg",
+      "instagram": "",
+      "facebook": "",
+      "about": "Resort di charme nella stessa area del Castello di Lanciano: suite, spa e parco per un soggiorno slow nell’entroterra marchigiano.",
+      "title": "",
+      "location": "Castelraimondo (MC)",
+      "email": "",
+      "category": "Hotel e ospitalità",
+      "description": "Relais e resort — Località Lanciano.",
+      "address": "Località Lanciano 5, 62022 Castelraimondo MC",
+      "phone": "+39 0737 642844",
+      "openingHours": "Servizi hotel e wellness su prenotazione.",
+      "sito": "https://www.borgolanciano.it/",
+      "foto": [],
+      "id": "19",
+      "slug": "borgo-lanciano-relais",
+      "lat": 43.1896,
+      "lng": 13.0373
+    },
+    {
+      "name": "ASD FOLGORE Castelraimondo",
+      "logo": "/assets/img/kiosk-poster-placeholder.svg",
+      "profilePic": "/assets/img/kiosk-poster-placeholder.svg",
+      "instagram": "",
+      "facebook": "",
+      "about": "ASD FOLGORE Castelraimondo e una realta sportiva locale con attivita dedicate al territorio e al settore giovanile. La segreteria supporta famiglie, tesserati e collaboratori per informazioni organizzative, iscrizioni e gestione amministrativa.",
+      "title": "",
+      "location": "Castelraimondo (MC)",
+      "email": "asdfolgorecastelraimondo@gmail.com",
+      "category": "Associazione sportiva dilettantistica",
+      "description": "Segreteria sportiva e amministrativa per attivita e settore giovanile.",
+      "address": "S.da p.le 256 - Muccese C/O Campo Sportivo, 62022 Castelraimondo (MC)",
+      "phone": "340/6230127 (sportiva) - 340/2347336 (amministrativa)",
+      "openingHours": "Contattare la segreteria per appuntamenti e orari attivita.",
+      "sito": "",
+      "foto": [],
+      "id": "20",
+      "slug": "asd-folgore-castelraimondo",
+      "listingTier": "premium",
+      "posterUrl": "/assets/img/kiosk-poster-placeholder.svg",
+      "lat": 43.2093,
+      "lng": 13.0468,
+      "loginEmail": "asdfolgore@asdfolgore.it",
+      "loginPassword": "asdfolgore2026!"
     }
   ],
   "map": [
-        {
-      "name": "Cassero 2.0",
-      "lat": 43.20750943329837,
-      "lng": 13.056386381979054,
+    {
+      "name": "Torre del Cassero",
+      "lat": 43.20758,
+      "lng": 13.0565,
       "center": true,
-      "icon": "assets/speakers/agos_pizza_avatar.png"
+      "slug": "torre-del-cassero",
+      "icon": "assets/icon/gelato.png"
     },
     {
       "name": "Gelateria Carnevali",
-      "lat": 43.208258901029225,
-      "lng": 13.057053668820435,
-      "center": true,
+      "lat": 43.208212,
+      "lng": 13.05701,
+      "center": false,
+      "slug": "gelateria-carnevali",
       "icon": "assets/icon/gelato.png"
     },
-
-        {
-      "name": "Ago's - Ristorante Pizzera",
-      "lat": 43.2135979488039,
-      "lng": 13.056150574360537,
-      "center": true,
+    {
+      "name": "Ago's - Ristorante Pizzeria",
+      "lat": 43.2086056,
+      "lng": 13.0572415,
+      "center": false,
+      "slug": "agos",
       "icon": "assets/icon/gelato.png"
     },
-
-        {
+    {
       "name": "Ristorante Nuovo Mondo",
-      "lat": 43.20807811012026,
-      "lng": 13.055913065880656,
-      "center": true,
+      "lat": 43.207951,
+      "lng": 13.0559477,
+      "center": false,
+      "slug": "ristorante-nuovo-mondo",
       "icon": "assets/icon/gelato.png"
     },
-
-        {
+    {
       "name": "Pizza El Pedro",
-      "lat": 43.20549770868139,
-      "lng": 13.055414176691704,
-      "center": true,
+      "lat": 43.206459,
+      "lng": 13.05598,
+      "center": false,
+      "slug": "pizza-el-pedro",
       "icon": "assets/icon/gelato.png"
     },
-
-        {
+    {
       "name": "Bar L'eclissi",
-      "lat": 43.20738421252214,
-      "lng": 13.056011296569654,
-      "center": true,
+      "lat": 43.2073555,
+      "lng": 13.0560769,
+      "center": false,
+      "slug": "bar-leclissi",
       "icon": "assets/icon/gelato.png"
     },
-
-        {
-      "name": "Pizzera La Lanterna",
-      "lat": 43.207702291397084,
-      "lng": 13.056773081225085,
-      "center": true,
+    {
+      "name": "Ristorante Pizzeria La Lanterna",
+      "lat": 43.2074813,
+      "lng": 13.0573017,
+      "center": false,
+      "slug": "la-lanterna",
       "icon": "assets/icon/gelato.png"
     },
-
-        {
+    {
       "name": "Gelateria Centrale",
-      "lat": 43.37351172474246,
-      "lng": 13.077083281020434,
-      "center": true,
+      "lat": 43.20892,
+      "lng": 13.057426,
+      "center": false,
+      "slug": "gelateria-centrale",
       "icon": "assets/icon/gelato.png"
     },
-
-        { 
+    {
       "name": "CONAD CITY",
-      "lat": 43.39258357350975,
-      "lng": 13.076877149874912,
-      "center": true,
+      "lat": 43.211478,
+      "lng": 13.0521545,
+      "center": false,
+      "slug": "conad-city",
       "icon": "assets/icon/gelato.png"
     },
-
-        {
+    {
       "name": "Ludwig",
-      "lat": 43.20822997528104,
-      "lng": 13.057122065054134,
-      "center": true,
+      "lat": 43.2080547,
+      "lng": 13.0569176,
+      "center": false,
+      "slug": "ludwig",
       "icon": "assets/icon/gelato.png"
     },
-
-        {
+    {
       "name": "Tabaccheria Cerqueti",
-      "lat": 43.20794607059282,
-      "lng": 13.056678711914214,
-      "center": true,
+      "lat": 43.207681,
+      "lng": 13.056698,
+      "center": false,
+      "slug": "tabaccheria-cerqueti",
+      "icon": "assets/icon/gelato.png"
+    },
+    {
+      "name": "Museo Nazionale del Costume Folcloristico",
+      "lat": 43.2099748,
+      "lng": 13.0581396,
+      "center": false,
+      "slug": "museo-costume-folcloristico",
+      "icon": "assets/icon/gelato.png"
+    },
+    {
+      "name": "Chiesa di San Biagio",
+      "lat": 43.20752,
+      "lng": 13.05635,
+      "center": false,
+      "slug": "chiesa-san-biagio",
+      "icon": "assets/icon/gelato.png"
+    },
+    {
+      "name": "Castello di Lanciano",
+      "lat": 43.19007,
+      "lng": 13.036989,
+      "center": false,
+      "slug": "castello-di-lanciano",
+      "icon": "assets/icon/gelato.png"
+    },
+    {
+      "name": "Hotel Bellavista",
+      "lat": 43.206589,
+      "lng": 13.04725,
+      "center": false,
+      "slug": "hotel-bellavista",
+      "icon": "assets/icon/gelato.png"
+    },
+    {
+      "name": "Hotel Ristorante Panorama (Crispiero)",
+      "lat": 43.1948416,
+      "lng": 13.0987272,
+      "center": false,
+      "slug": "hotel-panorama-crispiero",
+      "icon": "assets/icon/gelato.png"
+    },
+    {
+      "name": "Hotel Le Magnolie",
+      "lat": 43.2117,
+      "lng": 13.0524,
+      "center": false,
+      "slug": "hotel-le-magnolie",
+      "icon": "assets/icon/gelato.png"
+    },
+    {
+      "name": "Relais Borgo Lanciano",
+      "lat": 43.1896,
+      "lng": 13.0373,
+      "center": false,
+      "slug": "borgo-lanciano-relais",
+      "icon": "assets/icon/gelato.png"
+    },
+    {
+      "name": "ASD FOLGORE Castelraimondo",
+      "lat": 43.2093,
+      "lng": 13.0468,
+      "center": false,
+      "slug": "asd-folgore-castelraimondo",
       "icon": "assets/icon/gelato.png"
     }
-
   ],
   "tracks": [
     {

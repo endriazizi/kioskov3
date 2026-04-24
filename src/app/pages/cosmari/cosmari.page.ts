@@ -6,6 +6,8 @@ import {
 } from '@ionic/angular/standalone';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { environment } from '../../../environments/environment';
+import { kioskDevLog } from '../../utils/kiosk-dev-console';
 import { addIcons } from 'ionicons';
 import { arrowBackOutline, lockClosedOutline } from 'ionicons/icons';
 
@@ -39,6 +41,12 @@ export class CosmariPage implements OnInit {
   }
 
   ngOnInit() {
+    if (environment.kioskStrictMode) {
+      this.isBrowser = true;
+      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.BASE);
+      kioskDevLog('🧭 [Cosmari] kioskStrictMode: iframe in-app');
+      return;
+    }
     // PWA / Browser: prova iframe
     if (!(window as any).cordova) {
       this.isBrowser = true;
@@ -69,7 +77,7 @@ export class CosmariPage implements OnInit {
         }
       });
     } catch {
-      window.open(this.BASE, '_system');
+      console.warn('🔒 [Cosmari] niente window.open esterno in kiosk');
     }
   }
 
@@ -82,6 +90,10 @@ export class CosmariPage implements OnInit {
   }
 
   openExternal() {
+    if (environment.kioskStrictMode) {
+      console.warn('🔒 [Cosmari] openExternal bloccato — policy kiosk internal-only');
+      return;
+    }
     window.open(this.BASE, '_blank', 'noopener');
   }
 

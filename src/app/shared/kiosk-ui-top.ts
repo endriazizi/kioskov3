@@ -6,6 +6,8 @@
 //
 // Stile: commenti lunghi, log opzionali (debug), unbind pulito.
 //
+import { environment } from '../../environments/environment';
+
 // Uso (come nel tuo tutorial.ts):
 // this.unbindKiosk = bindKioskUiTopAuto({
 //   headerSelector: 'ion-header',
@@ -44,7 +46,7 @@ export function bindKioskUiTopAuto(opts: KioskAutoOpts = {}): Unbind {
   } = opts;
 
   const debug = (...args: any[]) => {
-    if (log) console.debug('[kiosk-ui-top]', ...args);
+    if (log && !environment.production) console.debug('[kiosk-ui-top]', ...args);
   };
 
   let headerEl: HTMLElement | null = null;

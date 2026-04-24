@@ -1,16 +1,14 @@
 <ion-header>
   <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button class="kiosk-toolbar-back" fill="clear" (click)="goBack()" aria-label="Torna indietro">
+        <ion-icon slot="icon-only" ios="chevron-back-outline" md="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
     <ion-title>
       <ion-icon name="recycle-outline" style="vertical-align:middle;margin-right:6px"></ion-icon>
       Cosmari – Castelraimondo
     </ion-title>
-
-    <ion-buttons slot="end">
-      <ion-button color="danger" (click)="goBack()">
-        <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
-        Torna indietro
-      </ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
