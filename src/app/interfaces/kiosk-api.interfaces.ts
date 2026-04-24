@@ -130,6 +130,8 @@ export interface KioskBannerDto {
   listing_tier?: string | null;
   listingTier?: string | null;
   isPremium?: boolean | null;
+  multi_home_posters?: boolean | number | null;
+  multiHomePosters?: boolean | number | null;
   uploaded_by_type?: 'admin' | 'business' | string | null;
   uploaded_by_email?: string | null;
   uploadedBy?: string | null;

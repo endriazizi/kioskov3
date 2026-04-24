@@ -19,6 +19,10 @@ export const environment = {
   kioskAllowTelMailto: true,
   /** Se false, salta le chiamate /api/public-kiosk/* e usa solo assets/data/data.json. */
   useKioskPublicApi: true,
+  /** Polling endpoint versione feed (ms). */
+  kioskFeedVersionPollMs: 30_000,
+  /** Hard refresh feed ogni X minuti anche senza cambio versione. */
+  kioskFeedHardRefreshMinutes: 10,
   /**
    * OpenWeatherMap API key (opzionale). Se valorizzata, ha priorità su Open-Meteo.
    * Se vuota, la home usa Open-Meteo (nessuna chiave; geocoding + previsione pubblici).

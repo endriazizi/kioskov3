@@ -7,6 +7,8 @@ export const environment = {
   kioskStrictMode: true,
   kioskAllowTelMailto: true,
   useKioskPublicApi: true,
+  kioskFeedVersionPollMs: 30_000,
+  kioskFeedHardRefreshMinutes: 10,
   /** Vuota = meteo via Open-Meteo (senza chiave). Con chiave = OpenWeather ha priorità. */
   weatherOpenWeatherApiKey: '',
   weatherCity: 'Castelraimondo,it',

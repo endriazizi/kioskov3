@@ -7,6 +7,8 @@ export const environment = {
   kioskStrictMode: true,
   kioskAllowTelMailto: true,
   useKioskPublicApi: true,
+  kioskFeedVersionPollMs: 30_000,
+  kioskFeedHardRefreshMinutes: 10,
   weatherOpenWeatherApiKey: '',
   weatherCity: 'Castelraimondo,it',
   legacySpeakerIdToSlug: KIOSK_LEGACY_SPEAKER_ID_TO_SLUG,

@@ -65,6 +65,7 @@ type AdItem = {
   title?: string;
   subtitle?: string;
   uploadedBy?: string;
+  multiHomePosters?: boolean;
 };
 
 /**
@@ -311,10 +312,12 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   /** Cache-buster immagini: cambia a ogni reload feed poster/promo. */
   private assetCacheVersion = Date.now();
   /** Polling feed pubblico: confronto versione server per refresh banner/promo solo quando cambia. */
-  private readonly FEED_VERSION_POLL_MS = 30_000;
+  private readonly FEED_VERSION_POLL_MS = this.resolveFeedVersionPollMs();
+  private readonly FEED_HARD_REFRESH_MS = this.resolveFeedHardRefreshMs();
   private feedVersionPollTimer?: ReturnType<typeof setInterval>;
   private feedVersionInFlight = false;
   private lastFeedVersion = "";
+  private lastFeedHardRefreshAt = 0;
   private fullscreenSwipeStartX: number | null = null;
   private fullscreenSwipeStartY: number | null = null;
   private readonly FULLSCREEN_SWIPE_THRESHOLD_PX = 42;
@@ -722,25 +725,51 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
           if (!version) return;
           if (!this.lastFeedVersion) {
             this.lastFeedVersion = version;
+            this.lastFeedHardRefreshAt = Date.now();
             if (bootstrap) {
               kioskDevLog("🛰️ [Tutorial] Feed version bootstrap:", version.slice(0, 18));
             }
             return;
           }
-          if (version === this.lastFeedVersion) return;
+          if (version === this.lastFeedVersion) {
+            const now = Date.now();
+            if (now - this.lastFeedHardRefreshAt >= this.FEED_HARD_REFRESH_MS) {
+              this.refreshPublicFeeds("hard-refresh");
+            }
+            return;
+          }
           const prev = this.lastFeedVersion;
           this.lastFeedVersion = version;
           kioskDevLog(
             "🔄 [Tutorial] Feed version changed — refresh poster/promo",
             `${prev.slice(0, 8)} -> ${version.slice(0, 8)}`
           );
-          this.loadBannerCarousel();
-          this.loadPromoStrip();
+          this.refreshPublicFeeds("version-change");
         },
         error: () => {
           this.feedVersionInFlight = false;
         },
       });
+  }
+
+  private refreshPublicFeeds(reason: "version-change" | "hard-refresh"): void {
+    this.lastFeedHardRefreshAt = Date.now();
+    kioskDevLog("🧩 [Tutorial] Refresh feed pubblici:", reason);
+    this.loadBannerCarousel();
+    this.loadPromoStrip();
+  }
+
+  private resolveFeedVersionPollMs(): number {
+    const raw = Number((environment as Record<string, unknown>)["kioskFeedVersionPollMs"]);
+    if (!Number.isFinite(raw)) return 30_000;
+    return Math.min(5 * 60_000, Math.max(5_000, Math.round(raw)));
+  }
+
+  private resolveFeedHardRefreshMs(): number {
+    const rawMin = Number((environment as Record<string, unknown>)["kioskFeedHardRefreshMinutes"]);
+    if (!Number.isFinite(rawMin)) return 10 * 60_000;
+    const ms = Math.round(rawMin * 60_000);
+    return Math.min(120 * 60_000, Math.max(60_000, ms));
   }
 
   /** Mappa risposta `/promo-banners` → item UI; blocca tap su CTA esterne (log 🔒). */
@@ -1282,15 +1311,10 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  private isMultiPosterBusinessSlug(slug: string | undefined): boolean {
-    const s = String(slug || "").trim().toLowerCase();
-    return s === "comune-castelraimondo";
-  }
-
   private posterDedupeKey(it: AdItem): string {
     const slug = it.activitySlug?.trim();
     if (slug) {
-      if (this.isMultiPosterBusinessSlug(slug)) {
+      if (it.multiHomePosters) {
         const src = String(it.src || "").trim();
         const title = String(it.title || "").trim();
         const subtitle = String(it.subtitle || "").trim();
@@ -1344,6 +1368,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     const title = (b.title != null ? String(b.title).trim() : "") || undefined;
     const subtitle =
       (b.subtitle != null ? String(b.subtitle).trim() : "") || undefined;
+    const multiHomePosters =
+      b.multi_home_posters === true ||
+      b.multi_home_posters === 1 ||
+      b.multiHomePosters === true ||
+      b.multiHomePosters === 1;
     const uploadedBy =
       String(b.uploadedBy ?? "").trim() ||
       (String(b.uploaded_by_type ?? "").toLowerCase() === "admin"
@@ -1359,6 +1388,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       title,
       subtitle,
       uploadedBy,
+      multiHomePosters,
     };
   }
 
