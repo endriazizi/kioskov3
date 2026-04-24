@@ -22,6 +22,14 @@
                 }
               ]
             },
+            "totemProdApi": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.totem-prodapi.ts"
+                }
+              ]
+            },
             "ci": {
               "budgets": [
                 {
@@ -120,6 +128,12 @@
             },
             "totem": {
               "buildTarget": "app:build:totem",
+              "host": "0.0.0.0",
+              "port": 8200,
+              "allowedHosts": ["all"]
+            },
+            "totemProdApi": {
+              "buildTarget": "app:build:totemProdApi",
               "host": "0.0.0.0",
               "port": 8200,
               "allowedHosts": ["all"]

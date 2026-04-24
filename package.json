@@ -8,6 +8,7 @@
     "start:ionic": "npx ionic serve",
     "start:ng": "npx ng serve",
     "start:totem": "npx ng serve -c totem",
+    "start:totem:prodapi": "npx ng serve -c totemProdApi",
     "build": "npx ng build",
     "test": "npx ng test",
     "lint": "npx ng lint"
