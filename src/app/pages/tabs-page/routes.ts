@@ -55,6 +55,11 @@ export const TABS_ROUTES: Routes = [
         ],
       },
       {
+        path: 'piani-premium',
+        loadComponent: () =>
+          import('../piani-premium/piani-premium.page').then(m => m.PianiPremiumPage),
+      },
+      {
         path: 'map',
         loadComponent: () => import('../map/map').then(m => m.MapPage),
       },

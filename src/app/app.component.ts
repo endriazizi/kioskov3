@@ -99,6 +99,7 @@ export class AppComponent implements OnInit {
   appPages = [
     { title: "Eventi", url: "/app/tabs/schedule", icon: "calendar-outline" },
     { title: "Attività", url: "/app/tabs/speakers", icon: "people" },
+    { title: "Piani Premium", url: "/kiosk/piani-premium", icon: "pricetags" },
     { title: "Map", url: "/app/tabs/map", icon: "map" },
 
 
@@ -290,7 +291,8 @@ export class AppComponent implements OnInit {
   }
 
   openTutorial() {
-    this.menu.enable(false);
+    this.menu.enable(true);
+    void this.menu.close().catch(() => {});
     void this.router.navigateByUrl("/app/tabs/home");
   }
 

@@ -2,7 +2,11 @@
   <ion-toolbar>
     @if (!showSearchbar) {
     <ion-buttons slot="start">
-      <ion-menu-button></ion-menu-button>
+      <ion-menu-button
+        menu="main-menu"
+        autoHide="false"
+        (click)="openMainMenu()"
+      ></ion-menu-button>
     </ion-buttons>
     } @if(ios) {
     <ion-segment [(ngModel)]="segment" (ionChange)="updateSchedule()">

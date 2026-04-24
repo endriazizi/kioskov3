@@ -9,7 +9,7 @@ import { isPlatform, NavController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 
 import { addIcons } from 'ionicons';
-import { arrowBackOutline } from 'ionicons/icons';
+import { arrowBackOutline, pricetagsOutline } from 'ionicons/icons';
 
 @Component({
   standalone: true,
@@ -29,12 +29,13 @@ export class PrenotaLanternaPage implements OnInit {
   // URL del sito Prenota La Lanterna
   // private readonly RAW_URL = 'https://prenota.pizzerialalanterna.it/asporto';
   private readonly RAW_URL = 'https://pizzerialalanterna.it';
+  private readonly PREMIUM_PLANS_ROUTE = '/kiosk/piani-premium';
 
   isBrowser = true;          // true = PWA/desktop browser, false = app ibrida
   safeUrl!: SafeResourceUrl; // URL sanitizzato per l'iframe
 
   constructor() {
-    addIcons({ arrowBackOutline });
+    addIcons({ arrowBackOutline, pricetagsOutline });
     // considera "ibrido" se gira dentro Capacitor/Cordova
     this.isBrowser = !(isPlatform('hybrid') || isPlatform('capacitor') || isPlatform('cordova'));
   }
@@ -46,5 +47,9 @@ export class PrenotaLanternaPage implements OnInit {
   goBack() {
     // torna indietro nello stack (oppure usa navigateRoot('/app/tabs/...') se preferisci)
     this.nav.back();
+  }
+
+  openPremiumPlans() {
+    this.router.navigateByUrl(this.PREMIUM_PLANS_ROUTE);
   }
 }

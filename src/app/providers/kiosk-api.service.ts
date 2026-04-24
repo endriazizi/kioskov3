@@ -11,6 +11,15 @@ import type {
 } from '../interfaces/kiosk-api.interfaces';
 import { kioskDevLog, kioskDevWarn } from '../utils/kiosk-dev-console';
 
+export type KioskPremiumLeadBody = {
+  name: string;
+  email: string;
+  phone?: string;
+  organization?: string;
+  message?: string;
+  website?: string;
+};
+
 /**
  * Client HTTP per le API pubbliche del backend PWA dedicate al totem kiosk.
  * Log espliciti con emoji per debug sul campo (come da convenzione progetto).
@@ -168,6 +177,16 @@ export class KioskApiService {
     return this.http.get(this.url('/api/public-kiosk/feed-version')).pipe(
       catchError((err) => {
         kioskDevWarn('⚠️ [KioskAPI] GET feed-version fallita —', err?.message || err);
+        return throwError(() => err);
+      })
+    );
+  }
+
+  submitPremiumRequest(body: KioskPremiumLeadBody): Observable<{ ok?: boolean }> {
+    kioskDevLog('🧭 [KioskAPI] POST /api/public-kiosk-lead/premium-request …');
+    return this.http.post<{ ok?: boolean }>(this.url('/api/public-kiosk-lead/premium-request'), body).pipe(
+      catchError((err) => {
+        kioskDevWarn('⚠️ [KioskAPI] POST premium-request fallita —', err?.message || err);
         return throwError(() => err);
       })
     );

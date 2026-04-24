@@ -45,12 +45,7 @@ export class PopoverPage {
   }
 
   close(url: string) {
-    if (!this.whitelist.isAllowed(url)) {
-      this.whitelist.logBlockedExternal(url, 'about-popover');
-      this.popoverCtrl.dismiss();
-      return;
-    }
-    window.open(url, '_blank');
+    this.whitelist.logBlockedExternal(url, 'about-popover forced-block');
     this.popoverCtrl.dismiss();
   }
 }

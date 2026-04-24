@@ -1,0 +1,149 @@
+<ion-header class="kpl-header ion-no-border">
+  <ion-toolbar class="kpl-toolbar">
+    <ion-buttons slot="start">
+      <ion-button fill="clear" class="kpl-back" routerLink="/tutorial" aria-label="Torna al totem">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="kpl-brand">Kiosk · Piani</ion-title>
+    <!-- <ion-button slot="end" fill="clear" routerLink="/login" class="kpl-staff-link">Area staff</ion-button> -->
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="kpl-content">
+  <section class="kpl-hero">
+    <div class="kpl-hero__glow" aria-hidden="true"></div>
+    <div class="kpl-hero__inner">
+      <p class="kpl-eyebrow">Totem multimediale · Centro commerciale naturale</p>
+      <h1 class="kpl-h1">Porta la tua attivita' <span class="kpl-h1-accent">in vetrina</span></h1>
+      <p class="kpl-lead">
+        Scegli il piano piu' adatto: <strong>Base</strong> per la scheda completa sul totem, <strong>Premium</strong> per il
+        poster verticale in home e la massima visibilita'.
+      </p>
+      <div class="kpl-hero__cta">
+        <ion-button size="large" class="kpl-btn-primary" (click)="scrollToForm()">Richiedi informazioni Premium</ion-button>
+        <nav class="kpl-hero__plan-nav" aria-label="Collegamenti ai piani Base e Premium">
+          <a class="kpl-anchor" href="#piano-base">Piano Base</a>
+          <span class="kpl-hero__plan-nav-sep" aria-hidden="true">·</span>
+          <a class="kpl-anchor" href="#piano-premium">Piano Premium</a>
+          <span class="kpl-hero__plan-nav-sep" aria-hidden="true">·</span>
+          <a class="kpl-anchor" href="#piani">Confronta i piani</a>
+        </nav>
+      </div>
+    </div>
+  </section>
+
+  <section id="piani" class="kpl-plans">
+    <h2 class="kpl-h2">Due piani, un obiettivo</h2>
+    <p class="kpl-sub">Funzionalita' pensate per attivita' locali e per il territorio.</p>
+
+    <div class="kpl-grid">
+      <article id="piano-base" class="kpl-card kpl-card--base">
+        <div class="kpl-card__badge">Standard</div>
+        <h3 class="kpl-card__title">Base</h3>
+        <p class="kpl-card__pitch">Presenza professionale su totem e mappa.</p>
+        <ul class="kpl-card__list">
+          <li>Scheda attivita': nome, categoria, contatti, testi descrittivi</li>
+          <li>Logo, copertina e gallery dal portale</li>
+          <li>Visibilita' in elenco e sulla mappa interattiva</li>
+          <li class="kpl-muted">Senza poster verticale sulla home carousel</li>
+        </ul>
+      </article>
+
+      <article id="piano-premium" class="kpl-card kpl-card--premium">
+        <div class="kpl-card__badge kpl-card__badge--hot">Consigliato</div>
+        <h3 class="kpl-card__title">Premium</h3>
+        <p class="kpl-card__pitch">Massima esposizione nella vetrina del totem.</p>
+        <ul class="kpl-card__list">
+          <li><strong>Tutto il Base</strong>, piu' testi estesi lato portale</li>
+          <li><strong>Poster home 4:5</strong> - upload, revisione, slot attivo sul carosello</li>
+          <li>Priorita' percepita: coerente con le attivita' in evidenza sul totem</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section id="richiesta" class="kpl-form-section">
+    <div class="kpl-form-wrap">
+      <h2 class="kpl-h2">Richiedi informazioni sul piano Premium</h2>
+      <p class="kpl-form-lead">
+        Compila il modulo: riceverai una risposta con dettagli commerciali e tempistiche. Nessun pagamento integrato in
+        questa pagina.
+      </p>
+
+      @if (sent()) {
+        <div class="kpl-success" role="status">
+          <span class="kpl-success__icon" aria-hidden="true">✓</span>
+          <p><strong>Grazie!</strong> La richiesta e' stata inviata.</p>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="kpl-form" novalidate>
+        <div class="kpl-honeypot" aria-hidden="true">
+          <label for="kpl-website">Website</label>
+          <input id="kpl-website" type="text" formControlName="website" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <ion-item lines="none" class="kpl-field">
+          <ion-label position="stacked">Nome e cognome <span class="kpl-req">*</span></ion-label>
+          <ion-input formControlName="name" autocomplete="name" placeholder="Mario Rossi"></ion-input>
+        </ion-item>
+        <ion-note color="danger" *ngIf="form.controls.name.touched && form.controls.name.invalid" class="kpl-err">
+          Inserisci almeno 2 caratteri.
+        </ion-note>
+
+        <ion-item lines="none" class="kpl-field">
+          <ion-label position="stacked">Email <span class="kpl-req">*</span></ion-label>
+          <ion-input type="email" formControlName="email" autocomplete="email" placeholder="nome@attivita.it"></ion-input>
+        </ion-item>
+        <ion-note color="danger" *ngIf="form.controls.email.touched && form.controls.email.invalid" class="kpl-err">
+          Email non valida.
+        </ion-note>
+
+        <ion-item lines="none" class="kpl-field">
+          <ion-label position="stacked">Telefono</ion-label>
+          <ion-input type="tel" formControlName="phone" autocomplete="tel" placeholder="+39 ..."></ion-input>
+        </ion-item>
+
+        <ion-item lines="none" class="kpl-field">
+          <ion-label position="stacked">Attivita' / Comune</ion-label>
+          <ion-input formControlName="organization" placeholder="Es. Bar Centrale - Castelraimondo"></ion-input>
+        </ion-item>
+
+        <ion-item lines="none" class="kpl-field kpl-field--area">
+          <ion-label position="stacked">Messaggio</ion-label>
+          <ion-textarea
+            formControlName="message"
+            rows="4"
+            placeholder="Es. vorrei il poster in home, numero sedi, periodo di interesse..."
+          ></ion-textarea>
+        </ion-item>
+
+        <div class="kpl-form-actions">
+          <ion-button type="submit" size="large" class="kpl-btn-submit" [disabled]="submitting() || form.invalid">
+            @if (submitting()) {
+              <ion-spinner name="crescent" class="kpl-spin"></ion-spinner>
+              <span>Invio...</span>
+            } @else {
+              Invia richiesta
+            }
+          </ion-button>
+        </div>
+        <p class="kpl-privacy">
+          Inviando il modulo accetti di essere ricontattato per informazioni sul servizio. Dati trattati secondo la normativa
+          vigente.
+        </p>
+      </form>
+    </div>
+  </section>
+
+  <footer class="kpl-footer">
+    <p>© {{ year }} · Centro commerciale naturale · Kiosk</p>
+    <p class="kpl-footer__plans">
+      <a class="kpl-footer__plan-link" href="#piano-base">Piano Base</a>
+      <span class="kpl-footer__plan-sep" aria-hidden="true">·</span>
+      <a class="kpl-footer__plan-link" href="#piano-premium">Piano Premium</a>
+    </p>
+    <p class="kpl-footer__mail">Per assistenza diretta: endri.azizi@gmail.com</p>
+  </footer>
+</ion-content>

@@ -44,8 +44,8 @@ export class PlateformPage implements OnInit, AfterViewInit {
     /https?:\/\/(www\.)?elfsight\.com\/instagram-feed-instashow\/?(?:\?.*)?$/i;
   blockedUrl = false;
 
-  // ✅ Allow these schemes to still work
-  private readonly ALLOWED_SCHEMES = new Set(["tel:", "mailto:"]);
+  // In kiosk mode nessuno schema esterno deve aprire app fuori dal totem.
+  private readonly ALLOWED_SCHEMES = new Set<string>();
 
   // FIX: flag per attivare la policy “non uscire dall’app” SOLO nel ramo else (site mode)
   private siteModeActive = false; // FIX
@@ -182,9 +182,11 @@ export class PlateformPage implements OnInit, AfterViewInit {
       return;
     }
 
-    if (isPlatform("capacitor"))
+    if (isPlatform("capacitor")) {
       await Browser.open({ url, presentationStyle: "fullscreen" });
-    else window.open(url, "_blank", "noopener");
+      return;
+    }
+    window.location.assign(url);
   }
 
   private async toast(message: string) {

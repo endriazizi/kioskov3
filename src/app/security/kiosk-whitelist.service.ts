@@ -3,6 +3,15 @@ import { Injectable, InjectionToken, Inject, Optional } from '@angular/core';
 import { environment } from '../../environments/environment';
 
 export type WhitelistRule = string | RegExp;
+export type KioskBlockType = 'href' | 'action' | 'open';
+
+export interface KioskBlockStats {
+  href: number;
+  action: number;
+  open: number;
+  total: number;
+  lastBlockedAt: number | null;
+}
 
 /** Extend ALLOW rules from modules/environments */
 export const KIOSK_WHITELIST = new InjectionToken<WhitelistRule[]>('KIOSK_WHITELIST');
@@ -13,8 +22,10 @@ export const KIOSK_ALLOW_SAME_ORIGIN = new InjectionToken<boolean>('KIOSK_ALLOW_
 
 @Injectable({ providedIn: 'root' })
 export class KioskWhitelistService {
+  private readonly blockStatsStorageKey = 'kiosk.security.block-stats.v1';
   /** Allowed URL schemes (keep tight for kiosk use) */
-  private readonly allowedSchemes = new Set(['http:', 'https:', 'tel:', 'mailto:']);
+  private readonly allowedSchemes = new Set(['http:', 'https:']);
+  private blockStats: KioskBlockStats;
 
   /** Base allow rules (merge with injected extras) — usati solo se kioskStrictMode=false */
   private readonly baseAllow: WhitelistRule[] = [
@@ -54,6 +65,7 @@ export class KioskWhitelistService {
   ) {
     this.allowRules = [...this.baseAllow, ...(extraAllow ?? [])];
     this.denyRules = [...(extraDeny ?? [])];
+    this.blockStats = this.loadBlockStats();
   }
 
   /** True se la policy “solo interno” è attiva (blocca tutti gli http/https esterni). */
@@ -114,6 +126,23 @@ export class KioskWhitelistService {
     );
   }
 
+  recordBlocked(type: KioskBlockType, rawUrl: string, reason: string): void {
+    this.blockStats[type] += 1;
+    this.blockStats.total += 1;
+    this.blockStats.lastBlockedAt = Date.now();
+    this.persistBlockStats();
+    this.logBlockedExternal(rawUrl, reason);
+  }
+
+  getBlockStats(): KioskBlockStats {
+    return { ...this.blockStats };
+  }
+
+  resetBlockStats(): void {
+    this.blockStats = this.emptyBlockStats();
+    this.persistBlockStats();
+  }
+
   /** Optionally add rules at runtime (e.g., admin UI) */
   addAllowRule(rule: WhitelistRule) { (this.allowRules as WhitelistRule[]).push(rule); }
   addDenyRule(rule: WhitelistRule)  { (this.denyRules  as WhitelistRule[]).push(rule); }
@@ -160,5 +189,35 @@ export class KioskWhitelistService {
     const host = url.hostname.toLowerCase();
     const ruleHost = trimmed.toLowerCase().replace(/^\./, ''); // tolerate ".example.com"
     return host === ruleHost || host.endsWith('.' + ruleHost);
+  }
+
+  private emptyBlockStats(): KioskBlockStats {
+    return { href: 0, action: 0, open: 0, total: 0, lastBlockedAt: null };
+  }
+
+  private loadBlockStats(): KioskBlockStats {
+    try {
+      const raw = window.localStorage.getItem(this.blockStatsStorageKey);
+      if (!raw) return this.emptyBlockStats();
+      const parsed = JSON.parse(raw) as Partial<KioskBlockStats>;
+      return {
+        href: Number(parsed.href) || 0,
+        action: Number(parsed.action) || 0,
+        open: Number(parsed.open) || 0,
+        total: Number(parsed.total) || 0,
+        lastBlockedAt:
+          typeof parsed.lastBlockedAt === 'number' ? parsed.lastBlockedAt : null,
+      };
+    } catch {
+      return this.emptyBlockStats();
+    }
+  }
+
+  private persistBlockStats(): void {
+    try {
+      window.localStorage.setItem(this.blockStatsStorageKey, JSON.stringify(this.blockStats));
+    } catch {
+      // best effort: localStorage potrebbe non essere disponibile
+    }
   }
 }

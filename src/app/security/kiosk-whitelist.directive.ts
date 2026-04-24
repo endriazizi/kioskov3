@@ -14,6 +14,7 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
   private originalOpen = window.open;
   private originalAssign = window.location.assign.bind(window.location);
   private originalReplace = window.location.replace.bind(window.location);
+  private mutationObserver: MutationObserver | null = null;
 
   private clickHandler = (ev: MouseEvent) => {
     // intercetta solo click primario
@@ -51,7 +52,7 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
       // #endregion
       ev.preventDefault();
       ev.stopPropagation();
-      this.whitelist.logBlockedExternal(href, 'click su <a>');
+      this.whitelist.recordBlocked('href', href, 'click su <a>');
       this.blockToast();
       return;
     }
@@ -62,6 +63,62 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
       window.location.href = new URL(href, window.location.href).toString();
     }
   };
+
+  private auxClickHandler = (ev: MouseEvent) => {
+    // Blocca middle-click / click secondari che possono aprire nuova tab
+    const path = ev.composedPath ? (ev.composedPath() as HTMLElement[]) : [];
+    const anchor = path.find((el) => el instanceof HTMLAnchorElement) as HTMLAnchorElement | undefined;
+    if (!anchor) return;
+    const href = anchor.getAttribute('href');
+    if (!href || href.startsWith('#')) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+  };
+
+  private submitHandler = (ev: Event) => {
+    const form = ev.target as HTMLFormElement | null;
+    if (!(form instanceof HTMLFormElement)) return;
+    const actionAttr = (form.getAttribute('action') || '').trim();
+    // action vuota => submit interno alla pagina corrente
+    if (!actionAttr) return;
+    if (!this.whitelist.isAllowed(actionAttr)) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      this.whitelist.recordBlocked('action', actionAttr, 'submit form[action]');
+      this.blockToast();
+    }
+  };
+
+  private hardenLinkLikeElement(el: Element): void {
+    if (el instanceof HTMLAnchorElement) {
+      const href = (el.getAttribute('href') || '').trim();
+      if (!href || href.startsWith('#')) return;
+      if (!this.whitelist.isAllowed(href)) {
+        el.setAttribute('data-kiosk-blocked-href', href);
+        el.removeAttribute('href');
+        el.setAttribute('aria-disabled', 'true');
+        this.whitelist.recordBlocked('href', href, 'mutation hardening <a href>');
+        return;
+      }
+      if (el.target === '_blank') {
+        el.removeAttribute('target');
+      }
+      return;
+    }
+    if (el instanceof HTMLFormElement) {
+      const action = (el.getAttribute('action') || '').trim();
+      if (!action) return;
+      if (!this.whitelist.isAllowed(action)) {
+        el.setAttribute('data-kiosk-blocked-action', action);
+        el.removeAttribute('action');
+        this.whitelist.recordBlocked('action', action, 'mutation hardening form[action]');
+      }
+    }
+  }
+
+  private hardenTree(root: ParentNode): void {
+    root.querySelectorAll('a[href], form[action]').forEach((el) => this.hardenLinkLikeElement(el));
+  }
 
   private async blockToast() {
     const t = await this.toast.create({
@@ -75,13 +132,42 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
   ngOnInit() {
     // 1) Intercetta click su link
     document.addEventListener('click', this.clickHandler, true);
+    document.addEventListener('auxclick', this.auxClickHandler, true);
+    document.addEventListener('submit', this.submitHandler, true);
+    this.hardenTree(document);
+
+    this.mutationObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'attributes' && m.target instanceof Element) {
+          this.hardenLinkLikeElement(m.target);
+          continue;
+        }
+        m.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return;
+          this.hardenLinkLikeElement(node);
+          this.hardenTree(node);
+        });
+      }
+    });
+    this.mutationObserver.observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['href', 'target', 'action'],
+    });
+
+    const kioskAudit = {
+      getStats: () => this.whitelist.getBlockStats(),
+      reset: () => this.whitelist.resetBlockStats(),
+    };
+    (window as any).kioskSecurityAudit = kioskAudit;
 
     // 2) Blocca window.open su URL non whitelisted
     window.open = ((url?: string | URL, target?: string, features?: string) => {
       if (!url) return null;
       const href = typeof url === 'string' ? url : url.toString();
       if (!this.whitelist.isAllowed(href)) {
-        this.whitelist.logBlockedExternal(href, 'window.open');
+        this.whitelist.recordBlocked('open', href, 'window.open');
         this.blockToast();
         return null;
       }
@@ -94,7 +180,7 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
     window.location.assign = ((url: string | URL) => {
       const href = typeof url === 'string' ? url : url.toString();
       if (!this.whitelist.isAllowed(href)) {
-        this.whitelist.logBlockedExternal(href, 'location.assign');
+        this.whitelist.recordBlocked('open', href, 'location.assign');
         this.blockToast();
         return;
       }
@@ -104,7 +190,7 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
     window.location.replace = ((url: string | URL) => {
       const href = typeof url === 'string' ? url : url.toString();
       if (!this.whitelist.isAllowed(href)) {
-        this.whitelist.logBlockedExternal(href, 'location.replace');
+        this.whitelist.recordBlocked('open', href, 'location.replace');
         this.blockToast();
         return;
       }
@@ -114,6 +200,11 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     document.removeEventListener('click', this.clickHandler, true);
+    document.removeEventListener('auxclick', this.auxClickHandler, true);
+    document.removeEventListener('submit', this.submitHandler, true);
+    this.mutationObserver?.disconnect();
+    this.mutationObserver = null;
+    delete (window as any).kioskSecurityAudit;
     // ripristina API native
     window.open = this.originalOpen;
     window.location.assign = this.originalAssign as any;

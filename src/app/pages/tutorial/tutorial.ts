@@ -38,7 +38,7 @@ import {
 import { IonContent as IonContentBase } from "@ionic/angular";
 import { Storage } from "@ionic/storage-angular";
 import { addIcons } from "ionicons";
-import { arrowForward, close, menuOutline, playCircle } from "ionicons/icons";
+import { arrowForward, close, menuOutline, playCircle, pricetagsOutline } from "ionicons/icons";
 import { HttpClient } from "@angular/common/http";
 import { CommonModule } from "@angular/common";
 import { bindKioskUiTopAuto } from "../../shared/kiosk-ui-top";
@@ -333,7 +333,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private adVideoIO?: IntersectionObserver;
 
   constructor() {
-    addIcons({ arrowForward, close, menuOutline, playCircle });
+    addIcons({ arrowForward, close, menuOutline, playCircle, pricetagsOutline });
 
     // ===== INIZIO MODIFICA =====
     // Cache dei video presenti in `ads` (serve per mappare video DOM ↔ adsIndex)
@@ -2086,7 +2086,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       ([entry]) => {
         const active = entry.isIntersecting && entry.intersectionRatio > 0.6;
         this.isVideoActive = active;
-        this.menu.enable(active);
+        this.menu.enable(true);
         if (active) this.startVideo();
         else this.pauseVideo();
       },
@@ -2292,7 +2292,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   // Menu & Nav
   async toggleMenu() {
     try {
-      await this.menu.toggle();
+      await this.menu.enable(true, "main-menu");
+      await this.menu.toggle("main-menu");
     } catch {}
   }
 
@@ -2303,6 +2304,12 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.router
       .navigateByUrl("/app/tabs/schedule", { replaceUrl: true })
       .catch((err) => console.error("Errore durante startApp:", err));
+  }
+
+  openPremiumPlans(): void {
+    this.router.navigateByUrl("/kiosk/piani-premium").catch((err) => {
+      console.error("Errore durante apertura piani premium:", err);
+    });
   }
 
   @HostListener("click", ["$event"])

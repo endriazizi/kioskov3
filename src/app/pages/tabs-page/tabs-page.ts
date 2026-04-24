@@ -16,6 +16,7 @@ import {
   location,
   newspaperOutline,
   people,
+  pricetagsOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -40,6 +41,7 @@ export class TabsPage {
       location,
       informationCircle,
       newspaperOutline,
+      pricetagsOutline,
     });
   }
 

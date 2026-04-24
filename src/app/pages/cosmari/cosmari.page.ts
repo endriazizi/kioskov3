@@ -90,11 +90,7 @@ export class CosmariPage implements OnInit {
   }
 
   openExternal() {
-    if (environment.kioskStrictMode) {
-      console.warn('🔒 [Cosmari] openExternal bloccato — policy kiosk internal-only');
-      return;
-    }
-    window.open(this.BASE, '_blank', 'noopener');
+    console.warn('🔒 [Cosmari] openExternal bloccato — policy kiosk internal-only');
   }
 
   goBack() {

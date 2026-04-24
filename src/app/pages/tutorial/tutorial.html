@@ -1,6 +1,17 @@
 <!-- Toolbar brand: loghi istituzionali + CTA totem -->
 <ion-header class="ion-no-border kiosk-home-header">
   <ion-toolbar class="toolbar-logo toolbar-logo--compact kiosk-home-toolbar">
+    <ion-buttons slot="start">
+      <ion-button
+        fill="clear"
+        class="video-touch-btn kiosk-menu-btn"
+        (click)="toggleMenu()"
+        aria-label="Apri menu"
+      >
+        <ion-icon [ios]="'menu-outline'" [md]="'menu-outline'"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+
     <div class="toolbar-container kiosk-home-toolbar__logos">
       <button
         type="button"
@@ -8,7 +19,7 @@
         (click)="onToolbarLogoClick($event)"
         aria-label="Comune di Castelraimondo, informazioni e sito istituzionale"
       >
-        <img src="assets/img/logo_comune.png" alt="" decoding="async" />
+        <img src="assets/img/logo_comune.png" alt="" decoding="async" width="300" height="44" />
       </button>
     </div>
 
@@ -58,6 +69,16 @@
         </div>
       </div>
     </div>
+
+    <section class="kiosk-premium-banner" aria-label="Collegamento piani premium">
+      <button type="button" class="kiosk-premium-banner__btn" (click)="openPremiumPlans()">
+        <ion-icon name="pricetags-outline" aria-hidden="true"></ion-icon>
+        <span class="kiosk-premium-banner__text">
+          <strong>Scopri i Piani Premium</strong>
+          <small>Apri la pagina dedicata e guarda tutte le opzioni</small>
+        </span>
+      </button>
+    </section>
 
     <!-- SLIDES -->
     <div class="slide-container">
@@ -281,8 +302,8 @@
     <div class="pbc-footer-shell">
       <ion-card class="pbc-card" mode="md">
         <ion-card-content class="pbc-wrap">
-          <img src="assets/img/pbc.png" alt="PBC - Grafica sito" class="brand-logo" />
-          <img src="assets/img/endri.png" alt="Endri - Grafica sito" class="brand-logo" />
+          <img src="assets/img/pbc.png" alt="PBC - Grafica sito" class="brand-logo" width="240" height="44" />
+          <img src="assets/img/endri.png" alt="Endri - Grafica sito" class="brand-logo" width="240" height="44" />
         </ion-card-content>
       </ion-card>
       <div class="pbc-footer-meta" aria-label="Crediti e versione app">
@@ -432,6 +453,7 @@
       </div>
     </ng-template>
   </ion-modal>
+
 </ion-content>
 
 <!--

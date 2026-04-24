@@ -39,4 +39,9 @@ export const routes: Routes = [
       import('./pages/tutorial/tutorial').then(m => m.TutorialPage),
     canMatch: [checkTutorialGuard],
   },
+  {
+    path: 'kiosk/piani-premium',
+    loadComponent: () =>
+      import('./pages/piani-premium/piani-premium.page').then(m => m.PianiPremiumPage),
+  },
 ];

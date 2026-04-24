@@ -15,8 +15,8 @@ export const environment = {
   apiBaseUrl: 'http://127.0.0.1:3000',
   /** Se true, nessuna navigazione http/https verso host esterni (solo app + tel/mail opzionali). */
   kioskStrictMode: true,
-  /** In strict mode: consenti tel: e mailto: (azioni “sicure” sul dispositivo). */
-  kioskAllowTelMailto: true,
+  /** In strict mode totem: blocca anche tel:/mailto: per evitare uscita verso app esterne. */
+  kioskAllowTelMailto: false,
   /** Se false, salta le chiamate /api/public-kiosk/* e usa solo assets/data/data.json. */
   useKioskPublicApi: true,
   /** Polling endpoint versione feed (ms). */

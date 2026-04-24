@@ -29,6 +29,7 @@ import {
   IonSegmentButton,
   IonTitle,
   IonToolbar,
+  MenuController,
   ModalController,
   ToastController, IonItem } from '@ionic/angular/standalone';
 import { Group, Session } from '../../interfaces/conference.interfaces';
@@ -81,6 +82,7 @@ export class SchedulePage implements OnInit {
   toastCtrl = inject(ToastController);
   user = inject(UserService);
   config = inject(Config);
+  private menu = inject(MenuController);
 
   // Gets a reference to the list element
   @ViewChild('scheduleList', { static: true }) scheduleList: IonList;
@@ -105,9 +107,15 @@ export class SchedulePage implements OnInit {
   }
 
   ngOnInit() {
+    void this.menu.enable(true, 'main-menu');
     this.updateSchedule();
     this.ios = this.config.get('mode') === 'ios';
     void this.buildWhatsappQr();
+  }
+
+  openMainMenu(): void {
+    void this.menu.enable(true, 'main-menu');
+    void this.menu.open('main-menu');
   }
 
   /** Navigazione esplicita: evita edge case routerLink/anchor vs whitelist kiosk su totem touch. */
