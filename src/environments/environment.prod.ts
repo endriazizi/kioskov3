@@ -5,7 +5,7 @@ export const environment = {
   appVersion: '0.0.2',
   apiBaseUrl: 'http://127.0.0.1:3000',
   kioskStrictMode: true,
-  kioskAllowTelMailto: true,
+  kioskAllowTelMailto: false,
   useKioskPublicApi: true,
   kioskFeedVersionPollMs: 30_000,
   kioskFeedHardRefreshMinutes: 10,

@@ -17,6 +17,7 @@ import {
 } from '@ionic/angular/standalone';
 import * as L from 'leaflet';
 import { firstValueFrom } from 'rxjs';
+import { Router } from '@angular/router';
 import { Location } from '../../interfaces/conference.interfaces';
 import { LocationService } from '../../providers/location.service';
 import { KioskApiService } from '../../providers/kiosk-api.service';
@@ -51,6 +52,7 @@ import { KioskApiService } from '../../providers/kiosk-api.service';
 export class MapPage implements AfterViewInit {
   private locationService = inject(LocationService);
   private kioskApi = inject(KioskApiService);
+  private router = inject(Router);
   private destroyRef = inject(DestroyRef);
 
   private map: L.Map | null = null;
@@ -131,6 +133,19 @@ export class MapPage implements AfterViewInit {
       .addAttribution('© OpenStreetMap contributors') // testo liscio
       .addTo(this.map);
 
+      this.map.on('popupopen', (ev: L.PopupEvent) => {
+        const btn = ev.popup
+          .getElement()
+          ?.querySelector<HTMLButtonElement>('[data-kiosk-route]');
+        if (!btn) return;
+        const route = btn.getAttribute('data-kiosk-route');
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (route) void this.router.navigateByUrl(route);
+        };
+      });
+
       const locations = await firstValueFrom(this.locationService.getLocations());
       if (this.map && locations?.length) {
         locations.forEach((location: Location) => {
@@ -166,7 +181,7 @@ export class MapPage implements AfterViewInit {
       slug &&
       `/app/tabs/speakers/speaker-details/${encodeURIComponent(slug)}`;
     const link = detail
-      ? `<a class="kiosk-map-popup__link" href="${detail}">Apri scheda</a>`
+      ? `<button type="button" class="kiosk-map-popup__link" data-kiosk-route="${this.escapeHtml(detail)}">Apri scheda</button>`
       : '';
     return `<div class="kiosk-map-popup__inner"><strong>${name}</strong>${link ? `<br/>${link}` : ''}</div>`;
   }

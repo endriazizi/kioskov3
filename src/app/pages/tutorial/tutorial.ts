@@ -12,7 +12,7 @@ import {
   HostListener,
   ChangeDetectorRef,
 } from "@angular/core";
-import { NavigationEnd, Router, RouterLink } from "@angular/router";
+import { ActivatedRoute, NavigationEnd, Router, RouterLink } from "@angular/router";
 import {
   catchError,
   EMPTY,
@@ -167,6 +167,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   // Services
   private menu = inject(MenuController);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private storage = inject(Storage);
   private http = inject(HttpClient);
   private toastCtrl = inject(ToastController);
@@ -212,9 +213,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   /** Avanzamento automatico poster (immagini); i video non-click-to-play bloccano il tick fino a fine clip. */
   private readonly ADS_DURATION_MS = 10_000;
   private adsTimer?: any;
-  private readonly IDLE_POSTER_TIMEOUT_MS = 10_000;
-  private readonly IDLE_POSTER_ROTATION_MS = 10_000;
+  private idlePosterEnabled = true;
+  private idlePosterTimeoutMs = 10_000;
+  private idlePosterRotationMs = 10_000;
   private idlePosterMode = false;
+  private forceIdlePosterOnNextAdsLoad = false;
   private idlePosterTimer?: ReturnType<typeof setTimeout>;
   private idlePosterRotateTimer?: ReturnType<typeof setInterval>;
 
@@ -343,6 +346,18 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   // Lifecycle
   ngOnInit() {
+    this.forceIdlePosterOnNextAdsLoad = this.route.snapshot.queryParamMap.get("idleFs") === "1";
+    if (this.forceIdlePosterOnNextAdsLoad) {
+      void this.router
+        .navigate([], {
+          relativeTo: this.route,
+          replaceUrl: true,
+          queryParamsHandling: "merge",
+          queryParams: { idleFs: null },
+        })
+        .catch(() => {});
+    }
+
     this.syncCreditsDockTabsLayout();
     this.creditsDockNavSub = this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
@@ -357,6 +372,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.updateTimeAndDate();
     this.clockInterval = setInterval(() => this.updateTimeAndDate(), 1000);
     this.fetchWeather();
+    this.loadIdlePosterRuntimeConfig();
     /** Carosello poster e strip promo sono indipendenti: due GET paralleli quando l’API è attiva. */
     this.loadBannerCarousel();
     this.loadPromoStrip();
@@ -964,8 +980,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private scheduleIdlePosterMode(): void {
+    if (!this.idlePosterEnabled) return;
     this.clearIdlePosterTimers();
-    this.idlePosterTimer = setTimeout(() => this.enterIdlePosterMode(), this.IDLE_POSTER_TIMEOUT_MS);
+    this.idlePosterTimer = setTimeout(() => this.enterIdlePosterMode(), this.idlePosterTimeoutMs);
   }
 
   private clearIdlePosterTimers(): void {
@@ -996,6 +1013,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private enterIdlePosterMode(): void {
+    if (!this.idlePosterEnabled) return;
     if (this.idlePosterMode || !this.ads.length) return;
     const firstPosterIndex = this.firstImageAdIndex(this.adsIndex);
     if (firstPosterIndex < 0) return;
@@ -1012,7 +1030,26 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       if (nextPosterIndex < 0) return;
       this.goToAd(nextPosterIndex, "auto");
       this.posterFullscreenItem = this.ads[nextPosterIndex];
-    }, this.IDLE_POSTER_ROTATION_MS);
+    }, this.idlePosterRotationMs);
+  }
+
+  private loadIdlePosterRuntimeConfig(): void {
+    if (!(environment as Record<string, unknown>)["useKioskPublicApi"]) return;
+    this.kioskApi.getHome().pipe(take(1)).subscribe({
+      next: (raw) => {
+        const cfg = this.kioskApi.unwrapIdleFullscreenConfig(raw);
+        this.idlePosterEnabled = cfg.enabled;
+        this.idlePosterTimeoutMs = cfg.timeoutMs;
+        this.idlePosterRotationMs = cfg.rotationMs;
+        kioskDevLog("⚙️ [Tutorial] Inattività runtime:", {
+          enabled: this.idlePosterEnabled,
+          timeoutMs: this.idlePosterTimeoutMs,
+          rotationMs: this.idlePosterRotationMs,
+        });
+        if (!this.idlePosterEnabled) this.clearIdlePosterTimers();
+      },
+      error: () => {},
+    });
   }
 
   private exitIdlePosterMode(): void {
@@ -1415,12 +1452,54 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private afterBannerAdsLoaded(): void {
     this.bumpAssetCacheVersion();
     this.rebuildVideoAdIndexes();
+    const resumeIdleFullscreen =
+      this.idlePosterMode && this.posterFullscreenOpen;
     setTimeout(() => {
       if (!this.ads.length) return;
+      if (resumeIdleFullscreen) {
+        this.syncPosterFullscreenFromAds();
+        this.bindAdVideoObserver();
+        return;
+      }
+      if (this.posterFullscreenOpen) {
+        this.syncPosterFullscreenFromAds();
+      }
       this.goToAd(this.adsIndex, "auto");
       this.startAdsCarousel();
       this.bindAdVideoObserver();
+      if (this.forceIdlePosterOnNextAdsLoad) {
+        this.forceIdlePosterOnNextAdsLoad = false;
+        this.enterIdlePosterMode();
+      }
     }, 0);
+  }
+
+  /**
+   * Dopo refresh feed (polling feed-version): aggiorna l’overlay fullscreen
+   * senza reload pagina — match per slug attività, fallback su src precedente.
+   */
+  private syncPosterFullscreenFromAds(): void {
+    if (!this.posterFullscreenOpen || !this.posterFullscreenItem || !this.ads.length) {
+      return;
+    }
+    const prev = this.posterFullscreenItem;
+    const prevSlug = normalizeKioskBusinessSlugCandidate(prev.activitySlug);
+    let idx = prevSlug
+      ? this.ads.findIndex(
+          (a) => normalizeKioskBusinessSlugCandidate(a.activitySlug) === prevSlug
+        )
+      : -1;
+    if (idx < 0 && prev.src) {
+      const prevBase = prev.src.split("?")[0];
+      idx = this.ads.findIndex((a) => a.src.split("?")[0] === prevBase);
+    }
+    if (idx < 0) {
+      idx = this.firstImageAdIndex(this.adsIndex);
+    }
+    if (idx < 0) return;
+    this.adsIndex = idx;
+    this.posterFullscreenItem = this.ads[idx];
+    this.goToAd(idx, "auto");
   }
 
   // ========= CAROSELLO POSTER / VIDEO =========

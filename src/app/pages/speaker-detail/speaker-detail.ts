@@ -33,7 +33,6 @@ import { Speaker } from '../../interfaces/conference.interfaces';
 import { ConferenceService } from '../../providers/conference.service';
 import { KioskApiService } from '../../providers/kiosk-api.service';
 import { kioskDevLog } from '../../utils/kiosk-dev-console';
-import { KioskWhitelistService } from '../../security/kiosk-whitelist.service';
 
 import { GelateriaCentraleComponent } from '../gelateria-centrale/gelateria-centrale.component';
 import { environment } from '../../../environments/environment';
@@ -71,7 +70,6 @@ export class SpeakerDetailPage {
 
   private confService = inject(ConferenceService);
   private kioskApi = inject(KioskApiService);
-  private whitelist = inject(KioskWhitelistService);
   private route = inject(ActivatedRoute);
 
   constructor() {
@@ -270,30 +268,6 @@ export class SpeakerDetailPage {
       return 'Scansiona il QR per aprire l’email sul tuo smartphone.';
     }
     return '';
-  }
-
-  /** tel: / mailto: solo se policy kiosk lo consente */
-  openTelSafe(): void {
-    const phone = (this.speaker?.phone || '').trim();
-    if (!phone) return;
-    const href = `tel:${phone.replace(/\s/g, '')}`;
-    if (!this.whitelist.isAllowed(href)) {
-      this.whitelist.logBlockedExternal(href, 'SpeakerDetail tel');
-      return;
-    }
-    // assign è intercettato da appKioskWhitelist; location.href bypassa il patch
-    window.location.assign(href);
-  }
-
-  openMailtoSafe(): void {
-    const email = (this.speaker?.email || '').trim();
-    if (!email) return;
-    const href = `mailto:${email}`;
-    if (!this.whitelist.isAllowed(href)) {
-      this.whitelist.logBlockedExternal(href, 'SpeakerDetail mailto');
-      return;
-    }
-    window.location.assign(href);
   }
 
   onImageLoad(slot: 'avatar' | 'brandLogo', src: string | null | undefined): void {

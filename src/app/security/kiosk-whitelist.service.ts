@@ -25,6 +25,14 @@ export class KioskWhitelistService {
   private readonly blockStatsStorageKey = 'kiosk.security.block-stats.v1';
   /** Allowed URL schemes (keep tight for kiosk use) */
   private readonly allowedSchemes = new Set(['http:', 'https:']);
+  /** Schemi che aprono app esterne (telefono, email, messaggistica) */
+  private readonly externalAppSchemes = new Set([
+    'tel:',
+    'mailto:',
+    'sms:',
+    'whatsapp:',
+    'intent:',
+  ]);
   private blockStats: KioskBlockStats;
 
   /** Base allow rules (merge with injected extras) — usati solo se kioskStrictMode=false */
@@ -86,17 +94,19 @@ export class KioskWhitelistService {
     const url = this.tryParseUrl(rawUrl);
     if (!url) return false;
 
-    // 1) Scheme guard
+    // 1) tel/mailto/sms/whatsapp: bloccati di default sul totem (evita uscita verso app di sistema)
+    if (this.externalAppSchemes.has(url.protocol)) {
+      return environment.kioskAllowTelMailto === true;
+    }
+
+    // 2) Solo http/https oltre questo punto
     if (!this.allowedSchemes.has(url.protocol)) return false;
 
-    // 2) DENY first
+    // 3) DENY first
     if (this.matchesAny(url, this.denyRules)) return false;
 
     // ─── Policy centralizzata “internal-only” (totem kiosk) ───
     if (environment.kioskStrictMode) {
-      if (url.protocol === 'tel:' || url.protocol === 'mailto:') {
-        return environment.kioskAllowTelMailto !== false;
-      }
       if (url.protocol === 'http:' || url.protocol === 'https:') {
         const appOrigin = this.safeAppOrigin();
         return !!appOrigin && url.origin === appOrigin;
@@ -132,6 +142,9 @@ export class KioskWhitelistService {
     this.blockStats.lastBlockedAt = Date.now();
     this.persistBlockStats();
     this.logBlockedExternal(rawUrl, reason);
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6753ff'},body:JSON.stringify({sessionId:'6753ff',runId:'audit-fix',hypothesisId:'H-block',location:'kiosk-whitelist.service.ts:recordBlocked',message:'Navigazione kiosk bloccata',data:{type,reason,urlPrefix:String(rawUrl||'').slice(0,80)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
   }
 
   getBlockStats(): KioskBlockStats {

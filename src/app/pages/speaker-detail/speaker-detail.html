@@ -136,13 +136,13 @@
             </ion-item>
           }
           @if (speaker?.phone) {
-            <ion-item class="kiosk-contact-item" button="true" (click)="openTelSafe()">
+            <ion-item class="kiosk-contact-item" lines="none">
               <ion-icon name="call-outline" slot="start" class="kiosk-contact-icon"></ion-icon>
               <ion-label class="kiosk-contact-label">{{ speaker?.phone }}</ion-label>
             </ion-item>
           }
           @if (speaker?.email) {
-            <ion-item class="kiosk-contact-item" button="true" (click)="openMailtoSafe()">
+            <ion-item class="kiosk-contact-item" lines="none">
               <ion-icon name="mail-outline" slot="start" class="kiosk-contact-icon"></ion-icon>
               <ion-label class="kiosk-contact-label">{{ speaker?.email }}</ion-label>
             </ion-item>

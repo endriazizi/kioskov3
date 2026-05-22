@@ -14,6 +14,8 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
   private originalOpen = window.open;
   private originalAssign = window.location.assign.bind(window.location);
   private originalReplace = window.location.replace.bind(window.location);
+  private originalLocationHrefSet: ((value: string) => void) | null = null;
+  private originalBrowserOpen: ((options: { url: string }) => Promise<void>) | null = null;
   private mutationObserver: MutationObserver | null = null;
 
   private clickHandler = (ev: MouseEvent) => {
@@ -41,6 +43,23 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
 
     const href = anchor.getAttribute('href');
     if (!href || href.startsWith('#')) return; // ancora interna: ok
+
+    // Blocca schemi pericolosi anche se il browser non li normalizza subito
+    const lowerHref = href.trim().toLowerCase();
+    if (
+      lowerHref.startsWith('tel:') ||
+      lowerHref.startsWith('mailto:') ||
+      lowerHref.startsWith('sms:') ||
+      lowerHref.startsWith('whatsapp:') ||
+      lowerHref.startsWith('intent:') ||
+      lowerHref.startsWith('javascript:')
+    ) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      this.whitelist.recordBlocked('href', href, 'click schema esterno');
+      this.blockToast();
+      return;
+    }
 
     const allowed = this.whitelist.isAllowed(href);
     if (!allowed) {
@@ -124,6 +143,10 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // #region agent log
+    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6753ff'},body:JSON.stringify({sessionId:'6753ff',runId:'audit-fix',hypothesisId:'H1',location:'kiosk-whitelist.directive.ts:ngOnInit',message:'KioskWhitelistDirective attiva',data:{strictMode:true},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+
     // 1) Intercetta click su link
     document.addEventListener('click', this.clickHandler, true);
     document.addEventListener('auxclick', this.auxClickHandler, true);
@@ -190,6 +213,60 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
       }
       this.originalReplace(href);
     }) as any;
+
+    this.patchLocationHrefSetter();
+    void this.patchCapacitorBrowserOpen();
+  }
+
+  private patchLocationHrefSetter(): void {
+    try {
+      const locProto = Object.getPrototypeOf(window.location) as Location;
+      const desc = Object.getOwnPropertyDescriptor(locProto, 'href');
+      if (!desc?.set) return;
+      this.originalLocationHrefSet = desc.set.bind(window.location);
+      const originalSet = this.originalLocationHrefSet;
+      const whitelist = this.whitelist;
+      const notifyBlocked = (href: string) => {
+        whitelist.recordBlocked('open', href, 'location.href');
+        void this.blockToast();
+      };
+      Object.defineProperty(locProto, 'href', {
+        configurable: true,
+        enumerable: desc.enumerable,
+        get: desc.get,
+        set(value: string) {
+          if (!whitelist.isAllowed(value)) {
+            notifyBlocked(value);
+            return;
+          }
+          originalSet(value);
+        },
+      });
+    } catch {
+      // best effort: assign/replace restano patchati
+    }
+  }
+
+  private async patchCapacitorBrowserOpen(): Promise<void> {
+    try {
+      const mod = await import('@capacitor/browser');
+      const Browser = mod.Browser;
+      if (!Browser?.open || this.originalBrowserOpen) return;
+      this.originalBrowserOpen = Browser.open.bind(Browser);
+      const whitelist = this.whitelist;
+      const blockToast = () => this.blockToast();
+      Browser.open = (async (options: { url: string }) => {
+        const href = String(options?.url || '');
+        if (!href || !whitelist.isAllowed(href)) {
+          whitelist.recordBlocked('open', href, 'Capacitor Browser.open');
+          await blockToast();
+          return;
+        }
+        return this.originalBrowserOpen!(options);
+      }) as typeof Browser.open;
+    } catch {
+      // Capacitor non disponibile in PWA browser
+    }
   }
 
   ngOnDestroy() {
@@ -203,5 +280,28 @@ export class KioskWhitelistDirective implements OnInit, OnDestroy {
     window.open = this.originalOpen;
     window.location.assign = this.originalAssign as any;
     window.location.replace = this.originalReplace as any;
+    if (this.originalLocationHrefSet) {
+      try {
+        const locProto = Object.getPrototypeOf(window.location) as Location;
+        const desc = Object.getOwnPropertyDescriptor(locProto, 'href');
+        if (desc?.get) {
+          Object.defineProperty(locProto, 'href', {
+            configurable: true,
+            enumerable: desc.enumerable,
+            get: desc.get,
+            set: this.originalLocationHrefSet,
+          });
+        }
+      } catch { /* noop */ }
+      this.originalLocationHrefSet = null;
+    }
+    if (this.originalBrowserOpen) {
+      void import('@capacitor/browser')
+        .then(({ Browser }) => {
+          Browser.open = this.originalBrowserOpen! as typeof Browser.open;
+        })
+        .catch(() => {});
+      this.originalBrowserOpen = null;
+    }
   }
 }

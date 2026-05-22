@@ -151,3 +151,10 @@ export interface KioskBannerDto {
     imageUrl?: string | null;
   } | null;
 }
+
+export interface KioskIdleFullscreenConfig {
+  enabled: boolean;
+  timeoutMs: number;
+  rotationMs: number;
+  maintenanceNotes?: string;
+}

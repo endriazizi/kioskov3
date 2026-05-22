@@ -10,7 +10,7 @@ export const environment = {
    */
   apiBaseUrl: '',
   kioskStrictMode: true,
-  kioskAllowTelMailto: true,
+  kioskAllowTelMailto: false,
   useKioskPublicApi: true,
   kioskFeedVersionPollMs: 30_000,
   kioskFeedHardRefreshMinutes: 10,

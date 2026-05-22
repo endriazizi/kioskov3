@@ -5,7 +5,7 @@ export const environment = {
   appVersion: '0.0.2',
   apiBaseUrl: 'https://api.pizzerialalanterna.it',
   kioskStrictMode: true,
-  kioskAllowTelMailto: true,
+  kioskAllowTelMailto: false,
   useKioskPublicApi: true,
   kioskFeedVersionPollMs: 30_000,
   kioskFeedHardRefreshMinutes: 10,

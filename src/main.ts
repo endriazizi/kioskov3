@@ -34,13 +34,8 @@ if (environment.production) {
 try {
   const base = new URL('./', window.location.href).toString();
   setAssetPath(base);
-  // #region agent log
-  fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6f3cc8'},body:JSON.stringify({sessionId:'6f3cc8',runId:'post-fix',hypothesisId:'H17',location:'main.ts:setAssetPath',message:'ionicons asset path configured',data:{base},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-} catch (e) {
-  // #region agent log
-  fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6f3cc8'},body:JSON.stringify({sessionId:'6f3cc8',runId:'post-fix',hypothesisId:'H17',location:'main.ts:setAssetPath',message:'ionicons asset path setup failed',data:{error:String((e && e.message) || e || '')},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
+} catch {
+  // ionicons userà path di default
 }
 
 bootstrapApplication(AppComponent, {

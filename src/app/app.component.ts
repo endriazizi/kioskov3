@@ -9,6 +9,7 @@ import {
 import { Router, RouterLink, RouterLinkActive } from "@angular/router";
 import { SwUpdate } from "@angular/service-worker";
 import { addIcons } from "ionicons";
+import { firstValueFrom } from "rxjs";
 
 
 
@@ -59,6 +60,9 @@ import {
 } from "ionicons/icons";
 import { UserService } from "./providers/user.service";
 import { KioskLoadingService } from "./providers/kiosk-loading.service";
+import { KioskApiService } from "./providers/kiosk-api.service";
+import { environment } from "../environments/environment";
+import { KioskWhitelistDirective } from "./security/kiosk-whitelist.directive";
 import { kioskDevLog } from "./utils/kiosk-dev-console";
 
 @Component({
@@ -81,6 +85,7 @@ import { kioskDevLog } from "./utils/kiosk-dev-console";
     IonApp,
     IonSpinner,
     FormsModule,
+    KioskWhitelistDirective,
   ],
   providers: [MenuController, ToastController],
   encapsulation: ViewEncapsulation.None,
@@ -94,6 +99,7 @@ export class AppComponent implements OnInit {
   private menu = inject(MenuController);
   private platform = inject(Platform);
   readonly kioskLoading = inject(KioskLoadingService);
+  private kioskApi = inject(KioskApiService);
 
         // { title: "About", url: "/app/tabs/about", icon: "information-circle" },
   appPages = [
@@ -114,7 +120,8 @@ export class AppComponent implements OnInit {
   dark = false;
 
   private inactivityTimer: any;
-  private readonly TIMEOUT = 10000; // 10 secondi reali
+  private inactivityEnabled = true;
+  private inactivityTimeoutMs = 10000;
 
   constructor() {
     addIcons({
@@ -165,6 +172,7 @@ export class AppComponent implements OnInit {
   }
 
   private resetInactivityTimer() {
+    if (!this.inactivityEnabled) return;
     if (this.inactivityTimer) {
       clearTimeout(this.inactivityTimer);
     }
@@ -174,8 +182,13 @@ export class AppComponent implements OnInit {
       if (this.isOnTutorial()) return;
 
       kioskDevLog("⏳ Timeout di inattività, torno alla Home Page");
-      void this.router.navigateByUrl("/app/tabs/home", { replaceUrl: true }).catch(() => {});
-    }, this.TIMEOUT);
+      void this.router
+        .navigate(["/app/tabs/home"], {
+          replaceUrl: true,
+          queryParams: { idleFs: "1" },
+        })
+        .catch(() => {});
+    }, this.inactivityTimeoutMs);
   }
 
   private isOnTutorial(): boolean {
@@ -196,7 +209,7 @@ export class AppComponent implements OnInit {
     this.checkLoginStatus();
     this.listenForLoginEvents();
 
-    // avvia il timer di inattività al boot
+    await this.loadKioskIdleRuntimeConfig();
     this.resetInactivityTimer();
 
     // Service Worker update toast
@@ -212,6 +225,22 @@ export class AppComponent implements OnInit {
         .then(() => this.swUpdate.activateUpdate())
         .then(() => window.location.reload());
     });
+  }
+
+  private async loadKioskIdleRuntimeConfig(): Promise<void> {
+    if (!environment.useKioskPublicApi) return;
+    try {
+      const raw = await firstValueFrom(this.kioskApi.getHome());
+      const cfg = this.kioskApi.unwrapIdleFullscreenConfig(raw);
+      this.inactivityEnabled = !!cfg.enabled;
+      this.inactivityTimeoutMs = cfg.timeoutMs;
+      kioskDevLog("⚙️ [App] Inattività runtime:", {
+        enabled: this.inactivityEnabled,
+        timeoutMs: this.inactivityTimeoutMs,
+      });
+    } catch {
+      // fallback ai default hardcoded
+    }
   }
 
   initializeApp() {

@@ -8,6 +8,7 @@ import type {
   KioskBannerDto,
   KioskPublicBusinessDto,
   KioskPublicEventDto,
+  KioskIdleFullscreenConfig,
 } from '../interfaces/kiosk-api.interfaces';
 import { kioskDevLog, kioskDevWarn } from '../utils/kiosk-dev-console';
 
@@ -185,6 +186,26 @@ export class KioskApiService {
         return throwError(() => err);
       })
     );
+  }
+
+  /**
+   * Estrae la configurazione inattività fullscreen dal payload GET /api/public-kiosk/home.
+   * Fallback difensivo: valori safe anche su backend legacy senza campo dedicato.
+   */
+  unwrapIdleFullscreenConfig(raw: unknown): KioskIdleFullscreenConfig {
+    const r = raw as Record<string, unknown> | null;
+    const root = (r?.data ?? r?.payload ?? r ?? {}) as Record<string, unknown>;
+    const cfg = (root.idleFullscreen ?? root.idle_fullscreen ?? {}) as Record<string, unknown>;
+    const enabledRaw = cfg.enabled;
+    const timeoutRaw = cfg.timeoutMs ?? cfg.timeout_ms;
+    const rotationRaw = cfg.rotationMs ?? cfg.rotation_ms;
+    const notes = String(cfg.maintenanceNotes ?? cfg.maintenance_notes ?? '').trim();
+    return {
+      enabled: enabledRaw === false || String(enabledRaw ?? '1') === '0' ? false : true,
+      timeoutMs: Math.max(5000, Math.min(300000, Number(timeoutRaw) || 10000)),
+      rotationMs: Math.max(3000, Math.min(300000, Number(rotationRaw) || 10000)),
+      maintenanceNotes: notes,
+    };
   }
 
   submitPremiumRequest(body: KioskPremiumLeadBody): Observable<{ ok?: boolean }> {
