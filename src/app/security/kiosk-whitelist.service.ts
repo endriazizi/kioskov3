@@ -142,9 +142,6 @@ export class KioskWhitelistService {
     this.blockStats.lastBlockedAt = Date.now();
     this.persistBlockStats();
     this.logBlockedExternal(rawUrl, reason);
-    // #region agent log
-    fetch('http://127.0.0.1:7727/ingest/c4e926a9-a777-4a16-97cd-643defec2cb0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6753ff'},body:JSON.stringify({sessionId:'6753ff',runId:'audit-fix',hypothesisId:'H-block',location:'kiosk-whitelist.service.ts:recordBlocked',message:'Navigazione kiosk bloccata',data:{type,reason,urlPrefix:String(rawUrl||'').slice(0,80)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
   }
 
   getBlockStats(): KioskBlockStats {

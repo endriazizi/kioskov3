@@ -32,6 +32,7 @@ import QRCode from 'qrcode';
 import { Speaker } from '../../interfaces/conference.interfaces';
 import { ConferenceService } from '../../providers/conference.service';
 import { KioskApiService } from '../../providers/kiosk-api.service';
+import { sanitizeKioskProseHtml } from '../../security/kiosk-outbound-guard';
 import { kioskDevLog } from '../../utils/kiosk-dev-console';
 
 import { GelateriaCentraleComponent } from '../gelateria-centrale/gelateria-centrale.component';
@@ -252,6 +253,10 @@ export class SpeakerDetailPage {
       console.warn('⚠️ [SpeakerDetail] QR locale KO', e);
       this.detailQrDataUrl = '';
     }
+  }
+
+  sanitizedAboutHtml(): string {
+    return sanitizeKioskProseHtml(this.speaker?.about);
   }
 
   /** Testo sotto al titolo in base al tipo di link codificato */

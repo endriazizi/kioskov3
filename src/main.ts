@@ -1,6 +1,12 @@
 import '@angular/compiler';
 
-import { enableProdMode, importProvidersFrom, isDevMode } from '@angular/core';
+import {
+  APP_INITIALIZER,
+  enableProdMode,
+  importProvidersFrom,
+  inject,
+  isDevMode,
+} from '@angular/core';
 import {
   IonicRouteStrategy,
   provideIonicAngular,
@@ -25,7 +31,14 @@ import { IonicStorageModule } from '@ionic/storage-angular';
 import { setAssetPath } from 'ionicons';
 import { AppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
+import { installKioskOutboundGuard } from './app/security/kiosk-outbound-guard';
+import { KioskWhitelistService } from './app/security/kiosk-whitelist.service';
 import { environment } from './environments/environment';
+
+function kioskOutboundGuardInitializer() {
+  const whitelist = inject(KioskWhitelistService);
+  return () => installKioskOutboundGuard(whitelist);
+}
 
 if (environment.production) {
   enableProdMode();
@@ -40,6 +53,11 @@ try {
 
 bootstrapApplication(AppComponent, {
   providers: [
+    {
+      provide: APP_INITIALIZER,
+      multi: true,
+      useFactory: kioskOutboundGuardInitializer,
+    },
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     provideIonicAngular(),
     provideRouter(

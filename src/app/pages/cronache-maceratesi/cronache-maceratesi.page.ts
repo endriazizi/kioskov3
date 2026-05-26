@@ -5,11 +5,12 @@ import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon, IonContent
 } from '@ionic/angular/standalone';
-import { isPlatform, NavController } from '@ionic/angular';
+import { NavController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 
 import { addIcons } from 'ionicons';
 import { arrowBackOutline } from 'ionicons/icons';
+import { kioskEmbedUseInAppFrame } from '../../security/kiosk-embed-page.util';
 
 @Component({
   standalone: true,
@@ -29,16 +30,16 @@ export class CronacheMaceratesiPage implements OnInit {
   // URL del sito Cronache Maceratesi
   private readonly RAW_URL = 'https://www.cronachemaceratesi.it';
 
-  isBrowser = true;          // true = PWA/desktop browser, false = app ibrida
-  safeUrl!: SafeResourceUrl; // URL sanitizzato per l'iframe
+  isBrowser = true;
+  safeUrl!: SafeResourceUrl;
 
   constructor() {
     addIcons({ arrowBackOutline });
-    // considera "ibrido" se gira dentro Capacitor/Cordova
-    this.isBrowser = !(isPlatform('hybrid') || isPlatform('capacitor') || isPlatform('cordova'));
+    this.isBrowser = kioskEmbedUseInAppFrame();
   }
 
   ngOnInit(): void {
+    this.isBrowser = kioskEmbedUseInAppFrame();
     this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.RAW_URL);
   }
 

@@ -85,7 +85,7 @@
 
         <div
           class="about-text kiosk-prose"
-          [innerHTML]="speaker?.about || '…'"
+          [innerHTML]="sanitizedAboutHtml()"
         ></div>
       </article>
 
