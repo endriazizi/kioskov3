@@ -8,15 +8,75 @@ interface GuardState {
   whitelist: KioskWhitelistService;
   notifyBlocked: KioskBlockNotify;
   originalOpen: typeof window.open;
-  originalAssign: typeof Location.prototype.assign;
-  originalReplace: typeof Location.prototype.replace;
+  originalAssign: (url: string | URL) => void;
+  originalReplace: (url: string | URL) => void;
+  locationAssignPatched: boolean;
+  locationReplacePatched: boolean;
   originalLocationHrefSet: ((value: string) => void) | null;
+  locationHrefPatched: boolean;
   originalBrowserOpen: ((options: { url: string }) => Promise<void>) | null;
   originalThemeableBrowserOpen: ((...args: unknown[]) => unknown) | null;
   mutationObserver: MutationObserver | null;
   clickHandler: (ev: MouseEvent) => void;
   auxClickHandler: (ev: MouseEvent) => void;
   submitHandler: (ev: Event) => void;
+}
+
+function locationPrototype(): Location {
+  return Object.getPrototypeOf(window.location) as Location;
+}
+
+/**
+ * Chrome/modern browsers: `window.location.assign = …` fallisce (read-only).
+ * Patch best-effort su Location.prototype; se non possibile, restano click + href + window.open.
+ */
+function patchLocationNavMethod(
+  method: 'assign' | 'replace',
+  original: (url: string | URL) => void,
+  whitelist: KioskWhitelistService,
+  blockToast: () => void
+): boolean {
+  try {
+    const locProto = locationPrototype();
+    const desc = Object.getOwnPropertyDescriptor(locProto, method);
+    if (!desc?.value) return false;
+    Object.defineProperty(locProto, method, {
+      configurable: true,
+      writable: true,
+      enumerable: desc.enumerable,
+      value(url: string | URL) {
+        const href = typeof url === 'string' ? url : url.toString();
+        if (!whitelist.isAllowed(href)) {
+          whitelist.recordBlocked('open', href, `location.${method}`);
+          blockToast();
+          return;
+        }
+        original.call(window.location, url);
+      },
+    });
+    return true;
+  } catch (e) {
+    console.warn(`🔒 [Kiosk] location.${method} non patchabile (browser read-only):`, e);
+    return false;
+  }
+}
+
+function restoreLocationNavMethod(
+  method: 'assign' | 'replace',
+  original: (url: string | URL) => void
+): void {
+  try {
+    const locProto = locationPrototype();
+    const desc = Object.getOwnPropertyDescriptor(locProto, method);
+    Object.defineProperty(locProto, method, {
+      configurable: true,
+      writable: true,
+      enumerable: desc?.enumerable ?? true,
+      value: original,
+    });
+  } catch {
+    /* noop */
+  }
 }
 
 let state: GuardState | null = null;
@@ -31,6 +91,18 @@ export function installKioskOutboundGuard(
   notifyBlocked: KioskBlockNotify = () => {}
 ): void {
   if (state) return;
+
+  try {
+    installKioskOutboundGuardCore(whitelist, notifyBlocked);
+  } catch (e) {
+    console.error('🔒 [Kiosk] install guard fallito — app avviata senza patch location:', e);
+  }
+}
+
+function installKioskOutboundGuardCore(
+  whitelist: KioskWhitelistService,
+  notifyBlocked: KioskBlockNotify
+): void {
 
   const originalOpen = window.open;
   const originalAssign = window.location.assign.bind(window.location);
@@ -183,41 +255,39 @@ export function installKioskOutboundGuard(
   (window as unknown as { kioskSecurityAudit?: typeof kioskAudit }).kioskSecurityAudit =
     kioskAudit;
 
-  window.open = ((url?: string | URL, _target?: string, _features?: string) => {
-    if (!url) return null;
-    const href = typeof url === 'string' ? url : url.toString();
-    if (!whitelist.isAllowed(href)) {
-      whitelist.recordBlocked('open', href, 'window.open');
-      blockToast();
+  try {
+    window.open = ((url?: string | URL, _target?: string, _features?: string) => {
+      if (!url) return null;
+      const href = typeof url === 'string' ? url : url.toString();
+      if (!whitelist.isAllowed(href)) {
+        whitelist.recordBlocked('open', href, 'window.open');
+        blockToast();
+        return null;
+      }
+      window.location.href = new URL(href, window.location.href).toString();
       return null;
-    }
-    window.location.href = new URL(href, window.location.href).toString();
-    return null;
-  }) as typeof window.open;
+    }) as typeof window.open;
+  } catch (e) {
+    console.warn('🔒 [Kiosk] window.open non patchabile:', e);
+  }
 
-  window.location.assign = ((url: string | URL) => {
-    const href = typeof url === 'string' ? url : url.toString();
-    if (!whitelist.isAllowed(href)) {
-      whitelist.recordBlocked('open', href, 'location.assign');
-      blockToast();
-      return;
-    }
-    originalAssign(href);
-  }) as typeof window.location.assign;
-
-  window.location.replace = ((url: string | URL) => {
-    const href = typeof url === 'string' ? url : url.toString();
-    if (!whitelist.isAllowed(href)) {
-      whitelist.recordBlocked('open', href, 'location.replace');
-      blockToast();
-      return;
-    }
-    originalReplace(href);
-  }) as typeof window.location.replace;
+  const locationAssignPatched = patchLocationNavMethod(
+    'assign',
+    originalAssign,
+    whitelist,
+    blockToast
+  );
+  const locationReplacePatched = patchLocationNavMethod(
+    'replace',
+    originalReplace,
+    whitelist,
+    blockToast
+  );
 
   let originalLocationHrefSet: ((value: string) => void) | null = null;
+  let locationHrefPatched = false;
   try {
-    const locProto = Object.getPrototypeOf(window.location) as Location;
+    const locProto = locationPrototype();
     const desc = Object.getOwnPropertyDescriptor(locProto, 'href');
     if (desc?.set) {
       originalLocationHrefSet = desc.set.bind(window.location);
@@ -235,9 +305,10 @@ export function installKioskOutboundGuard(
           originalSet(value);
         },
       });
+      locationHrefPatched = true;
     }
-  } catch {
-    // best effort
+  } catch (e) {
+    console.warn('🔒 [Kiosk] location.href non patchabile:', e);
   }
 
   void patchCapacitorBrowserOpen(whitelist, blockToast);
@@ -249,7 +320,10 @@ export function installKioskOutboundGuard(
     originalOpen,
     originalAssign,
     originalReplace,
+    locationAssignPatched,
+    locationReplacePatched,
     originalLocationHrefSet,
+    locationHrefPatched,
     originalBrowserOpen: null,
     originalThemeableBrowserOpen,
     mutationObserver,
@@ -270,13 +344,22 @@ export function uninstallKioskOutboundGuard(): void {
   state.mutationObserver?.disconnect();
   delete (window as unknown as { kioskSecurityAudit?: unknown }).kioskSecurityAudit;
 
-  window.open = state.originalOpen;
-  window.location.assign = state.originalAssign;
-  window.location.replace = state.originalReplace;
+  try {
+    window.open = state.originalOpen;
+  } catch {
+    /* noop */
+  }
 
-  if (state.originalLocationHrefSet) {
+  if (state.locationAssignPatched) {
+    restoreLocationNavMethod('assign', state.originalAssign);
+  }
+  if (state.locationReplacePatched) {
+    restoreLocationNavMethod('replace', state.originalReplace);
+  }
+
+  if (state.locationHrefPatched && state.originalLocationHrefSet) {
     try {
-      const locProto = Object.getPrototypeOf(window.location) as Location;
+      const locProto = locationPrototype();
       const desc = Object.getOwnPropertyDescriptor(locProto, 'href');
       if (desc?.get) {
         Object.defineProperty(locProto, 'href', {
