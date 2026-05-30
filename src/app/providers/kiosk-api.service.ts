@@ -46,6 +46,10 @@ export class KioskApiService {
   resolveAssetUrl(path: string | null | undefined): string {
     if (path == null || path === '') return '';
     const p = String(path).trim();
+    if (/^http:\/\//i.test(p)) {
+      if (/pizzerialalanterna\.it/i.test(p)) return p.replace(/^http:\/\//i, 'https://');
+      return p;
+    }
     if (/^https?:\/\//i.test(p)) return p;
     if (p.startsWith('assets/') || p.startsWith('/assets/')) {
       return p.startsWith('/') ? p : `/${p}`;

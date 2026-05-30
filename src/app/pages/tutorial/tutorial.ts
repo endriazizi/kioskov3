@@ -2029,7 +2029,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   onPosterVideoError(index: number): void {
     const ad = this.ads[index];
     if (!ad || ad.kind !== "video") return;
-    const fallback = String(ad.fallbackSrc || ad.poster || "").trim();
+    const fallback = String(ad.poster || ad.fallbackSrc || "").trim();
     if (fallback && !this.kioskApi.isLikelyVideoAssetUrl(fallback)) {
       kioskDevWarn(
         "⚠️ [Tutorial] Video poster non caricato — fallback immagine attività:",
