@@ -40,15 +40,7 @@
   <div class="viewport">
     <!-- INFO (clock + meteo): fascia “dashboard” touch-friendly -->
     <div class="info-kiosk info-kiosk--compact kiosk-live-strip">
-      <div class="kiosk-live-strip__clock" aria-live="polite">
-        <div class="kiosk-live-strip__time-card" role="group" aria-labelledby="kiosk-live-time-label">
-          <span id="kiosk-live-time-label" class="kiosk-live-strip__time-eyebrow">Ora</span>
-          <div class="kiosk-live-strip__time-row">
-            <span class="kiosk-live-strip__clock-icon" aria-hidden="true">🕒</span>
-            <div class="clock">{{ currentTime }}</div>
-          </div>
-        </div>
-      </div>
+      <app-kiosk-live-clock />
       <div class="kiosk-live-strip__meta">
         <div class="kiosk-live-strip__pill kiosk-live-strip__pill--date">
           <span class="kiosk-live-strip__emoji" aria-hidden="true">📅</span>
@@ -144,7 +136,7 @@
                     [attr.autoplay]="isClickToPlayVideo(i) ? null : ''"
                     (loadedmetadata)="onAdVideoMeta(i, $event)"
                     (ended)="onAdVideoEnded(i)"
-                    (error)="removeBrokenAd(i)"
+                    (error)="onPosterVideoError(i)"
                   ></video>
                   <div
                     class="poster-caption"

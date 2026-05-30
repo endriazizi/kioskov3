@@ -48,6 +48,7 @@ import type { KioskBannerDto, KioskPublicBusinessDto } from "../../interfaces/ki
 import type { Speaker } from "../../interfaces/conference.interfaces";
 import { environment } from "../../../environments/environment";
 import { kioskDevInfo, kioskDevLog, kioskDevWarn } from "../../utils/kiosk-dev-console";
+import { KioskLiveClockComponent } from "./kiosk-live-clock.component";
 
 /**
  * Slide carosello home kiosk: ogni attività ha al massimo 1 poster.
@@ -148,6 +149,7 @@ function normalizeKioskBusinessSlugCandidate(raw: string | null | undefined): st
   imports: [
     CommonModule,
     RouterLink,
+    KioskLiveClockComponent,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -187,10 +189,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private creditsDockNavSub?: Subscription;
 
   // Clock / Weather
-  currentTime!: string;
   currentDate = "";
   weather: any;
-  private clockInterval?: any;
+  private dateInterval?: ReturnType<typeof setInterval>;
 
   // View refs
   @ViewChild("pageContent", { static: true }) pageContent!: IonContentBase;
@@ -378,8 +379,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
         if (this.promoFullscreenOpen) this.closePromoFullscreen(undefined, "router-nav");
       });
 
-    this.updateTimeAndDate();
-    this.clockInterval = setInterval(() => this.updateTimeAndDate(), 1000);
+    this.updateDate();
+    this.dateInterval = setInterval(() => this.updateDate(), 60_000);
     this.fetchWeather();
     this.loadIdlePosterRuntimeConfig();
     /** Carosello poster e strip promo sono indipendenti: due GET paralleli quando l’API è attiva. */
@@ -436,7 +437,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.clockInterval) clearInterval(this.clockInterval);
+    if (this.dateInterval) clearInterval(this.dateInterval);
 
     this.stopAdsCarousel();
     this.stopPromoStripAuto();
@@ -471,15 +472,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.fitScreenLayout = path === "/tutorial" || path === "/app/tabs/home";
   }
 
-  // ========= CLOCK / METEO =========
-  updateTimeAndDate() {
-    const now = new Date();
-    this.currentTime = now.toLocaleTimeString("it-IT", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-    this.currentDate = now.toLocaleDateString("it-IT", {
+  // ========= DATA / METEO (orologio in app-kiosk-live-clock, OnPush) =========
+  private updateDate(): void {
+    this.currentDate = new Date().toLocaleDateString("it-IT", {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -2026,6 +2021,29 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.startAdsCarousel();
     }
+  }
+
+  /**
+   * Video poster KO (404, transcodifica mancante su server): mostra cover/logo invece di rimuovere la slide.
+   */
+  onPosterVideoError(index: number): void {
+    const ad = this.ads[index];
+    if (!ad || ad.kind !== "video") return;
+    const fallback = String(ad.fallbackSrc || ad.poster || "").trim();
+    if (fallback && !this.kioskApi.isLikelyVideoAssetUrl(fallback)) {
+      kioskDevWarn(
+        "⚠️ [Tutorial] Video poster non caricato — fallback immagine attività:",
+        ad.src,
+      );
+      ad.kind = "image";
+      ad.src = fallback;
+      ad.poster = undefined;
+      this.ads = [...this.ads];
+      this.rebuildVideoAdIndexes();
+      this.startAdsCarousel();
+      return;
+    }
+    this.removeBrokenAd(index);
   }
 
   removeBrokenAd(i: number) {

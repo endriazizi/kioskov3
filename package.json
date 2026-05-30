@@ -10,6 +10,7 @@
     "start:totem": "npx ng serve -c totem",
     "start:totem:prodapi": "npx ng serve -c totemProdApi",
     "start:totem:prodproxy": "npx ng serve -c totemProdProxy",
+    "kiosk:windows": "scripts\\totem-windows\\start-totem-kiosk.bat",
     "build": "npx ng build",
     "test": "npx ng test",
     "lint": "npx ng lint"

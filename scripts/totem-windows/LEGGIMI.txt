@@ -1,0 +1,44 @@
+================================================================================
+TOTEM WINDOWS — Chrome kiosk (kioskov3, porta 8200)
+================================================================================
+
+Prerequisito dev (come da te):
+  1. In VS Code / terminale, dalla cartella kioskov3:
+       npm run start:totem:prodproxy
+  2. Attendi "Local: http://localhost:8200/"
+  3. Avvia il kiosk (questo pacchetto).
+
+Script principali
+-----------------
+  start-totem-kiosk.bat       → attende porta 8200, apre Chrome kiosk, watchdog riavvio
+  01-install-kiosk-policies.bat → policy Windows (Esegui come amministratore, una tantum)
+  99-restore-kiosk-policies.bat → ripristino policy (manutenzione)
+  exit-kiosk-admin.bat        → chiude Chrome + messaggio uscita staff
+
+URL default
+  http://127.0.0.1:8200/tutorial
+  (redirect root → /tutorial in app.routes.ts)
+
+Variabili opzionali (prima di lanciare i .bat)
+  set TOTEM_URL=http://127.0.0.1:8200/tutorial
+  set TOTEM_PORT=8200
+  set TOTEM_CHROME=C:\Program Files\Google\Chrome\Application\chrome.exe
+
+Produzione / LAN
+  Se il totem deve usare l'IP di rete (es. tablet che punta al PC dev):
+  set TOTEM_URL=http://192.168.1.125:8200/tutorial
+
+Hardering enterprise (oltre ai .bat)
+------------------------------------
+  - Account Windows dedicato "Totem" senza diritti admin
+  - Avvio automatico: Task Scheduler → start-totem-kiosk.bat all'accesso
+  - Prima installazione: 01-install-kiosk-policies.bat come Admin
+  - Uscita staff: Ctrl+Alt+Del → Cambia utente / exit-kiosk-admin.bat
+  - Alt+F4 chiude Chrome; il watchdog lo riapre (comportamento voluto sul totem)
+  - Per bloccare Alt+F4 / tasto Win: Assigned Access o tool kiosk (KioWare, ecc.)
+
+Nota sicurezza
+  I flag Chrome NON sostituiscono policy OS. L'app kioskov3 ha già guard outbound
+  (kiosk-outbound-guard) per non uscire verso URL esterni.
+
+================================================================================
