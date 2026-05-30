@@ -1,9 +1,13 @@
 <ion-header class="kpl-header ion-no-border">
   <ion-toolbar class="kpl-toolbar">
     <ion-buttons slot="start">
-      <ion-button fill="clear" class="kpl-back" routerLink="/tutorial" aria-label="Torna al totem">
-        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
-      </ion-button>
+      <ion-menu-button menu="main-menu" autoHide="false" aria-label="Menu totem"></ion-menu-button>
+      <ion-back-button
+        class="kpl-back"
+        [defaultHref]="homeTotemHref"
+        text="Home"
+        aria-label="Torna alla home del totem"
+      ></ion-back-button>
     </ion-buttons>
     <ion-title class="kpl-brand">Kiosk · Piani</ion-title>
     <!-- <ion-button slot="end" fill="clear" routerLink="/login" class="kpl-staff-link">Area staff</ion-button> -->
@@ -23,11 +27,11 @@
       <div class="kpl-hero__cta">
         <ion-button size="large" class="kpl-btn-primary" (click)="scrollToForm()">Richiedi informazioni Premium</ion-button>
         <nav class="kpl-hero__plan-nav" aria-label="Collegamenti ai piani Base e Premium">
-          <a class="kpl-anchor" href="#piano-base">Piano Base</a>
+          <button type="button" class="kpl-anchor" (click)="scrollToSection('piano-base', $event)">Piano Base</button>
           <span class="kpl-hero__plan-nav-sep" aria-hidden="true">·</span>
-          <a class="kpl-anchor" href="#piano-premium">Piano Premium</a>
+          <button type="button" class="kpl-anchor" (click)="scrollToSection('piano-premium', $event)">Piano Premium</button>
           <span class="kpl-hero__plan-nav-sep" aria-hidden="true">·</span>
-          <a class="kpl-anchor" href="#piani">Confronta i piani</a>
+          <button type="button" class="kpl-anchor" (click)="scrollToSection('piani', $event)">Confronta i piani</button>
         </nav>
       </div>
     </div>
@@ -140,10 +144,15 @@
   <footer class="kpl-footer">
     <p>© {{ year }} · Centro commerciale naturale · Kiosk</p>
     <p class="kpl-footer__plans">
-      <a class="kpl-footer__plan-link" href="#piano-base">Piano Base</a>
+      <button type="button" class="kpl-footer__plan-link" (click)="scrollToSection('piano-base', $event)">Piano Base</button>
       <span class="kpl-footer__plan-sep" aria-hidden="true">·</span>
-      <a class="kpl-footer__plan-link" href="#piano-premium">Piano Premium</a>
+      <button type="button" class="kpl-footer__plan-link" (click)="scrollToSection('piano-premium', $event)">Piano Premium</button>
     </p>
-    <p class="kpl-footer__mail">Per assistenza diretta: endri.azizi@gmail.com</p>
+    <p class="kpl-footer__home">
+      <ion-button fill="clear" size="small" class="kpl-footer__home-btn" (click)="goHomeTotem($event)">
+        Torna alla home kiosk
+      </ion-button>
+    </p>
+    <p class="kpl-footer__mail">Per assistenza diretta: endri.azizi&#64;gmail.com</p>
   </footer>
 </ion-content>

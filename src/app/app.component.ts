@@ -55,8 +55,8 @@ import {
   newspaper,
   newspaperOutline,
   leaf,
-  leafOutline
-  
+  leafOutline,
+  pricetagsOutline,
 } from "ionicons/icons";
 import { UserService } from "./providers/user.service";
 import { KioskLoadingService } from "./providers/kiosk-loading.service";
@@ -105,7 +105,7 @@ export class AppComponent implements OnInit {
   appPages = [
     { title: "Eventi", url: "/app/tabs/schedule", icon: "calendar-outline" },
     { title: "Attività", url: "/app/tabs/speakers", icon: "people" },
-    { title: "Piani Premium", url: "/kiosk/piani-premium", icon: "pricetags" },
+    { title: "Piani Premium", url: "/app/tabs/piani-premium", icon: "pricetags" },
     { title: "Map", url: "/app/tabs/map", icon: "map" },
 
 
@@ -143,7 +143,9 @@ export class AppComponent implements OnInit {
       newspaper,
       newspaperOutline,
       informationCircleSharp,
-      leaf,leafOutline
+      leaf,
+      leafOutline,
+      pricetagsOutline,
     });
 
     effect(() => {

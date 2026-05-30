@@ -57,6 +57,22 @@ export class KioskApiService {
     return p.startsWith('/') ? `${b}${p}` : `${b}/${p}`;
   }
 
+  /** Rileva MP4/WEBM/MOV anche su path diretti e proxy `media-file?path=...`. */
+  isLikelyVideoAssetUrl(path: string | null | undefined): boolean {
+    const raw = String(path || '').trim().toLowerCase();
+    if (!raw) return false;
+    if (/\.(mp4|webm|mov)(\?|#|$)/.test(raw)) return true;
+    const pathOnly = raw.split(/[?#]/, 1)[0] || raw;
+    if (/\.(mp4|webm|mov)$/.test(pathOnly)) return true;
+    try {
+      const qs = raw.includes('?') ? raw.split('?', 2)[1] : '';
+      if (qs && /\.(mp4|webm|mov)/.test(decodeURIComponent(qs))) return true;
+    } catch {
+      /* noop */
+    }
+    return false;
+  }
+
   getHome(): Observable<unknown> {
     kioskDevLog('🧭 [KioskAPI] GET /api/public-kiosk/home …');
     return this.http.get(this.url('/api/public-kiosk/home')).pipe(

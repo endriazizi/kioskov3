@@ -1383,7 +1383,18 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private mapBannerDtoToPoster(b: KioskBannerDto): AdItem | null {
     const mtRaw = String(b.mediaType || b.media_type || b.poster_media_type || "").toLowerCase();
     const mimeRaw = String(b.mime_type || b.mimeType || "").toLowerCase();
-    const isVideo = mtRaw === "video" || mimeRaw.startsWith("video/");
+    const o = b as Record<string, unknown>;
+    const mediaPublic = String(
+      b.public_url ?? o.media_public_url ?? b.video_url ?? b.media_url ?? ""
+    ).trim();
+    const isVideo =
+      mtRaw === "video" ||
+      mimeRaw.startsWith("video/") ||
+      this.kioskApi.isLikelyVideoAssetUrl(mediaPublic) ||
+      this.kioskApi.isLikelyVideoAssetUrl(b.homePosterUrl) ||
+      this.kioskApi.isLikelyVideoAssetUrl(b.posterUrl) ||
+      this.kioskApi.isLikelyVideoAssetUrl(b.image_url) ||
+      this.kioskApi.isLikelyVideoAssetUrl(b.imageUrl);
     const ext = b.externalUrl || b.linkUrl;
     if (ext && String(ext).trim().match(/^https?:\/\//i)) {
       kioskDevWarn(
@@ -1396,7 +1407,10 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     const rawVideoSrc =
       b.video_url ||
       b.media_url ||
-      (isVideo ? b.homePosterUrl || b.posterUrl || b.public_url : null);
+      mediaPublic ||
+      (isVideo
+        ? b.homePosterUrl || b.posterUrl || b.public_url || b.image_url || b.imageUrl
+        : null);
     const rawImageSrc =
       b.homePosterUrl ||
       b.posterUrl ||
@@ -2148,6 +2162,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   onPosterImageError(index: number): void {
     const ad = this.ads[index];
     if (!ad || ad.kind !== "image") return;
+    if (this.kioskApi.isLikelyVideoAssetUrl(ad.src)) return;
     const fallback = String(ad.fallbackSrc || "").trim();
     if (fallback && fallback !== ad.src) {
       kioskDevWarn(
@@ -2242,30 +2257,20 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   private async forceUnlockAudio() {
     const v = this.slideVideo?.nativeElement;
+    if (!v) return;
     try {
-      const Ctx =
-        (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (Ctx) {
-        const ctx = new Ctx();
-        if (ctx.state === "suspended") await ctx.resume();
-        const src = ctx.createBufferSource();
-        src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
-        src.connect(ctx.destination);
-        src.start(0);
-      }
-      if (v) {
-        v.muted = false;
-        await v.play();
-        this.muted = false;
-        this.showUnmuteBtn = false;
-        this.isPlaying = true;
-      }
+      v.muted = false;
+      v.removeAttribute("muted");
+      v.volume = 1;
+      await v.play();
+      this.muted = false;
+      this.showUnmuteBtn = false;
+      this.isPlaying = true;
     } catch {
-      if (v) {
-        v.muted = true;
-        this.muted = true;
-        this.showUnmuteBtn = true;
-      }
+      v.muted = true;
+      v.setAttribute("muted", "");
+      this.muted = true;
+      this.showUnmuteBtn = true;
     }
   }
 
@@ -2394,7 +2399,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   openPremiumPlans(): void {
-    this.router.navigateByUrl("/kiosk/piani-premium").catch((err) => {
+    this.router.navigateByUrl("/app/tabs/piani-premium").catch((err) => {
       console.error("Errore durante apertura piani premium:", err);
     });
   }

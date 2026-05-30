@@ -39,9 +39,10 @@ export const routes: Routes = [
       import('./pages/tutorial/tutorial').then(m => m.TutorialPage),
     canMatch: [checkTutorialGuard],
   },
+  /** Bookmark legacy: resta nel totem con tab bar visibile (nessuna uscita verso URL esterni). */
   {
     path: 'kiosk/piani-premium',
-    loadComponent: () =>
-      import('./pages/piani-premium/piani-premium.page').then(m => m.PianiPremiumPage),
+    redirectTo: '/app/tabs/piani-premium',
+    pathMatch: 'full',
   },
 ];

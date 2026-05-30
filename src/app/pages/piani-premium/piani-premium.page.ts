@@ -1,9 +1,10 @@
 import { Component, inject, signal } from "@angular/core";
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
 import { Title } from "@angular/platform-browser";
-import { RouterLink } from "@angular/router";
+import { Router } from "@angular/router";
 import { NgIf } from "@angular/common";
 import {
+  IonBackButton,
   IonHeader,
   IonToolbar,
   IonTitle,
@@ -16,11 +17,9 @@ import {
   IonNote,
   IonSpinner,
   IonButtons,
-  IonIcon,
+  IonMenuButton,
 } from "@ionic/angular/standalone";
 import { ToastController } from "@ionic/angular";
-import { addIcons } from "ionicons";
-import { arrowBackOutline } from "ionicons/icons";
 import { firstValueFrom } from "rxjs";
 import { KioskApiService } from "../../providers/kiosk-api.service";
 
@@ -32,7 +31,6 @@ import { KioskApiService } from "../../providers/kiosk-api.service";
   imports: [
     NgIf,
     ReactiveFormsModule,
-    RouterLink,
     IonHeader,
     IonToolbar,
     IonTitle,
@@ -45,7 +43,8 @@ import { KioskApiService } from "../../providers/kiosk-api.service";
     IonNote,
     IonSpinner,
     IonButtons,
-    IonIcon,
+    IonMenuButton,
+    IonBackButton,
   ],
 })
 export class PianiPremiumPage {
@@ -53,6 +52,10 @@ export class PianiPremiumPage {
   private toast = inject(ToastController);
   private title = inject(Title);
   private kioskApi = inject(KioskApiService);
+  private router = inject(Router);
+
+  /** Home kiosk (tab Home = tutorial) — fallback se non c’è history. */
+  readonly homeTotemHref = "/app/tabs/home";
 
   readonly submitting = signal(false);
   readonly sent = signal(false);
@@ -68,12 +71,22 @@ export class PianiPremiumPage {
   });
 
   constructor() {
-    addIcons({ arrowBackOutline });
     this.title.setTitle("Piani Kiosk - Base e Premium");
   }
 
   scrollToForm(): void {
-    document.getElementById("richiesta")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    this.scrollToSection("richiesta");
+  }
+
+  /** Anchor interni: scroll in pagina senza href http(s) né hash che esce dall’app. */
+  scrollToSection(sectionId: string, ev?: Event): void {
+    ev?.preventDefault();
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  goHomeTotem(ev?: Event): void {
+    ev?.preventDefault();
+    void this.router.navigateByUrl(this.homeTotemHref);
   }
 
   async submit(): Promise<void> {

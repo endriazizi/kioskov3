@@ -30,7 +30,7 @@ export class PrenotaLanternaPage implements OnInit {
   // URL del sito Prenota La Lanterna
   // private readonly RAW_URL = 'https://prenota.pizzerialalanterna.it/asporto';
   private readonly RAW_URL = 'https://pizzerialalanterna.it';
-  private readonly PREMIUM_PLANS_ROUTE = '/kiosk/piani-premium';
+  private readonly PREMIUM_PLANS_ROUTE = '/app/tabs/piani-premium';
 
   isBrowser = true;
   safeUrl!: SafeResourceUrl;
