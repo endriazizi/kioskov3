@@ -114,7 +114,16 @@ export interface KioskBannerDto {
   src?: string | null;
   url?: string | null;
   mediaType?: 'image' | 'video' | string | null;
+  media_type?: 'image' | 'video' | string | null;
+  poster_media_type?: 'image' | 'video' | string | null;
   videoUrl?: string | null;
+  video_url?: string | null;
+  media_url?: string | null;
+  public_url?: string | null;
+  poster_thumb_url?: string | null;
+  posterThumbUrl?: string | null;
+  mime_type?: string | null;
+  mimeType?: string | null;
   /**
    * Stato poster/attività per home kiosk. Se un flag è false → il poster non va in carousel.
    * Se assenti → compatibilità: il poster resta eleggibile (backend legacy).

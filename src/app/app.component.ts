@@ -121,7 +121,8 @@ export class AppComponent implements OnInit {
 
   private inactivityTimer: any;
   private inactivityEnabled = true;
-  private inactivityTimeoutMs = 10000;
+  /** Default 60 s — override da API kiosk_idle_timeout_ms se useKioskPublicApi. */
+  private inactivityTimeoutMs = 60000;
 
   constructor() {
     addIcons({

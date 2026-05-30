@@ -202,7 +202,7 @@ export class KioskApiService {
     const notes = String(cfg.maintenanceNotes ?? cfg.maintenance_notes ?? '').trim();
     return {
       enabled: enabledRaw === false || String(enabledRaw ?? '1') === '0' ? false : true,
-      timeoutMs: Math.max(5000, Math.min(300000, Number(timeoutRaw) || 10000)),
+      timeoutMs: Math.max(5000, Math.min(300000, Number(timeoutRaw) || 60000)),
       rotationMs: Math.max(3000, Math.min(300000, Number(rotationRaw) || 10000)),
       maintenanceNotes: notes,
     };

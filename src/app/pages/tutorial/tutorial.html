@@ -136,8 +136,8 @@
                     #adVideo
                     class="ad-video"
                     [src]="assetUrl(ad.src)"
-                    [poster]="ad.poster || null"
-                    preload="metadata"
+                    [poster]="ad.poster ? assetUrl(ad.poster) : null"
+                    preload="auto"
                     muted
                     playsinline
                     webkit-playsinline
@@ -146,6 +146,15 @@
                     (ended)="onAdVideoEnded(i)"
                     (error)="removeBrokenAd(i)"
                   ></video>
+                  <div
+                    class="poster-caption"
+                    *ngIf="ad.businessName || ad.title || ad.subtitle"
+                  >
+                    <span class="poster-caption__name" *ngIf="ad.businessName">{{ ad.businessName }}</span>
+                    <span class="poster-caption__title" *ngIf="showPosterCaptionTitle(ad)">{{ ad.title }}</span>
+                    <span class="poster-caption__sub" *ngIf="showPosterCaptionSubtitle(ad)">{{ ad.subtitle }}</span>
+                    <span class="poster-caption__sub" *ngIf="ad.uploadedBy">upload by: {{ ad.uploadedBy }}</span>
+                  </div>
                   <div
                     *ngIf="i === adsIndex && isClickToPlayVideo(i) && adsShowPlayBtn"
                     class="ads-play-overlay"
@@ -400,56 +409,86 @@
     backdropDismiss="true"
   >
     <ng-template>
-      <div class="promo-fullscreen-shell" role="dialog" aria-modal="true" aria-label="Anteprima poster attività">
+      <div
+        class="promo-fullscreen-shell"
+        [class.promo-fullscreen-shell--idle]="isIdlePosterMode()"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Anteprima poster attività"
+      >
+        @if (isIdlePosterMode()) {
+          <div class="kiosk-idle-fs-banner" role="status" aria-live="polite">
+            <span class="kiosk-idle-fs-banner__dot" aria-hidden="true"></span>
+            <span class="kiosk-idle-fs-banner__text">Totem in pausa — tocca lo schermo per tornare</span>
+          </div>
+        }
         <button
           type="button"
           class="promo-fullscreen-close"
           (click)="closePosterFullscreen($event)"
           aria-label="Chiudi"
         >
-          Chiudi
+          {{ isIdlePosterMode() ? 'Riprendi' : 'Chiudi' }}
         </button>
         <div
           class="promo-fullscreen-stage"
           *ngIf="posterFullscreenItem"
+          (click)="onPosterFullscreenShellClick($event)"
           (touchstart)="onFullscreenTouchStart($event)"
           (touchend)="onPosterFullscreenTouchEnd($event)"
         >
-          <img
-            class="promo-fullscreen-img"
-            [src]="assetUrl(posterFullscreenItem.src)"
-            [alt]="posterFullscreenItem.title || posterFullscreenItem.businessName || 'Poster attività'"
-            draggable="false"
-          />
+          @if (posterFullscreenItem.kind === 'video') {
+            <video
+              class="promo-fullscreen-video"
+              [src]="assetUrl(posterFullscreenItem.src)"
+              [poster]="posterFullscreenItem.poster ? assetUrl(posterFullscreenItem.poster) : null"
+              autoplay
+              [muted]="adsMuted"
+              [loop]="isIdlePosterMode()"
+              playsinline
+              webkit-playsinline
+              draggable="false"
+              (loadeddata)="onPosterFullscreenVideoReady()"
+            ></video>
+          } @else {
+            <img
+              class="promo-fullscreen-img"
+              [src]="assetUrl(posterFullscreenItem.src)"
+              [alt]="posterFullscreenItem.title || posterFullscreenItem.businessName || 'Poster attività'"
+              draggable="false"
+            />
+          }
         </div>
-        <footer class="promo-fullscreen-footer" *ngIf="posterFullscreenItem">
-          <div class="promo-fullscreen-caption">
-            <span class="promo-fullscreen-biz" *ngIf="posterFullscreenItem.businessName">{{
-              posterFullscreenItem.businessName
-            }}</span>
-            <span class="promo-fullscreen-title" *ngIf="posterFullscreenItem.title">{{ posterFullscreenItem.title }}</span>
-            <span class="promo-fullscreen-sub" *ngIf="posterFullscreenItem.subtitle">{{
-              posterFullscreenItem.subtitle
-            }}</span>
-            <span class="promo-fullscreen-sub" *ngIf="posterFullscreenItem.uploadedBy"
-              >upload by: {{ posterFullscreenItem.uploadedBy }}</span
-            >
-          </div>
-          <div class="promo-fullscreen-btns">
-            <ion-button type="button" expand="block" fill="outline" color="medium" class="promo-fs-btn" (click)="closePosterFullscreen($event)"
-              >Esci</ion-button
-            >
-            <ion-button
-              type="button"
-              expand="block"
-              color="primary"
-              class="promo-fs-btn"
-              *ngIf="posterFullscreenNavSlug"
-              (click)="goPosterDetailFromFullscreen($event)"
-              >Scheda attività</ion-button
-            >
-          </div>
-        </footer>
+        @if (posterFullscreenItem && !isIdlePosterMode()) {
+          <footer class="promo-fullscreen-footer">
+            <div class="promo-fullscreen-caption">
+              <span class="promo-fullscreen-biz" *ngIf="posterFullscreenItem.businessName">{{
+                posterFullscreenItem.businessName
+              }}</span>
+              <span class="promo-fullscreen-title" *ngIf="posterFullscreenItem.title">{{ posterFullscreenItem.title }}</span>
+              <span class="promo-fullscreen-sub" *ngIf="posterFullscreenItem.subtitle">{{
+                posterFullscreenItem.subtitle
+              }}</span>
+              <span class="promo-fullscreen-sub" *ngIf="posterFullscreenItem.uploadedBy"
+                >upload by: {{ posterFullscreenItem.uploadedBy }}</span
+              >
+            </div>
+            <div class="promo-fullscreen-btns">
+              <ion-button type="button" expand="block" fill="outline" color="medium" class="promo-fs-btn" (click)="closePosterFullscreen($event)"
+                >Esci</ion-button
+              >
+              <ion-button
+                type="button"
+                expand="block"
+                color="primary"
+                class="promo-fs-btn"
+                *ngIf="posterFullscreenNavSlug"
+                (click)="goPosterDetailFromFullscreen($event)"
+                >Scheda attività</ion-button
+              >
+            </div>
+          </footer>
+        }
       </div>
     </ng-template>
   </ion-modal>
