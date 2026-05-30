@@ -36,6 +36,7 @@
   class="kiosk"
   [class.kiosk--chrome-tabs]="creditsDockTabsLayout"
   [class.kiosk--fit-screen]="fitScreenLayout"
+  [class.kiosk--idle-fs]="isIdlePosterMode()"
 >
   <div class="viewport">
     <!-- INFO (clock + meteo): fascia “dashboard” touch-friendly -->
@@ -433,14 +434,16 @@
             <video
               class="promo-fullscreen-video"
               [src]="assetUrl(posterFullscreenItem.src)"
-              [poster]="posterFullscreenItem.poster ? assetUrl(posterFullscreenItem.poster) : null"
+              [poster]="!isIdlePosterMode() && posterFullscreenItem.poster ? assetUrl(posterFullscreenItem.poster) : null"
               autoplay
               [muted]="adsMuted"
-              [loop]="isIdlePosterMode()"
+              [loop]="false"
               playsinline
               webkit-playsinline
               draggable="false"
-              (loadeddata)="onPosterFullscreenVideoReady()"
+              preload="auto"
+              (canplay)="onPosterFullscreenVideoReady($event)"
+              (ended)="onPosterFullscreenVideoEnded($event)"
             ></video>
           } @else {
             <img

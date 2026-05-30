@@ -1536,7 +1536,12 @@ ion-content.kiosk.kiosk--chrome-tabs .kiosk-promo-strip-wrap {
   --height: 100%;
   --width: 100%;
   --border-radius: 0;
-  --background: #0b1220;
+  --background: #000;
+}
+
+.promo-fullscreen-modal::part(backdrop) {
+  opacity: 1;
+  background: #000;
 }
 
 .promo-fullscreen-shell {
@@ -1555,6 +1560,13 @@ ion-content.kiosk.kiosk--chrome-tabs .kiosk-promo-strip-wrap {
   .promo-fullscreen-stage {
     cursor: pointer;
   }
+}
+
+/* Nasconde carosello sotto il modal idle — evita doppio layer video (flicker GPU Chrome). */
+.kiosk--idle-fs .poster-home-shell,
+.kiosk--idle-fs .kiosk-premium-banner {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .kiosk-idle-fs-banner {

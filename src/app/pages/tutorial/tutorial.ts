@@ -221,7 +221,12 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private idlePosterMode = false;
   private forceIdlePosterOnNextAdsLoad = false;
   private idlePosterTimer?: ReturnType<typeof setTimeout>;
-  private idlePosterRotateTimer?: ReturnType<typeof setInterval>;
+  /** Timeout rotazione poster idle (solo immagini; i video usano evento `ended`). */
+  private idlePosterRotateTimer?: ReturnType<typeof setTimeout>;
+  private idleVideoDurationFallbackTimer?: ReturnType<typeof setTimeout>;
+  private lastIdlePosterAdvanceAt = 0;
+  /** Evita replay/flicker: un solo avvio play per src video fullscreen idle. */
+  private idleFsVideoPlayKey = "";
 
   /** Strip “In evidenza” (promo-banners): scroll orizzontale automatico (stesso intervallo del poster `ADS_DURATION_MS`). */
   private promoAutoTimer?: ReturnType<typeof setInterval>;
@@ -968,23 +973,21 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   private stepPosterFullscreen(step: -1 | 1): void {
     if (!this.posterFullscreenOpen || !this.posterFullscreenItem || !this.ads.length) return;
-    const imageIndices: number[] = [];
-    for (let i = 0; i < this.ads.length; i++) {
-      if (this.ads[i]?.kind === "image") imageIndices.push(i);
+    let idx = this.ads.findIndex((a) => a === this.posterFullscreenItem);
+    if (idx < 0) {
+      idx = this.ads.findIndex((a) => a.src === this.posterFullscreenItem?.src);
     }
-    if (!imageIndices.length) return;
-
-    let currentPos = imageIndices.findIndex((idx) => this.ads[idx] === this.posterFullscreenItem);
-    if (currentPos < 0) {
-      currentPos = imageIndices.findIndex((idx) => this.ads[idx]?.src === this.posterFullscreenItem?.src);
-    }
-    if (currentPos < 0) currentPos = 0;
-
-    const nextPos = (currentPos + step + imageIndices.length) % imageIndices.length;
-    const nextAdsIndex = imageIndices[nextPos];
-    this.adsIndex = nextAdsIndex;
-    this.goToAd(nextAdsIndex, "smooth");
+    if (idx < 0) idx = this.adsIndex;
+    const nextAdsIndex = (idx + step + this.ads.length) % this.ads.length;
     this.posterFullscreenItem = this.ads[nextAdsIndex];
+    if (this.idlePosterMode) {
+      if (this.ads[nextAdsIndex]?.kind === "video") this.adsMuted = true;
+      this.idleFsVideoPlayKey = "";
+      this.setAdsIndexForIdle(nextAdsIndex);
+      this.scheduleIdlePosterAdvance();
+      return;
+    }
+    this.goToAd(nextAdsIndex, "smooth");
   }
 
   private stepPromoFullscreen(step: -1 | 1): void {
@@ -1009,10 +1012,87 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       clearTimeout(this.idlePosterTimer);
       this.idlePosterTimer = undefined;
     }
+    this.clearIdlePosterRotateTimer();
+    this.clearIdleVideoDurationFallback();
+  }
+
+  private clearIdlePosterRotateTimer(): void {
     if (this.idlePosterRotateTimer) {
-      clearInterval(this.idlePosterRotateTimer);
+      clearTimeout(this.idlePosterRotateTimer);
       this.idlePosterRotateTimer = undefined;
     }
+  }
+
+  private clearIdleVideoDurationFallback(): void {
+    if (this.idleVideoDurationFallbackTimer) {
+      clearTimeout(this.idleVideoDurationFallbackTimer);
+      this.idleVideoDurationFallbackTimer = undefined;
+    }
+  }
+
+  /** Poster idle successivo (carosello fullscreen in pausa). */
+  private advanceIdlePoster(): void {
+    if (!this.idlePosterMode || !this.ads.length) return;
+    const now = Date.now();
+    if (now - this.lastIdlePosterAdvanceAt < 400) return;
+    this.lastIdlePosterAdvanceAt = now;
+    this.clearIdlePosterRotateTimer();
+    this.clearIdleVideoDurationFallback();
+    const nextPosterIndex = this.firstImageAdIndex(this.adsIndex + 1);
+    if (nextPosterIndex < 0) return;
+    if (this.ads[nextPosterIndex]?.kind === "video") this.adsMuted = true;
+    this.idleFsVideoPlayKey = "";
+    this.setAdsIndexForIdle(nextPosterIndex);
+    this.posterFullscreenItem = this.ads[nextPosterIndex];
+    this.scheduleIdlePosterAdvance();
+  }
+
+  /**
+   * Idle fullscreen: aggiorna indice senza scroll/play del carosello sotto il modal.
+   * Evita doppio decoder video + repaint scroll (flicker su Chrome Windows kiosk).
+   */
+  private setAdsIndexForIdle(i: number): void {
+    if (!this.ads.length) return;
+    const prevIndex = this.adsIndex;
+    const prev = this.ads[prevIndex];
+    if (prev?.kind === "video") this.leaveVideoAd(prevIndex);
+    this.clearVideoAdAdvance();
+    this.adsIndex = Math.max(0, Math.min(i, this.ads.length - 1));
+    this.pauseAllAdVideos(true);
+    this.adsShowUnmuteBtn = false;
+  }
+
+  /**
+   * Idle fullscreen: immagini = rotazione a intervallo fisso; video = attende fine riproduzione.
+   */
+  private scheduleIdlePosterAdvance(): void {
+    if (!this.idlePosterMode || !this.ads.length) return;
+    this.clearIdlePosterRotateTimer();
+    const current = this.ads[this.adsIndex];
+    if (!current || current.kind === "video") return;
+    this.idlePosterRotateTimer = setTimeout(
+      () => this.advanceIdlePoster(),
+      this.idlePosterRotationMs,
+    );
+  }
+
+  private scheduleIdleVideoDurationFallback(v: HTMLVideoElement): void {
+    this.clearIdleVideoDurationFallback();
+    const arm = () => {
+      const durMs =
+        Number.isFinite(v.duration) && v.duration > 0
+          ? v.duration * 1000
+          : this.VIDEO_FALLBACK_MS;
+      this.idleVideoDurationFallbackTimer = setTimeout(() => {
+        if (!this.idlePosterMode) return;
+        this.advanceIdlePoster();
+      }, Math.max(1000, durMs + 300));
+    };
+    if (Number.isFinite(v.duration) && v.duration > 0) {
+      arm();
+      return;
+    }
+    v.addEventListener("loadedmetadata", () => arm(), { once: true });
   }
 
   private onTutorialInteraction(): void {
@@ -1042,15 +1122,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.stopAdsCarousel();
     this.clearVideoAdAdvance();
     this.pauseAllAdVideos(false);
-    this.goToAd(firstPosterIndex, "auto");
+    // Autoplay fullscreen: browser richiede muted senza gesto utente (totem ha adsAudioWanted=true).
+    this.adsMuted = true;
+    this.setAdsIndexForIdle(firstPosterIndex);
     this.openPosterFullscreen(this.ads[firstPosterIndex]);
-
-    this.idlePosterRotateTimer = setInterval(() => {
-      const nextPosterIndex = this.firstImageAdIndex(this.adsIndex + 1);
-      if (nextPosterIndex < 0) return;
-      this.goToAd(nextPosterIndex, "auto");
-      this.posterFullscreenItem = this.ads[nextPosterIndex];
-    }, this.idlePosterRotationMs);
+    this.scheduleIdlePosterAdvance();
   }
 
   private loadIdlePosterRuntimeConfig(): void {
@@ -1066,7 +1142,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
           timeoutMs: this.idlePosterTimeoutMs,
           rotationMs: this.idlePosterRotationMs,
         });
-        if (!this.idlePosterEnabled) this.clearIdlePosterTimers();
+        if (!this.idlePosterEnabled) {
+          this.clearIdlePosterTimers();
+        } else if (!this.idlePosterMode) {
+          this.scheduleIdlePosterMode();
+        }
       },
       error: () => {},
     });
@@ -1074,12 +1154,17 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   private exitIdlePosterMode(): void {
     this.idlePosterMode = false;
+    this.idleFsVideoPlayKey = "";
     this.clearIdlePosterTimers();
     if (this.posterFullscreenOpen) {
       this.posterFullscreenOpen = false;
       this.posterFullscreenItem = null;
     }
-    this.startAdsCarousel();
+    // Riallinea scroll carosello (in idle non scrollavamo il track).
+    const idx = this.adsIndex;
+    setTimeout(() => {
+      if (this.ads.length) this.goToAd(idx, "auto");
+    }, 0);
   }
 
   /**
@@ -1496,10 +1581,12 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Dopo aver impostato `ads`: riallinea indici video e avvia carosello */
   private afterBannerAdsLoaded(): void {
-    this.bumpAssetCacheVersion();
-    this.rebuildVideoAdIndexes();
     const resumeIdleFullscreen =
       this.idlePosterMode && this.posterFullscreenOpen;
+    if (!resumeIdleFullscreen) {
+      this.bumpAssetCacheVersion();
+    }
+    this.rebuildVideoAdIndexes();
     setTimeout(() => {
       if (!this.ads.length) return;
       if (resumeIdleFullscreen) {
@@ -1516,6 +1603,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       if (this.forceIdlePosterOnNextAdsLoad) {
         this.forceIdlePosterOnNextAdsLoad = false;
         this.enterIdlePosterMode();
+      } else if (!this.idlePosterMode) {
+        // Poster API lenta: il timer avviato in ngAfterViewInit può scadere a ads=[] — riprogramma.
+        this.scheduleIdlePosterMode();
       }
     }, 0);
   }
@@ -1543,9 +1633,13 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       idx = this.firstImageAdIndex(this.adsIndex);
     }
     if (idx < 0) return;
-    this.adsIndex = idx;
     this.posterFullscreenItem = this.ads[idx];
-    this.goToAd(idx, "auto");
+    if (this.idlePosterMode) {
+      this.setAdsIndexForIdle(idx);
+      this.scheduleIdlePosterAdvance();
+    } else {
+      this.goToAd(idx, "auto");
+    }
   }
 
   // ========= CAROSELLO POSTER / VIDEO =========
@@ -1885,10 +1979,34 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /** Handler template: audio su video fullscreen (non idle). */
-  onPosterFullscreenVideoReady(): void {
-    if (this.isIdlePosterMode() || !this.adsAudioWanted) return;
+  /** Handler template: idle → play muted una sola volta per src; tap manuale → audio se consentito. */
+  onPosterFullscreenVideoReady(ev?: Event): void {
+    const v = (ev?.target as HTMLVideoElement | null) ?? null;
+    if (this.isIdlePosterMode()) {
+      if (!v) return;
+      const key = String(v.currentSrc || v.src || "").trim();
+      if (key && this.idleFsVideoPlayKey === key) return;
+      this.idleFsVideoPlayKey = key;
+      v.muted = true;
+      v.loop = false;
+      v.setAttribute("muted", "");
+      void v.play().catch(() => {});
+      this.scheduleIdleVideoDurationFallback(v);
+      this.adsMuted = true;
+      return;
+    }
+    if (!this.adsAudioWanted) return;
     void this.tryUnmuteAd(this.adsIndex);
+  }
+
+  /** Fine video fullscreen in idle → poster successivo (immagine o altro video). */
+  onPosterFullscreenVideoEnded(ev?: Event): void {
+    if (!this.isIdlePosterMode()) return;
+    const v = ev?.target as HTMLVideoElement | null;
+    if (v && !v.ended) return;
+    this.idleFsVideoPlayKey = "";
+    this.clearIdleVideoDurationFallback();
+    this.advanceIdlePoster();
   }
 
   private async tryUnmuteAd(adIndex: number) {
