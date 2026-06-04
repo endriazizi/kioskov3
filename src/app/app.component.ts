@@ -3,6 +3,7 @@ import {
   effect,
   HostListener,
   inject,
+  OnDestroy,
   OnInit,
   ViewEncapsulation,
 } from "@angular/core";
@@ -63,6 +64,7 @@ import { KioskLoadingService } from "./providers/kiosk-loading.service";
 import { KioskApiService } from "./providers/kiosk-api.service";
 import { environment } from "../environments/environment";
 import { KioskWhitelistDirective } from "./security/kiosk-whitelist.directive";
+import { KioskLocalHealthService } from "./services/kiosk-local-health.service";
 import { kioskDevLog } from "./utils/kiosk-dev-console";
 
 @Component({
@@ -90,7 +92,7 @@ import { kioskDevLog } from "./utils/kiosk-dev-console";
   providers: [MenuController, ToastController],
   encapsulation: ViewEncapsulation.None,
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private storage = inject(Storage);
   private userService = inject(UserService);
@@ -100,6 +102,7 @@ export class AppComponent implements OnInit {
   private platform = inject(Platform);
   readonly kioskLoading = inject(KioskLoadingService);
   private kioskApi = inject(KioskApiService);
+  private kioskLocalHealth = inject(KioskLocalHealthService);
 
         // { title: "About", url: "/app/tabs/about", icon: "information-circle" },
   appPages = [
@@ -214,6 +217,7 @@ export class AppComponent implements OnInit {
 
     await this.loadKioskIdleRuntimeConfig();
     this.resetInactivityTimer();
+    this.kioskLocalHealth.start();
 
     // Service Worker update toast
     this.swUpdate.versionUpdates.subscribe(async () => {
@@ -287,5 +291,9 @@ export class AppComponent implements OnInit {
 
   toggleDarkMode() {
     document.documentElement.classList.toggle("ion-palette-dark", this.dark);
+  }
+
+  ngOnDestroy(): void {
+    this.kioskLocalHealth.stop();
   }
 }

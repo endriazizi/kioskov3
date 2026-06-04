@@ -130,7 +130,7 @@
                     class="ad-video"
                     [src]="assetUrl(ad.src)"
                     [poster]="ad.poster ? assetUrl(ad.poster) : null"
-                    preload="auto"
+                    [attr.preload]="isIdlePosterMode() ? 'none' : 'auto'"
                     muted
                     playsinline
                     webkit-playsinline
@@ -394,39 +394,83 @@
     </ng-template>
   </ion-modal>
 
-  <!-- Poster attività: anteprima full screen + accesso alla scheda attività -->
+  <!-- Saver idle: overlay nativo (no ion-modal → niente flicker GPU Chrome Windows) -->
+  <div
+    class="kiosk-idle-saver"
+    *ngIf="isIdlePosterMode() && idleSaverItem as idleItem"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Totem in pausa"
+  >
+    <div class="kiosk-idle-fs-banner" role="status" aria-live="polite">
+      <span class="kiosk-idle-fs-banner__dot" aria-hidden="true"></span>
+      <span class="kiosk-idle-fs-banner__text">Totem in pausa — tocca lo schermo per tornare</span>
+    </div>
+    <button
+      type="button"
+      class="kiosk-idle-saver__close"
+      (click)="exitIdleSaver($event)"
+      aria-label="Riprendi"
+    >
+      Riprendi
+    </button>
+    <div
+      class="kiosk-idle-saver__stage"
+      (click)="onIdleSaverShellClick($event)"
+      (touchstart)="onFullscreenTouchStart($event)"
+      (touchend)="onIdleSaverTouchEnd($event)"
+    >
+      @if (idleItem.kind === 'video') {
+        <video
+          #idleSaverVideo
+          class="kiosk-idle-saver__video"
+          [src]="idleMediaUrl(idleItem.src)"
+          muted
+          autoplay
+          playsinline
+          webkit-playsinline
+          preload="auto"
+          draggable="false"
+          (ended)="onIdleSaverVideoEnded($event)"
+          (error)="onIdleSaverVideoError($event)"
+        ></video>
+      } @else {
+        <img
+          class="kiosk-idle-saver__img"
+          [src]="assetUrl(idleItem.src)"
+          [alt]="idleItem.title || idleItem.businessName || 'Poster attività'"
+          draggable="false"
+        />
+      }
+    </div>
+  </div>
+
+  <!-- Poster attività: anteprima full screen manuale (tap su immagine) -->
   <ion-modal
-    [isOpen]="posterFullscreenOpen"
+    [isOpen]="posterFullscreenOpen && !isIdlePosterMode()"
     (didDismiss)="closePosterFullscreen()"
     class="promo-fullscreen-modal"
     backdropDismiss="true"
+    [animated]="true"
   >
     <ng-template>
       <div
         class="promo-fullscreen-shell"
-        [class.promo-fullscreen-shell--idle]="isIdlePosterMode()"
         role="dialog"
         aria-modal="true"
         aria-label="Anteprima poster attività"
       >
-        @if (isIdlePosterMode()) {
-          <div class="kiosk-idle-fs-banner" role="status" aria-live="polite">
-            <span class="kiosk-idle-fs-banner__dot" aria-hidden="true"></span>
-            <span class="kiosk-idle-fs-banner__text">Totem in pausa — tocca lo schermo per tornare</span>
-          </div>
-        }
         <button
           type="button"
           class="promo-fullscreen-close"
           (click)="closePosterFullscreen($event)"
           aria-label="Chiudi"
         >
-          {{ isIdlePosterMode() ? 'Riprendi' : 'Chiudi' }}
+          Chiudi
         </button>
         <div
           class="promo-fullscreen-stage"
           *ngIf="posterFullscreenItem"
-          (click)="onPosterFullscreenShellClick($event)"
           (touchstart)="onFullscreenTouchStart($event)"
           (touchend)="onPosterFullscreenTouchEnd($event)"
         >
@@ -434,7 +478,7 @@
             <video
               class="promo-fullscreen-video"
               [src]="assetUrl(posterFullscreenItem.src)"
-              [poster]="!isIdlePosterMode() && posterFullscreenItem.poster ? assetUrl(posterFullscreenItem.poster) : null"
+              [poster]="posterFullscreenItem.poster ? assetUrl(posterFullscreenItem.poster) : null"
               autoplay
               [muted]="adsMuted"
               [loop]="false"
@@ -443,7 +487,6 @@
               draggable="false"
               preload="auto"
               (canplay)="onPosterFullscreenVideoReady($event)"
-              (ended)="onPosterFullscreenVideoEnded($event)"
             ></video>
           } @else {
             <img
@@ -454,7 +497,7 @@
             />
           }
         </div>
-        @if (posterFullscreenItem && !isIdlePosterMode()) {
+        @if (posterFullscreenItem) {
           <footer class="promo-fullscreen-footer">
             <div class="promo-fullscreen-caption">
               <span class="promo-fullscreen-biz" *ngIf="posterFullscreenItem.businessName">{{

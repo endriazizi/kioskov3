@@ -2,15 +2,21 @@
 TOTEM WINDOWS — Chrome kiosk (kioskov3, porta 8200)
 ================================================================================
 
-Prerequisito dev (come da te):
-  1. In VS Code / terminale, dalla cartella kioskov3:
-       npm run start:totem:prodproxy
-  2. Attendi "Local: http://localhost:8200/"
-  3. Avvia il kiosk (questo pacchetto).
+Avvio CONSIGLIATO (un comando, tutti i guardiani):
+  cd kioskov3
+  npm run kiosk:windows:stack
+
+  Equivale a: watchdog ng serve + watchdog Chrome kick + Chrome kiosk loop.
+
+Avvio MANUALE (due finestre):
+  1. Finestra A: npm run start:totem:prodproxy  (NON chiudere)
+  2. Finestra B: npm run kiosk:windows         (dopo Local: http://localhost:8200/)
 
 Script principali
 -----------------
-  start-totem-kiosk.bat       → attende porta 8200, apre Chrome kiosk, watchdog riavvio
+  start-totem-stack.bat       → CONSIGLIATO in campo: watchdog ng serve + Chrome kiosk
+  start-totem-kiosk.bat       → attende porta 8200, apre Chrome kiosk, watchdog riavvio Chrome
+  watch-totem-dev-server.ps1  → solo watchdog porta 8200 (riavvia start:totem:prodproxy)
   01-install-kiosk-policies.bat → policy Windows (Esegui come amministratore, una tantum)
   99-restore-kiosk-policies.bat → ripristino policy (manutenzione)
   exit-kiosk-admin.bat        → chiude Chrome + messaggio uscita staff
@@ -23,6 +29,23 @@ Variabili opzionali (prima di lanciare i .bat)
   set TOTEM_URL=http://127.0.0.1:8200/tutorial
   set TOTEM_PORT=8200
   set TOTEM_CHROME=C:\Program Files\Google\Chrome\Application\chrome.exe
+  set TOTEM_AUTO_DEV_SERVER=1     → come start-totem-stack.bat (watchdog ng serve)
+  set TOTEM_DEV_POLL_SEC=15       → intervallo poll porta dev server
+  set TOTEM_DEV_START_GRACE_SEC=90 → attesa dopo avvio ng serve
+
+npm dalla cartella kioskov3:
+  npm run kiosk:windows:stack     → equivale a start-totem-stack.bat
+
+Resilienza (dopo patch)
+-----------------------
+  - watch-totem-dev-server.ps1: health HTTP su :8200, kill PID sulla porta, riavvio ng serve
+  - watch-totem-chrome-kick.ps1: se HTTP KO 2 volte → chiude Chrome (il batch lo riapre)
+  - App (kioskStrictMode): ping localhost ogni 2 min, 2 KO → reload (solo se l'app e' caricata)
+
+App totem (kioskStrictMode):
+  Se feed-version era KO e torna OK → reload pagina (cooldown 2 min, solo totem)
+
+Disabilitare chrome kick: set TOTEM_CHROME_KICK=0 prima di start-totem-kiosk.bat
 
 Produzione / LAN
   Se il totem deve usare l'IP di rete (es. tablet che punta al PC dev):
@@ -31,7 +54,7 @@ Produzione / LAN
 Hardering enterprise (oltre ai .bat)
 ------------------------------------
   - Account Windows dedicato "Totem" senza diritti admin
-  - Avvio automatico: Task Scheduler → start-totem-kiosk.bat all'accesso
+  - Avvio automatico: Task Scheduler → start-totem-stack.bat all'accesso
   - Prima installazione: 01-install-kiosk-policies.bat come Admin
   - Uscita staff: Ctrl+Alt+Del → Cambia utente / exit-kiosk-admin.bat
   - Alt+F4 chiude Chrome; il watchdog lo riapre (comportamento voluto sul totem)

@@ -14,6 +14,10 @@ export const environment = {
   useKioskPublicApi: true,
   kioskFeedVersionPollMs: 30_000,
   kioskFeedHardRefreshMinutes: 10,
+  /** Ping http://localhost:8200/ ogni 2 min; dopo 2 KO consecutivi → reload (cooldown 2 min). */
+  kioskLocalHealthCheckEnabled: true,
+  kioskLocalHealthCheckMs: 120_000,
+  kioskLocalHealthReloadCooldownMs: 120_000,
   weatherOpenWeatherApiKey: '',
   weatherCity: 'Castelraimondo,it',
   legacySpeakerIdToSlug: KIOSK_LEGACY_SPEAKER_ID_TO_SLUG,

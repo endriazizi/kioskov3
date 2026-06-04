@@ -204,6 +204,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild("promoStrip", { static: false })
   promoStripRef?: ElementRef<HTMLDivElement>;
   @ViewChildren("adVideo") adVideoEls!: QueryList<ElementRef<HTMLVideoElement>>;
+  @ViewChild("idleSaverVideo") idleSaverVideoRef?: ElementRef<HTMLVideoElement>;
 
   /** Poster home verticali: primario GET `/banners`, poi fallback /home, /home-posters, businesses, JSON locale. */
   ads: AdItem[] = [];
@@ -264,6 +265,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   promoFullscreenItem: PromoAdItem | null = null;
   posterFullscreenOpen = false;
   posterFullscreenItem: AdItem | null = null;
+  /** Poster corrente nel saver idle (overlay nativo, no ion-modal). */
+  idleSaverItem: AdItem | null = null;
 
   /** Immagine neutra se il poster API manca o fallisce il caricamento (ratio ~4:5, vedi commenti SCSS). */
   private readonly POSTER_PLACEHOLDER = "assets/img/kiosk-poster-placeholder.svg";
@@ -336,6 +339,13 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private feedVersionInFlight = false;
   private lastFeedVersion = "";
   private lastFeedHardRefreshAt = 0;
+  /** Almeno un poll feed-version OK (evita reload al primo bootstrap dopo errore transitorio). */
+  private feedVersionHadSuccess = false;
+  /** API feed-version non raggiungibile dopo un periodo OK → reload al ritorno (solo totem strict). */
+  private feedVersionApiDown = false;
+  private lastFeedVersionRecoveryReloadAt = 0;
+  /** Anti-flap: max un reload recovery ogni 2 minuti. */
+  private readonly FEED_RECOVERY_RELOAD_COOLDOWN_MS = 120_000;
   private fullscreenSwipeStartX: number | null = null;
   private fullscreenSwipeStartY: number | null = null;
   private readonly FULLSCREEN_SWIPE_THRESHOLD_PX = 42;
@@ -381,6 +391,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
         // Se cambio route mentre una fullscreen è aperta, la richiudo sempre
         // per evitare overlay residui sopra la nuova pagina.
         if (this.posterFullscreenOpen) this.closePosterFullscreen();
+        if (this.idlePosterMode) this.exitIdlePosterMode();
         if (this.promoFullscreenOpen) this.closePromoFullscreen(undefined, "router-nav");
       });
 
@@ -748,6 +759,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
               ""
           ).trim();
           if (!version) return;
+          if (this.feedVersionApiDown && this.feedVersionHadSuccess) {
+            this.feedVersionApiDown = false;
+            this.maybeReloadAfterFeedVersionRecovery();
+          }
+          this.feedVersionHadSuccess = true;
           if (!this.lastFeedVersion) {
             this.lastFeedVersion = version;
             this.lastFeedHardRefreshAt = Date.now();
@@ -773,11 +789,42 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
         },
         error: () => {
           this.feedVersionInFlight = false;
+          if (this.feedVersionHadSuccess) {
+            this.feedVersionApiDown = true;
+            kioskDevWarn(
+              "⚠️ [Tutorial] feed-version KO — al ritorno OK reload pagina (totem)"
+            );
+          }
         },
       });
   }
 
+  /**
+   * Dopo outage API: un reload riallinea poster, config idle e stato Angular
+   * (il refresh soft non recupera errori HTTP accumulati su altre tab).
+   */
+  private maybeReloadAfterFeedVersionRecovery(): void {
+    if (!this.isTotemKiosk) return;
+    const now = Date.now();
+    if (
+      now - this.lastFeedVersionRecoveryReloadAt <
+      this.FEED_RECOVERY_RELOAD_COOLDOWN_MS
+    ) {
+      kioskDevLog(
+        "🧩 [Tutorial] Recovery feed-version OK — reload saltato (cooldown)"
+      );
+      return;
+    }
+    this.lastFeedVersionRecoveryReloadAt = now;
+    kioskDevLog("🔄 [Tutorial] API feed-version tornata OK — reload pagina");
+    window.location.reload();
+  }
+
   private refreshPublicFeeds(reason: "version-change" | "hard-refresh"): void {
+    if (this.idlePosterMode) {
+      kioskDevLog("🧩 [Tutorial] Refresh feed saltato — saver idle attivo");
+      return;
+    }
     this.lastFeedHardRefreshAt = Date.now();
     kioskDevLog("🧩 [Tutorial] Refresh feed pubblici:", reason);
     this.loadBannerCarousel();
@@ -917,21 +964,32 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.posterFullscreenOpen = true;
   }
 
-  /** Tap/click sullo stage in modalità idle → esci dal saver (Windows totem / touch). */
-  onPosterFullscreenShellClick(ev: Event): void {
-    if (!this.idlePosterMode) return;
-    this.closePosterFullscreen(ev);
-  }
-
   closePosterFullscreen(ev?: Event): void {
     ev?.stopPropagation();
     this.pauseAllAdVideos(true);
-    if (this.idlePosterMode) {
-      this.exitIdlePosterMode();
-    }
     if (!this.posterFullscreenOpen) return;
     this.posterFullscreenOpen = false;
     this.posterFullscreenItem = null;
+  }
+
+  /** Tap sullo schermo in saver idle → torna alla home (solo click esplicito, no pointerdown globale). */
+  exitIdleSaver(ev?: Event): void {
+    ev?.stopPropagation();
+    ev?.preventDefault?.();
+    this.exitIdlePosterMode();
+  }
+
+  onIdleSaverShellClick(ev: Event): void {
+    this.exitIdleSaver(ev);
+  }
+
+  onIdleSaverTouchEnd(ev: TouchEvent): void {
+    const step = this.consumeFullscreenSwipeStep(ev);
+    if (!step) {
+      this.exitIdleSaver(ev);
+      return;
+    }
+    this.stepIdleSaverPoster(step);
   }
 
   onFullscreenTouchStart(ev: TouchEvent): void {
@@ -943,10 +1001,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   onPosterFullscreenTouchEnd(ev: TouchEvent): void {
     const step = this.consumeFullscreenSwipeStep(ev);
-    if (!step) {
-      if (this.idlePosterMode) this.closePosterFullscreen(ev);
-      return;
-    }
+    if (!step) return;
     this.stepPosterFullscreen(step);
   }
 
@@ -971,6 +1026,22 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     return dx < 0 ? 1 : -1;
   }
 
+  private stepIdleSaverPoster(step: -1 | 1): void {
+    if (!this.idlePosterMode || !this.idleSaverItem || !this.ads.length) return;
+    let idx = this.ads.findIndex((a) => a === this.idleSaverItem);
+    if (idx < 0) {
+      idx = this.ads.findIndex((a) => a.src === this.idleSaverItem?.src);
+    }
+    if (idx < 0) idx = this.adsIndex;
+    const nextAdsIndex = (idx + step + this.ads.length) % this.ads.length;
+    if (this.ads[nextAdsIndex]?.kind === "video") this.adsMuted = true;
+    this.idleFsVideoPlayKey = "";
+    this.setAdsIndexForIdle(nextAdsIndex);
+    this.idleSaverItem = this.ads[nextAdsIndex];
+    this.scheduleIdlePosterAdvance();
+    setTimeout(() => this.playIdleSaverMedia(), 0);
+  }
+
   private stepPosterFullscreen(step: -1 | 1): void {
     if (!this.posterFullscreenOpen || !this.posterFullscreenItem || !this.ads.length) return;
     let idx = this.ads.findIndex((a) => a === this.posterFullscreenItem);
@@ -980,13 +1051,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     if (idx < 0) idx = this.adsIndex;
     const nextAdsIndex = (idx + step + this.ads.length) % this.ads.length;
     this.posterFullscreenItem = this.ads[nextAdsIndex];
-    if (this.idlePosterMode) {
-      if (this.ads[nextAdsIndex]?.kind === "video") this.adsMuted = true;
-      this.idleFsVideoPlayKey = "";
-      this.setAdsIndexForIdle(nextAdsIndex);
-      this.scheduleIdlePosterAdvance();
-      return;
-    }
     this.goToAd(nextAdsIndex, "smooth");
   }
 
@@ -1043,8 +1107,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.ads[nextPosterIndex]?.kind === "video") this.adsMuted = true;
     this.idleFsVideoPlayKey = "";
     this.setAdsIndexForIdle(nextPosterIndex);
-    this.posterFullscreenItem = this.ads[nextPosterIndex];
+    this.idleSaverItem = this.ads[nextPosterIndex];
     this.scheduleIdlePosterAdvance();
+    setTimeout(() => this.playIdleSaverMedia(), 0);
   }
 
   /**
@@ -1096,9 +1161,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private onTutorialInteraction(): void {
-    if (this.idlePosterMode) {
-      this.exitIdlePosterMode();
-    }
+    // In idle NON uscire su pointerdown globale (Windows touch invia eventi fantasma → flicker).
+    if (this.idlePosterMode) return;
     this.scheduleIdlePosterMode();
   }
 
@@ -1125,8 +1189,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     // Autoplay fullscreen: browser richiede muted senza gesto utente (totem ha adsAudioWanted=true).
     this.adsMuted = true;
     this.setAdsIndexForIdle(firstPosterIndex);
-    this.openPosterFullscreen(this.ads[firstPosterIndex]);
+    this.idleSaverItem = this.ads[firstPosterIndex];
     this.scheduleIdlePosterAdvance();
+    setTimeout(() => this.playIdleSaverMedia(), 0);
   }
 
   private loadIdlePosterRuntimeConfig(): void {
@@ -1155,12 +1220,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private exitIdlePosterMode(): void {
     this.idlePosterMode = false;
     this.idleFsVideoPlayKey = "";
+    this.stopIdleSaverVideo();
     this.clearIdlePosterTimers();
-    if (this.posterFullscreenOpen) {
-      this.posterFullscreenOpen = false;
-      this.posterFullscreenItem = null;
-    }
-    // Riallinea scroll carosello (in idle non scrollavamo il track).
+    this.idleSaverItem = null;
     const idx = this.adsIndex;
     setTimeout(() => {
       if (this.ads.length) this.goToAd(idx, "auto");
@@ -1172,6 +1234,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
    * chiude modal + aspetta almeno un frame prima della navigate.
    */
   private async flushFullscreenBeforeNavigate(): Promise<void> {
+    if (this.idlePosterMode) this.exitIdlePosterMode();
     if (this.posterFullscreenOpen) this.closePosterFullscreen();
     if (this.promoFullscreenOpen) this.closePromoFullscreen(undefined, "pre-nav");
     this.cdr.detectChanges();
@@ -1581,8 +1644,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   /** Dopo aver impostato `ads`: riallinea indici video e avvia carosello */
   private afterBannerAdsLoaded(): void {
-    const resumeIdleFullscreen =
-      this.idlePosterMode && this.posterFullscreenOpen;
+    const resumeIdleFullscreen = this.idlePosterMode && !!this.idleSaverItem;
     if (!resumeIdleFullscreen) {
       this.bumpAssetCacheVersion();
     }
@@ -1615,10 +1677,10 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
    * senza reload pagina — match per slug attività, fallback su src precedente.
    */
   private syncPosterFullscreenFromAds(): void {
-    if (!this.posterFullscreenOpen || !this.posterFullscreenItem || !this.ads.length) {
-      return;
-    }
-    const prev = this.posterFullscreenItem;
+    const syncIdle = this.idlePosterMode && this.idleSaverItem;
+    const syncManual = this.posterFullscreenOpen && this.posterFullscreenItem;
+    if ((!syncIdle && !syncManual) || !this.ads.length) return;
+    const prev = syncIdle ? this.idleSaverItem! : this.posterFullscreenItem!;
     const prevSlug = normalizeKioskBusinessSlugCandidate(prev.activitySlug);
     let idx = prevSlug
       ? this.ads.findIndex(
@@ -1633,11 +1695,13 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       idx = this.firstImageAdIndex(this.adsIndex);
     }
     if (idx < 0) return;
-    this.posterFullscreenItem = this.ads[idx];
     if (this.idlePosterMode) {
       this.setAdsIndexForIdle(idx);
+      this.idleSaverItem = this.ads[idx];
       this.scheduleIdlePosterAdvance();
+      setTimeout(() => this.playIdleSaverMedia(), 0);
     } else {
+      this.posterFullscreenItem = this.ads[idx];
       this.goToAd(idx, "auto");
     }
   }
@@ -1653,6 +1717,14 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       const next = (this.adsIndex + 1) % this.ads.length;
       this.goToAd(next);
     }, this.ADS_DURATION_MS);
+  }
+
+  /** URL stabile per video saver idle (no cache-bust → evita reload/flicker mid-playback). */
+  idleMediaUrl(url: string | null | undefined): string {
+    const raw = String(url || "").trim();
+    if (!raw) return "";
+    if (/^(data:|blob:|https?:)/i.test(raw)) return raw;
+    return raw.startsWith("/") ? raw : `/${raw}`;
   }
 
   /** Appende query `v` alle immagini per evitare cache stale su URL invariata. */
@@ -1979,34 +2051,75 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /** Handler template: idle → play muted una sola volta per src; tap manuale → audio se consentito. */
-  onPosterFullscreenVideoReady(ev?: Event): void {
-    const v = (ev?.target as HTMLVideoElement | null) ?? null;
-    if (this.isIdlePosterMode()) {
-      if (!v) return;
-      const key = String(v.currentSrc || v.src || "").trim();
-      if (key && this.idleFsVideoPlayKey === key) return;
-      this.idleFsVideoPlayKey = key;
-      v.muted = true;
-      v.loop = false;
-      v.setAttribute("muted", "");
-      void v.play().catch(() => {});
-      this.scheduleIdleVideoDurationFallback(v);
-      this.adsMuted = true;
+  /** Avvio robusto video saver idle (muted, retry, durata reale). */
+  private playIdleSaverMedia(): void {
+    if (!this.idlePosterMode || !this.idleSaverItem) return;
+    if (this.idleSaverItem.kind !== "video") return;
+    const v = this.idleSaverVideoRef?.nativeElement;
+    if (!v) return;
+    const url = this.idleMediaUrl(this.idleSaverItem.src);
+    const key = String(url || "").trim();
+    if (key && this.idleFsVideoPlayKey === key && !v.paused && !v.ended) return;
+    this.idleFsVideoPlayKey = key;
+    v.muted = true;
+    v.loop = false;
+    v.playsInline = true;
+    v.setAttribute("muted", "");
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "true");
+    if (url && v.src !== url && !String(v.currentSrc || "").includes(url.split("?")[0])) {
+      v.src = url;
+    }
+    const tryPlay = (left = 8) => {
+      void v
+        .play()
+        .then(() => {
+          this.scheduleIdleVideoDurationFallback(v);
+        })
+        .catch(() => {
+          if (left > 0) setTimeout(() => tryPlay(left - 1), 280);
+        });
+    };
+    if (v.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      tryPlay();
       return;
     }
-    if (!this.adsAudioWanted) return;
-    void this.tryUnmuteAd(this.adsIndex);
+    v.addEventListener("canplay", () => tryPlay(), { once: true });
+    tryPlay();
   }
 
-  /** Fine video fullscreen in idle → poster successivo (immagine o altro video). */
-  onPosterFullscreenVideoEnded(ev?: Event): void {
-    if (!this.isIdlePosterMode()) return;
+  private stopIdleSaverVideo(): void {
+    const v = this.idleSaverVideoRef?.nativeElement;
+    if (!v) return;
+    try {
+      v.pause();
+      v.removeAttribute("src");
+      v.load();
+    } catch {
+      /* noop */
+    }
+  }
+
+  onIdleSaverVideoEnded(ev?: Event): void {
+    if (!this.idlePosterMode) return;
     const v = ev?.target as HTMLVideoElement | null;
     if (v && !v.ended) return;
     this.idleFsVideoPlayKey = "";
     this.clearIdleVideoDurationFallback();
     this.advanceIdlePoster();
+  }
+
+  onIdleSaverVideoError(ev?: Event): void {
+    if (!this.idlePosterMode) return;
+    kioskDevWarn("⚠️ [Tutorial] Video saver idle non caricato — passo al poster successivo", ev);
+    this.idleFsVideoPlayKey = "";
+    this.clearIdleVideoDurationFallback();
+    setTimeout(() => this.advanceIdlePoster(), 800);
+  }
+
+  onPosterFullscreenVideoReady(ev?: Event): void {
+    if (!this.adsAudioWanted) return;
+    void this.tryUnmuteAd(this.adsIndex);
   }
 
   private async tryUnmuteAd(adIndex: number) {
