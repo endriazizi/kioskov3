@@ -25,5 +25,6 @@ while ((Get-Date) -lt $deadline) {
   Start-Sleep -Milliseconds 500
 }
 
-Write-Host "[ERR] Timeout ${TimeoutSec}s — avvia prima: cd kioskov3 && npm run start:totem:prodproxy"
+Write-Host "[ERR] Timeout ${TimeoutSec}s - avvia prima: cd kioskov3; npm run start:totem:prodproxy"
+Write-Host "[ERR] Oppure: npm run kiosk:windows:stack"
 exit 1

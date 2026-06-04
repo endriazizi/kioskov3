@@ -29,7 +29,7 @@ function Start-TotemDevServer {
   if (((Get-Date) - $lastStartAt).TotalSeconds -lt 60) { return }
   $devStartInFlight = $true
   $lastStartAt = Get-Date
-  Write-Host "[Totem] Dev server non healthy — stop porta $Port e riavvio npm run start:totem:prodproxy ..."
+  Write-Host "[Totem] Dev server non healthy - stop porta $Port e riavvio npm run start:totem:prodproxy ..."
   if (Test-Path $StopPortScript) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $StopPortScript -Port $Port
   }
@@ -39,7 +39,7 @@ function Start-TotemDevServer {
   $devStartInFlight = $false
 }
 
-Write-Host "[Totem] Watchdog dev server (HTTP health) — poll ${PollSec}s su http://${HostName}:${Port}/"
+Write-Host "[Totem] Watchdog dev server (HTTP health) - poll ${PollSec}s su http://${HostName}:${Port}/"
 Write-Host "[Totem] Cartella: $KioskRoot"
 
 if (-not (Test-TotemHttpHealthy)) {
@@ -48,7 +48,7 @@ if (-not (Test-TotemHttpHealthy)) {
 
 while ($true) {
   if (-not (Test-TotemHttpHealthy)) {
-    Write-Host "[Totem] $(Get-Date -Format 'HH:mm:ss') — dev server non risponde (HTTP)"
+    Write-Host "[Totem] $(Get-Date -Format 'HH:mm:ss') - dev server non risponde (HTTP)"
     Start-TotemDevServer
   }
   Start-Sleep -Seconds $PollSec

@@ -15,14 +15,14 @@ function Test-TotemHttpHealthy {
   return ($LASTEXITCODE -eq 0)
 }
 
-Write-Host "[Totem] Chrome kick — se HTTP :$Port fallisce $FailsBeforeKick volte, chiude Chrome (watchdog lo riapre)"
+Write-Host "[Totem] Chrome kick - se HTTP :$Port fallisce $FailsBeforeKick volte, chiude Chrome (watchdog lo riapre)"
 
 while ($true) {
   if (Test-TotemHttpHealthy) {
     $failures = 0
   } else {
     $failures += 1
-    Write-Host "[Totem] $(Get-Date -Format 'HH:mm:ss') — HTTP KO ($failures/$FailsBeforeKick)"
+    Write-Host "[Totem] $(Get-Date -Format 'HH:mm:ss') - HTTP KO ($failures/$FailsBeforeKick)"
     if ($failures -ge $FailsBeforeKick) {
       Write-Host "[Totem] Riavvio Chrome (taskkill) per uscire da pagina errore connessione"
       taskkill /IM chrome.exe /F 2>$null
