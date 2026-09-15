@@ -38,16 +38,10 @@ export class KioskApiService {
     const p = path.startsWith('/') ? path : `/${path}`;
     const b = this.apiBase();
     /**
-     * Solo se `apiBaseUrl` è vuoto (stesso origin / totemProdProxy): Vite su :8200
-     * inoltra `/api` a Plesk (BE spesso indietro). `totemProdApi` con URL Plesk resta intatto.
+     * `apiBaseUrl` vuoto = stesso origin. `start:totem:prodproxy` usa `proxy.prodapi.conf.json`
+     * verso Plesk: non forzare 127.0.0.1:3000 (altrimenti il carosello cade sul JSON Agos).
+     * BE locale: `npm run start:totem` (`environment.totem.ts` → apiBaseUrl :3000).
      */
-    if (!environment.production && !b && p.startsWith('/api/public-kiosk/')) {
-      const host =
-        typeof location !== 'undefined' && location.hostname ? location.hostname : '';
-      if (/^(localhost|127\.0\.0\.1)$/i.test(host)) {
-        return `http://127.0.0.1:3000${p}`;
-      }
-    }
     return b ? `${b}${p}` : p;
   }
 
@@ -75,14 +69,6 @@ export class KioskApiService {
       return p.startsWith('/') ? p : `/${p}`;
     }
     const rel = p.startsWith('/') ? p : `/${p}`;
-    if (
-      !environment.production &&
-      this.apiBase() === '' &&
-      (rel.startsWith('/uploads/kiosk-business/') || rel.startsWith('/api/public-kiosk/media-file'))
-    ) {
-      // Vite su :8200: .jpg sotto /uploads e media-file via proxy Plesk non coincidono col BE locale.
-      return `http://127.0.0.1:3000${rel}`;
-    }
     return this.qualifySameOriginOrApi(rel);
   }
 

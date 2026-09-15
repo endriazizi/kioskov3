@@ -6,7 +6,8 @@ export const environment = {
   /**
    * Modalita' dev sicura:
    * - chiamate relative (`/api`, `/uploads`)
-   * - proxy Angular inoltra a produzione evitando CORS.
+   * - proxy Angular (`proxy.prodapi.conf.json`) inoltra a produzione evitando CORS.
+   * Non puntare il client a 127.0.0.1:3000: quello è `npm run start:totem`.
    */
   apiBaseUrl: '',
   kioskStrictMode: true,

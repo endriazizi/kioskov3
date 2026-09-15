@@ -150,7 +150,7 @@
               "buildTarget": "app:build:totemProdProxy",
               "host": "0.0.0.0",
               "port": 8200,
-              "proxyConfig": "proxy.prodapi.conf.json",
+              "proxyConfig": "proxy.prodapi.js",
               "allowedHosts": ["all"]
             },
             "production": {
