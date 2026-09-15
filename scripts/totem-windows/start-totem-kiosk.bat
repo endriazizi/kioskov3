@@ -19,6 +19,7 @@ if "%TOTEM_AUTO_DEV_SERVER%"=="1" (
   echo  Watchdog ng serve: off - usa start-totem-stack.bat per auto-avvio
 )
 echo  Uscita staff: Ctrl+Alt+Del oppure exit-kiosk-admin.bat
+echo  Alt+F4 chiude Chrome: questo watchdog lo riapre. Win/Alt+Tab = policy OS.
 echo ==========================================================
 echo.
 

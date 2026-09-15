@@ -42,23 +42,33 @@ Resilienza (dopo patch)
   - watch-totem-chrome-kick.ps1: se HTTP KO 2 volte → chiude Chrome (il batch lo riapre)
   - App (kioskStrictMode): ping localhost ogni 2 min, 2 KO → reload (solo se l'app e' caricata)
 
-App totem (kioskStrictMode):
-  Se feed-version era KO e torna OK → reload pagina (cooldown 2 min, solo totem)
+Chrome kiosk (03-start-chrome-kiosk.bat)
+---------------------------------------
+  Profilo isolato: %%LOCALAPPDATA%%\ENEATotemChrome
+  (se Chrome e' gia' aperto, --kiosk verrebbe ignorato e si aprirebbe una tab)
+  Niente --start-fullscreen: F11 poteva uscire dal fullscreen.
+  Niente estensioni / sync / account Google sul profilo totem.
+
+Variabili extra
+  set TOTEM_CHROME_DATA=D:\totem-chrome-profile
+  set TOTEM_KILL_ALL_CHROME=1   → termina ogni chrome.exe (solo su account Totem dedicato)
 
 Disabilitare chrome kick: set TOTEM_CHROME_KICK=0 prima di start-totem-kiosk.bat
 
 Produzione / LAN
   Se il totem deve usare l'IP di rete (es. tablet che punta al PC dev):
-  set TOTEM_URL=http://192.168.1.125:8200/tutorial
+  set TOTEM_URL=http://192.168.1.54:8200/tutorial
 
-Hardering enterprise (oltre ai .bat)
+Hardening enterprise (oltre ai .bat)
 ------------------------------------
   - Account Windows dedicato "Totem" senza diritti admin
   - Avvio automatico: Task Scheduler → start-totem-stack.bat all'accesso
   - Prima installazione: 01-install-kiosk-policies.bat come Admin
+    (blocca DevTools, Incognito, download, stampa, swipe Edge)
   - Uscita staff: Ctrl+Alt+Del → Cambia utente / exit-kiosk-admin.bat
-  - Alt+F4 chiude Chrome; il watchdog lo riapre (comportamento voluto sul totem)
-  - Per bloccare Alt+F4 / tasto Win: Assigned Access o tool kiosk (KioWare, ecc.)
+  - Alt+F4 chiude Chrome; il watchdog lo riapre (voluto)
+  - I flag Chrome NON bloccano Win / Alt+Tab / Ctrl+Alt+Del:
+    usare Assigned Access (accesso assegnato) o Shell Launcher
 
 Nota sicurezza
   I flag Chrome NON sostituiscono policy OS. L'app kioskov3 ha già guard outbound

@@ -42,6 +42,7 @@ import { addIcons } from "ionicons";
 import { arrowForward, close, menuOutline, playCircle, pricetagsOutline } from "ionicons/icons";
 import { HttpClient } from "@angular/common/http";
 import { CommonModule } from "@angular/common";
+import { KioskApiService } from "../../providers/kiosk-api.service";
 import { ConferenceService } from "../../providers/conference.service";
 import type { KioskBannerDto, KioskPublicBusinessDto } from "../../interfaces/kiosk-api.interfaces";
 import type { Speaker } from "../../interfaces/conference.interfaces";

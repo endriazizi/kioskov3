@@ -24,8 +24,9 @@ while ($true) {
     $failures += 1
     Write-Host "[Totem] $(Get-Date -Format 'HH:mm:ss') - HTTP KO ($failures/$FailsBeforeKick)"
     if ($failures -ge $FailsBeforeKick) {
-      Write-Host "[Totem] Riavvio Chrome (taskkill) per uscire da pagina errore connessione"
-      taskkill /IM chrome.exe /F 2>$null
+      Write-Host "[Totem] Riavvio Chrome totem (profilo ENEATotemChrome) per uscire da pagina errore"
+      $killer = Join-Path $PSScriptRoot 'kill-totem-chrome.bat'
+      if (Test-Path $killer) { & cmd /c "`"$killer`"" } else { taskkill /IM chrome.exe /F 2>$null }
       $failures = 0
       Start-Sleep -Seconds 8
     }
