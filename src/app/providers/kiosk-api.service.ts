@@ -37,6 +37,17 @@ export class KioskApiService {
   private url(path: string): string {
     const p = path.startsWith('/') ? path : `/${path}`;
     const b = this.apiBase();
+    /**
+     * Solo se `apiBaseUrl` è vuoto (stesso origin / totemProdProxy): Vite su :8200
+     * inoltra `/api` a Plesk (BE spesso indietro). `totemProdApi` con URL Plesk resta intatto.
+     */
+    if (!environment.production && !b && p.startsWith('/api/public-kiosk/')) {
+      const host =
+        typeof location !== 'undefined' && location.hostname ? location.hostname : '';
+      if (/^(localhost|127\.0\.0\.1)$/i.test(host)) {
+        return `http://127.0.0.1:3000${p}`;
+      }
+    }
     return b ? `${b}${p}` : p;
   }
 
@@ -47,18 +58,49 @@ export class KioskApiService {
     if (path == null || path === '') return '';
     const p = String(path).trim();
     if (/^http:\/\//i.test(p)) {
+      if (/^http:\/\/127\.0\.0\.1:3000\/uploads\/kiosk-business\//i.test(p)) return p;
       if (/pizzerialalanterna\.it/i.test(p)) return p.replace(/^http:\/\//i, 'https://');
+      try {
+        const u = new URL(p);
+        if (u.pathname.startsWith('/uploads/') || u.pathname.startsWith('/api/public-kiosk/media-file')) {
+          return this.qualifySameOriginOrApi(`${u.pathname}${u.search}`);
+        }
+      } catch {
+        /* keep raw */
+      }
       return p;
     }
     if (/^https?:\/\//i.test(p)) return p;
     if (p.startsWith('assets/') || p.startsWith('/assets/')) {
       return p.startsWith('/') ? p : `/${p}`;
     }
-    const b = this.apiBase();
-    if (!b) {
-      return p.startsWith('/') ? p : `/${p}`;
+    const rel = p.startsWith('/') ? p : `/${p}`;
+    if (
+      !environment.production &&
+      this.apiBase() === '' &&
+      (rel.startsWith('/uploads/kiosk-business/') || rel.startsWith('/api/public-kiosk/media-file'))
+    ) {
+      // Vite su :8200: .jpg sotto /uploads e media-file via proxy Plesk non coincidono col BE locale.
+      return `http://127.0.0.1:3000${rel}`;
     }
-    return p.startsWith('/') ? `${b}${p}` : `${b}/${p}`;
+    return this.qualifySameOriginOrApi(rel);
+  }
+
+  /**
+   * Locale con proxy Angular e Plesk nginx: path relativo `/api` `/uploads`.
+   * Totem con API remota (`api.pizzerialalanterna.it`): prefix origin API.
+   */
+  private qualifySameOriginOrApi(relPath: string): string {
+    const b = this.apiBase();
+    if (!b) return relPath;
+    try {
+      if (typeof location !== 'undefined' && location.origin) {
+        if (new URL(b).origin === location.origin) return relPath;
+      }
+    } catch {
+      /* prefix */
+    }
+    return `${b}${relPath}`;
   }
 
   /** Rileva MP4/WEBM/MOV anche su path diretti e proxy `media-file?path=...`. */
@@ -157,7 +199,7 @@ export class KioskApiService {
    */
   getBanners(): Observable<unknown> {
     kioskDevLog('🧭 [KioskAPI] GET /api/public-kiosk/banners …');
-    return this.http.get(this.url('/api/public-kiosk/banners')).pipe(
+    return this.http.get(this.url('/api/public-kiosk/banners?limit=120')).pipe(
       catchError((err) => {
         kioskDevWarn('⚠️ [KioskAPI] GET banners fallita —', err?.message || err);
         return throwError(() => err);
@@ -182,7 +224,7 @@ export class KioskApiService {
   /** Stesso elenco della chiave `homePosters` in GET /home (client leggeri / fallback). */
   getHomePosters(): Observable<unknown> {
     kioskDevLog('🧭 [KioskAPI] GET /api/public-kiosk/home-posters …');
-    return this.http.get(this.url('/api/public-kiosk/home-posters')).pipe(
+    return this.http.get(this.url('/api/public-kiosk/home-posters?limit=120')).pipe(
       catchError((err) => {
         kioskDevWarn('⚠️ [KioskAPI] GET home-posters fallita —', err?.message || err);
         return throwError(() => err);
@@ -363,6 +405,62 @@ export class KioskApiService {
 
     if (inactive) return false;
 
+    if (!this.isKioskPosterInValidityWindow(b)) return false;
+
+    return true;
+  }
+
+  /**
+   * Stesso orologio Italia del BE: se `valid_until` è nel passato il poster non entra nel carosello
+   * (video inclusi). Campi assenti → retrocompat, si affida al filtro SQL.
+   */
+  isKioskPosterInValidityWindow(b: KioskBannerDto): boolean {
+    const o = b as Record<string, unknown>;
+    const fromRaw = b.valid_from ?? o.validFrom ?? null;
+    const untilRaw = b.valid_until ?? o.validUntil ?? null;
+    const from = fromRaw == null || String(fromRaw).trim() === '' ? null : fromRaw;
+    const until = untilRaw == null || String(untilRaw).trim() === '' ? null : untilRaw;
+    if (from == null && until == null) return true;
+    return this.isPosterVisibleAtWallClock(from, until);
+  }
+
+  private nowSqlEuropeRome(at = new Date()): string {
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Rome',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(at);
+    const n = (t: string) => {
+      const raw = String(parts.find((p) => p.type === t)?.value || '0').replace(/\D/g, '');
+      const num = Number(raw);
+      return Number.isFinite(num) ? num : 0;
+    };
+    const y = n('year') || 1970;
+    return `${y}-${pad2(n('month'))}-${pad2(n('day'))} ${pad2(n('hour'))}:${pad2(n('minute'))}:${pad2(n('second'))}`;
+  }
+
+  private toSqlDatetimeWall(value: unknown): string {
+    if (value == null) return '';
+    const s = String(value).trim();
+    if (!s) return '';
+    const m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::(\d{2}))?/);
+    if (m && !/[zZ]|[+-]\d{2}:\d{2}/.test(s.slice(19))) {
+      return `${m[1]} ${m[2]}:${m[3] || '00'}`;
+    }
+    return s.replace('T', ' ').replace(/Z$/i, '').replace(/\.\d+$/, '').slice(0, 19);
+  }
+
+  private isPosterVisibleAtWallClock(validFrom: unknown, validUntil: unknown, nowSql = this.nowSqlEuropeRome()): boolean {
+    const from = this.toSqlDatetimeWall(validFrom);
+    const until = this.toSqlDatetimeWall(validUntil);
+    if (from && nowSql < from) return false;
+    if (until && nowSql > until) return false;
     return true;
   }
 

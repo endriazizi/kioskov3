@@ -120,6 +120,8 @@ export interface KioskBannerDto {
   video_url?: string | null;
   media_url?: string | null;
   public_url?: string | null;
+  media_public_url?: string | null;
+  media_file_url?: string | null;
   poster_thumb_url?: string | null;
   posterThumbUrl?: string | null;
   mime_type?: string | null;
@@ -144,6 +146,8 @@ export interface KioskBannerDto {
   uploaded_by_type?: 'admin' | 'business' | string | null;
   uploaded_by_email?: string | null;
   uploadedBy?: string | null;
+  valid_from?: string | null;
+  valid_until?: string | null;
   /** Route Angular interna (deprecata per tap poster: si usa solo slug → dettaglio attività) */
   internalRoute?: string | null;
   /**

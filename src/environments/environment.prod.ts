@@ -2,12 +2,12 @@ import { KIOSK_LEGACY_SPEAKER_ID_TO_SLUG } from './kiosk-legacy-speaker-slugs';
 
 export const environment = {
   production: true,
-  appVersion: '0.0.2',
+  appVersion: '2026.09.15-2',
   apiBaseUrl: 'http://127.0.0.1:3000',
   kioskStrictMode: true,
   kioskAllowTelMailto: false,
   useKioskPublicApi: true,
-  kioskFeedVersionPollMs: 30_000,
+  kioskFeedVersionPollMs: 12_000,
   kioskFeedHardRefreshMinutes: 10,
   /** Vuota = meteo via Open-Meteo (senza chiave). Con chiave = OpenWeather ha priorità. */
   weatherOpenWeatherApiKey: '',

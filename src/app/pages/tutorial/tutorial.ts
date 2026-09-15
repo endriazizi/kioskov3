@@ -51,7 +51,7 @@ import { kioskDevInfo, kioskDevLog, kioskDevWarn } from "../../utils/kiosk-dev-c
 import { KioskLiveClockComponent } from "./kiosk-live-clock.component";
 
 /**
- * Slide carosello home kiosk: ogni attività ha al massimo 1 poster.
+ * Slide carosello home kiosk: 1:N poster per attività (dedupe per media id).
  * Tap → dettaglio interno `/app/tabs/speakers/speaker-details/:activitySlug` (param route: `speakerId`).
  * Nessun URL esterno: eventuali link dal backend vengono scartati con log 🔒.
  */
@@ -59,6 +59,8 @@ type AdItem = {
   kind: "image" | "video";
   src: string;
   fallbackSrc?: string;
+  /** Path alternativo (media-file se src è /uploads, e viceversa). */
+  altSrc?: string;
   poster?: string;
   /** Slug attività (da business_slug / slug API) → solo `/speaker-details/:slug` */
   activitySlug?: string;
@@ -67,6 +69,10 @@ type AdItem = {
   subtitle?: string;
   uploadedBy?: string;
   multiHomePosters?: boolean;
+  mediaId?: number;
+  /** Evita loop se media-file fallisce e si ritenta `/uploads` (e viceversa). */
+  retriedDirectUpload?: boolean;
+  retriedMediaFile?: boolean;
 };
 
 /**
@@ -770,10 +776,17 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
             if (bootstrap) {
               kioskDevLog("🛰️ [Tutorial] Feed version bootstrap:", version.slice(0, 18));
             }
+            if (this.adsHavePosterPlaceholder()) {
+              this.refreshPublicFeeds("placeholder-retry");
+            }
             return;
           }
           if (version === this.lastFeedVersion) {
             const now = Date.now();
+            if (this.adsHavePosterPlaceholder() && now - this.lastFeedHardRefreshAt >= 15_000) {
+              this.refreshPublicFeeds("placeholder-retry");
+              return;
+            }
             if (now - this.lastFeedHardRefreshAt >= this.FEED_HARD_REFRESH_MS) {
               this.refreshPublicFeeds("hard-refresh");
             }
@@ -800,10 +813,12 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * Dopo outage API: un reload riallinea poster, config idle e stato Angular
-   * (il refresh soft non recupera errori HTTP accumulati su altre tab).
+   * Dopo outage API: remount poster (dev + totem). Solo totem fa reload pagina
+   * (il placeholder grigio restava bloccato se feed-version non cambiava).
    */
   private maybeReloadAfterFeedVersionRecovery(): void {
+    kioskDevLog("🧩 [Tutorial] Recovery API — remount poster home");
+    this.refreshPublicFeeds("api-recovery");
     if (!this.isTotemKiosk) return;
     const now = Date.now();
     if (
@@ -811,7 +826,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       this.FEED_RECOVERY_RELOAD_COOLDOWN_MS
     ) {
       kioskDevLog(
-        "🧩 [Tutorial] Recovery feed-version OK — reload saltato (cooldown)"
+        "🧩 [Tutorial] Recovery feed-version OK — reload pagina saltato (cooldown)"
       );
       return;
     }
@@ -820,20 +835,29 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     window.location.reload();
   }
 
-  private refreshPublicFeeds(reason: "version-change" | "hard-refresh"): void {
-    if (this.idlePosterMode) {
-      kioskDevLog("🧩 [Tutorial] Refresh feed saltato — saver idle attivo");
-      return;
-    }
+  private refreshPublicFeeds(
+    reason: "version-change" | "hard-refresh" | "placeholder-retry" | "api-recovery"
+  ): void {
     this.lastFeedHardRefreshAt = Date.now();
     kioskDevLog("🧩 [Tutorial] Refresh feed pubblici:", reason);
+    this.bumpAssetCacheVersion();
     this.loadBannerCarousel();
     this.loadPromoStrip();
   }
 
+  private isPosterPlaceholderSrc(src: string | null | undefined): boolean {
+    return /kiosk-poster-placeholder/i.test(String(src || ""));
+  }
+
+  private adsHavePosterPlaceholder(): boolean {
+    return this.ads.some(
+      (a) => a.kind === "image" && this.isPosterPlaceholderSrc(a.src)
+    );
+  }
+
   private resolveFeedVersionPollMs(): number {
     const raw = Number((environment as Record<string, unknown>)["kioskFeedVersionPollMs"]);
-    if (!Number.isFinite(raw)) return 30_000;
+    if (!Number.isFinite(raw)) return 12_000;
     return Math.min(5 * 60_000, Math.max(5_000, Math.round(raw)));
   }
 
@@ -1480,7 +1504,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * Un solo poster per chiave attività; ordinamento alfabetico sullo slug per stabilità tra refresh.
+   * 1:N poster per attività: chiave stabile = media id (fallback slug+src).
    */
   private dedupeAndSortPosters(items: AdItem[]): AdItem[] {
     const map = new Map<string, AdItem>();
@@ -1491,10 +1515,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
         continue;
       }
       if (map.has(key)) {
-        kioskDevWarn(
-          "⚠️ [Tutorial] Poster duplicato per la stessa attività — uso il primo:",
-          key
-        );
+        kioskDevWarn("⚠️ [Tutorial] Poster duplicato stesso media — ignoro copia", key);
         continue;
       }
       map.set(key, it);
@@ -1505,22 +1526,21 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private posterDedupeKey(it: AdItem): string {
-    const slug = it.activitySlug?.trim();
-    if (slug) {
-      if (it.multiHomePosters) {
-        const src = String(it.src || "").trim();
-        const title = String(it.title || "").trim();
-        const subtitle = String(it.subtitle || "").trim();
-        return `slug-multi:${slug}:${src}:${title}:${subtitle}`;
-      }
-      return `slug:${slug}`;
+    if (it.mediaId != null && Number.isFinite(Number(it.mediaId)) && Number(it.mediaId) > 0) {
+      return `media:${Number(it.mediaId)}`;
     }
-    if (it.src?.trim()) return `src:${it.src.trim()}`;
+    const slug = it.activitySlug?.trim() || "";
+    const src = String(it.src || "").split("?")[0].trim();
+    if (slug && src) return `slug-src:${slug}:${src}`;
+    if (src) return `src:${src}`;
+    if (slug) return `slug:${slug}`;
     return "";
   }
 
   private posterSortKey(it: AdItem): string {
-    return it.activitySlug || it.src || "";
+    const slug = it.activitySlug || "";
+    const id = it.mediaId != null ? String(it.mediaId).padStart(10, "0") : "";
+    return `${slug}|${id}|${it.src || ""}`;
   }
 
   private mapBannerDtoToPoster(b: KioskBannerDto): AdItem | null {
@@ -1552,15 +1572,25 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       b.media_url ||
       mediaPublic ||
       (isVideo
-        ? b.homePosterUrl || b.posterUrl || b.public_url || b.image_url || b.imageUrl
+        ? b.image_url || b.imageUrl || b.homePosterUrl || b.posterUrl || b.public_url
         : null);
+    const uploadsSrc = this.pickKioskUploadsSrc(
+      mediaPublic,
+      String(o.media_public_url ?? ""),
+      b.public_url,
+      b.image_url,
+      b.imageUrl
+    );
     const rawImageSrc =
-      b.homePosterUrl ||
-      b.posterUrl ||
+      uploadsSrc ||
+      b.image_url ||
       b.imageUrl ||
+      (o.media_public_url as string | undefined) ||
+      b.public_url ||
       nested?.imageUrl ||
       nested?.image_url ||
-      b.image_url ||
+      b.homePosterUrl ||
+      b.posterUrl ||
       b.src ||
       b.url;
     const hasVideoSrc = isVideo && !!String(rawVideoSrc || "").trim();
@@ -1586,29 +1616,98 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     const title = (b.title != null ? String(b.title).trim() : "") || undefined;
     const subtitle =
       (b.subtitle != null ? String(b.subtitle).trim() : "") || undefined;
-    const multiHomePosters =
-      b.multi_home_posters === true ||
-      b.multi_home_posters === 1 ||
-      b.multiHomePosters === true ||
-      b.multiHomePosters === 1;
     const uploadedBy =
       String(b.uploadedBy ?? "").trim() ||
       (String(b.uploaded_by_type ?? "").toLowerCase() === "admin"
         ? "admin"
         : String(b.uploaded_by_email ?? "").trim()) ||
       undefined;
+    const mediaIdRaw = Number(b.id ?? o.id ?? 0);
+    const mediaId = Number.isFinite(mediaIdRaw) && mediaIdRaw > 0 ? mediaIdRaw : undefined;
+    const altRaw = String(o.media_file_url ?? "").trim();
+    const uploadsResolved = uploadsSrc ? this.kioskApi.resolveAssetUrl(uploadsSrc) : "";
+    const mediaFileSrc = /media-file/i.test(altRaw)
+      ? altRaw
+      : this.mediaFileFallbackFromSrc(uploadsSrc || String(rawImageSrc || resolved));
+    const mediaFileResolved = mediaFileSrc ? this.kioskApi.resolveAssetUrl(mediaFileSrc) : "";
+    const imageSrc = effectiveVideo
+      ? resolved
+      : uploadsResolved || mediaFileResolved || resolved;
     return {
       kind: effectiveVideo ? "video" : "image",
-      src: resolved || this.POSTER_PLACEHOLDER,
+      src: imageSrc || this.POSTER_PLACEHOLDER,
       poster: effectiveVideo ? resolvedPoster : undefined,
       fallbackSrc: fallbackResolved || undefined,
+      altSrc: effectiveVideo ? undefined : (mediaFileResolved || undefined),
       activitySlug: slug || undefined,
       businessName: bn,
       title,
       subtitle,
       uploadedBy,
-      multiHomePosters,
+      multiHomePosters: true,
+      mediaId,
     };
+  }
+
+  /** Preferisce `/uploads/kiosk-business` (static/nginx) rispetto a media-file. */
+  private pickKioskUploadsSrc(...cands: Array<string | null | undefined>): string {
+    for (const c of cands) {
+      const s = String(c || "").trim();
+      if (!s || /media-file/i.test(s)) continue;
+      const pathOnly = s.split("?")[0];
+      if (pathOnly.startsWith("/uploads/kiosk-business/") || /\/uploads\/kiosk-business\//.test(pathOnly)) {
+        return s;
+      }
+    }
+    return "";
+  }
+
+  private mediaFileFallbackFromSrc(src: string): string {
+    const pathOnly = this.kioskUploadsPathFromSrc(src);
+    if (!pathOnly) return "";
+    const rel = pathOnly.replace(/^\/uploads\/kiosk-business\//, "");
+    if (!rel || rel.includes("..")) return "";
+    const slash = rel.indexOf("/");
+    const biz = slash >= 0 ? rel.slice(0, slash) : "";
+    const name = slash >= 0 ? rel.slice(slash + 1) : rel;
+    if (/^\d+$/.test(biz) && name && !name.includes("/")) {
+      return `/api/public-kiosk/media-file?b=${encodeURIComponent(biz)}&n=${encodeURIComponent(name)}`;
+    }
+    return `/api/public-kiosk/media-file?rel=${encodeURIComponent(rel)}`;
+  }
+
+  private kioskUploadsPathFromSrc(raw: string): string {
+    const s = String(raw || "").trim();
+    if (!s) return "";
+    if (/media-file/i.test(s)) {
+      try {
+        const u = new URL(s, "http://kiosk.local");
+        const p = String(u.searchParams.get("path") || "").trim();
+        if (p.startsWith("/uploads/kiosk-business/")) return p.split("?")[0];
+        const rel = String(u.searchParams.get("rel") || u.searchParams.get("file") || "").trim();
+        if (rel && !rel.includes("..")) {
+          return rel.startsWith("/uploads/kiosk-business/")
+            ? rel.split("?")[0]
+            : `/uploads/kiosk-business/${rel.replace(/^\/+/, "").split("?")[0]}`;
+        }
+        const b = String(u.searchParams.get("b") || "").trim();
+        const n = String(u.searchParams.get("n") || "").trim();
+        if (/^\d+$/.test(b) && n && !n.includes("..") && !n.includes("/")) {
+          return `/uploads/kiosk-business/${b}/${n}`;
+        }
+      } catch {
+        /* keep */
+      }
+    }
+    const pathOnly = s.split("?")[0];
+    if (pathOnly.startsWith("/uploads/kiosk-business/")) return pathOnly;
+    try {
+      const u = new URL(s, "http://kiosk.local");
+      if (u.pathname.startsWith("/uploads/kiosk-business/")) return u.pathname;
+    } catch {
+      /* keep */
+    }
+    return "";
   }
 
   private extractActivitySlugFromBanner(b: KioskBannerDto): string {
@@ -1674,19 +1773,23 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   /**
    * Dopo refresh feed (polling feed-version): aggiorna l’overlay fullscreen
-   * senza reload pagina — match per slug attività, fallback su src precedente.
+   * senza reload pagina — match per media id (1:N), poi slug, poi src.
    */
   private syncPosterFullscreenFromAds(): void {
     const syncIdle = this.idlePosterMode && this.idleSaverItem;
     const syncManual = this.posterFullscreenOpen && this.posterFullscreenItem;
     if ((!syncIdle && !syncManual) || !this.ads.length) return;
     const prev = syncIdle ? this.idleSaverItem! : this.posterFullscreenItem!;
+    let idx = -1;
+    if (prev.mediaId != null && Number.isFinite(Number(prev.mediaId)) && Number(prev.mediaId) > 0) {
+      idx = this.ads.findIndex((a) => Number(a.mediaId) === Number(prev.mediaId));
+    }
     const prevSlug = normalizeKioskBusinessSlugCandidate(prev.activitySlug);
-    let idx = prevSlug
-      ? this.ads.findIndex(
-          (a) => normalizeKioskBusinessSlugCandidate(a.activitySlug) === prevSlug
-        )
-      : -1;
+    if (idx < 0 && prevSlug) {
+      idx = this.ads.findIndex(
+        (a) => normalizeKioskBusinessSlugCandidate(a.activitySlug) === prevSlug
+      );
+    }
     if (idx < 0 && prev.src) {
       const prevBase = prev.src.split("?")[0];
       idx = this.ads.findIndex((a) => a.src.split("?")[0] === prevBase);
@@ -2407,25 +2510,39 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.openPosterFullscreen(ad);
   }
 
-  /** Errore caricamento immagine poster: sostituisce con placeholder senza rimuovere la slide. */
+  /** Errore caricamento immagine poster: ritenta l’altro path (media-file ↔ /uploads), poi placeholder — non la cover. */
   onPosterImageError(index: number): void {
     const ad = this.ads[index];
     if (!ad || ad.kind !== "image") return;
+    if (this.isPosterPlaceholderSrc(ad.src)) return;
     if (this.kioskApi.isLikelyVideoAssetUrl(ad.src)) return;
-    const fallback = String(ad.fallbackSrc || "").trim();
-    if (fallback && fallback !== ad.src) {
-      kioskDevWarn(
-        "⚠️ [Tutorial] Poster non caricato — fallback a cover/logo attività:",
-        ad.src
-      );
-      ad.src = fallback;
+    const raw = String(ad.src || "").trim();
+    const uploadsPath = this.kioskUploadsPathFromSrc(raw) || this.kioskUploadsPathFromSrc(ad.altSrc || "");
+    if (!ad.retriedDirectUpload && /media-file/i.test(raw) && uploadsPath) {
+      kioskDevWarn("⚠️ [Tutorial] media-file KO — ritento path /uploads diretto", uploadsPath);
+      ad.retriedDirectUpload = true;
+      ad.src = this.kioskApi.resolveAssetUrl(uploadsPath) || uploadsPath;
       this.ads = [...this.ads];
       return;
     }
-    kioskDevWarn(
-      "⚠️ [Tutorial] Poster non caricato — uso placeholder kiosk:",
-      ad.src
-    );
+    if (!ad.retriedMediaFile && uploadsPath) {
+      const rel = uploadsPath.replace(/^\/uploads\/kiosk-business\//, "");
+      kioskDevWarn("⚠️ [Tutorial] /uploads KO — ritento media-file", rel);
+      ad.retriedMediaFile = true;
+      const mf = this.mediaFileFallbackFromSrc(uploadsPath);
+      ad.src = this.kioskApi.resolveAssetUrl(mf) || mf;
+      this.ads = [...this.ads];
+      return;
+    }
+    const alt = String(ad.altSrc || "").trim();
+    if (alt && alt !== raw && !this.isPosterPlaceholderSrc(alt)) {
+      kioskDevWarn("⚠️ [Tutorial] Poster KO — ritento altSrc", alt);
+      ad.altSrc = undefined;
+      ad.src = alt;
+      this.ads = [...this.ads];
+      return;
+    }
+    kioskDevWarn("⚠️ [Tutorial] Poster non caricato — uso placeholder kiosk (retry al prossimo poll):", ad.src);
     ad.src = this.POSTER_PLACEHOLDER;
     this.ads = [...this.ads];
   }

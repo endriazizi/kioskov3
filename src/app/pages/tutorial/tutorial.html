@@ -103,16 +103,17 @@
                 tabindex="0"
                 [attr.aria-label]="'Poster attività, slide ' + (i + 1) + ' di ' + ads.length"
               >
-                <!-- IMMAGINE -->
-                <img
-                  *ngIf="ad.kind === 'image'; else videoTpl"
-                  [src]="assetUrl(ad.src)"
-                  (error)="onPosterImageError(i)"
-                  alt="Poster attività"
-                  loading="eager"
-                  decoding="async"
-                  draggable="false"
-                />
+                <!-- IMMAGINE: wrapper bianco — su totem Windows le PNG con alpha si composite su nero (GPU). -->
+                <div class="poster-frame" *ngIf="ad.kind === 'image'; else videoTpl">
+                  <img
+                    [src]="assetUrl(ad.src)"
+                    (error)="onPosterImageError(i)"
+                    alt="Poster attività"
+                    loading="eager"
+                    decoding="sync"
+                    draggable="false"
+                  />
+                </div>
                 <div
                   class="poster-caption"
                   *ngIf="ad.kind === 'image' && (ad.businessName || ad.title || ad.subtitle)"
@@ -416,6 +417,7 @@
     </button>
     <div
       class="kiosk-idle-saver__stage"
+      [class.kiosk-idle-saver__stage--photo]="idleItem.kind !== 'video'"
       (click)="onIdleSaverShellClick($event)"
       (touchstart)="onFullscreenTouchStart($event)"
       (touchend)="onIdleSaverTouchEnd($event)"

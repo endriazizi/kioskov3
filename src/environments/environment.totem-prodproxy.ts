@@ -2,7 +2,7 @@ import { KIOSK_LEGACY_SPEAKER_ID_TO_SLUG } from './kiosk-legacy-speaker-slugs';
 
 export const environment = {
   production: false,
-  appVersion: '0.0.2',
+  appVersion: '2026.09.15-2',
   /**
    * Modalita' dev sicura:
    * - chiamate relative (`/api`, `/uploads`)
@@ -12,7 +12,7 @@ export const environment = {
   kioskStrictMode: true,
   kioskAllowTelMailto: false,
   useKioskPublicApi: true,
-  kioskFeedVersionPollMs: 30_000,
+  kioskFeedVersionPollMs: 12_000,
   kioskFeedHardRefreshMinutes: 10,
   /** Ping http://localhost:8200/ ogni 2 min; dopo 2 KO consecutivi → reload (cooldown 2 min). */
   kioskLocalHealthCheckEnabled: true,

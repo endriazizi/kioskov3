@@ -7,12 +7,13 @@ import { KIOSK_LEGACY_SPEAKER_ID_TO_SLUG } from './kiosk-legacy-speaker-slugs';
 export const environment = {
   production: false,
   /** Bump su deploy (allineare a package.json o script bump). */
-  appVersion: '0.0.2',
+  appVersion: '2026.09.15-2',
   /**
    * Base URL API (senza slash finale). Vuoto = stesso origin → in dev serve **proxy** `proxy.conf.json`
    * verso Node (es. 127.0.0.1:3000) così `/api/public-kiosk/*` raggiunge `enea_be`.
    */
-  apiBaseUrl: 'http://127.0.0.1:3000',
+  apiBaseUrl: '',
+
   /** Se true, nessuna navigazione http/https verso host esterni (solo app + tel/mail opzionali). */
   kioskStrictMode: true,
   /** In strict mode totem: blocca anche tel:/mailto: per evitare uscita verso app esterne. */
@@ -20,7 +21,7 @@ export const environment = {
   /** Se false, salta le chiamate /api/public-kiosk/* e usa solo assets/data/data.json. */
   useKioskPublicApi: true,
   /** Polling endpoint versione feed (ms). */
-  kioskFeedVersionPollMs: 30_000,
+  kioskFeedVersionPollMs: 12_000,
   /** Hard refresh feed ogni X minuti anche senza cambio versione. */
   kioskFeedHardRefreshMinutes: 10,
   /**
