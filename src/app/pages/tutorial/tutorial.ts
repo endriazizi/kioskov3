@@ -11,6 +11,7 @@ import {
   HostBinding,
   HostListener,
   ChangeDetectorRef,
+  NgZone,
 } from "@angular/core";
 import { ActivatedRoute, NavigationEnd, Router, RouterLink } from "@angular/router";
 import {
@@ -41,8 +42,6 @@ import { addIcons } from "ionicons";
 import { arrowForward, close, menuOutline, playCircle, pricetagsOutline } from "ionicons/icons";
 import { HttpClient } from "@angular/common/http";
 import { CommonModule } from "@angular/common";
-import { bindKioskUiTopAuto } from "../../shared/kiosk-ui-top";
-import { KioskApiService } from "../../providers/kiosk-api.service";
 import { ConferenceService } from "../../providers/conference.service";
 import type { KioskBannerDto, KioskPublicBusinessDto } from "../../interfaces/kiosk-api.interfaces";
 import type { Speaker } from "../../interfaces/conference.interfaces";
@@ -182,6 +181,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private kioskApi = inject(KioskApiService);
   private confService = inject(ConferenceService);
   private cdr = inject(ChangeDetectorRef);
+  private zone = inject(NgZone);
 
   // Header / UI
   showSkip = true;
@@ -217,6 +217,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   /** Striscia opzionale sotto il carosello: GET `/promo-banners` (CTA orizzontali, non mescolati ai 4:5). */
   promoAds: PromoAdItem[] = [];
   adsIndex = 0;
+  /** Evita remount/flicker se il poll rinvia lo stesso feed. */
+  private adsFingerprint = "";
+  private promoFingerprint = "";
+  /** Primo paint carosello: overlay/cache-bust ok. I poll successivi non devono toccare le src. */
+  private adsHadFirstPaint = false;
 
   /** Avanzamento automatico poster (immagini); i video non-click-to-play bloccano il tick fino a fine clip. */
   private readonly ADS_DURATION_MS = 10_000;
@@ -336,8 +341,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   supportQrLoading = false;
   /** Banner “contattaci WhatsApp” dopo delay sulla slide poster */
   supportBannerVisible = false;
-  /** Cache-buster immagini: cambia a ogni reload feed poster/promo. */
-  private assetCacheVersion = Date.now();
   /** Polling feed pubblico: confronto versione server per refresh banner/promo solo quando cambia. */
   private readonly FEED_VERSION_POLL_MS = this.resolveFeedVersionPollMs();
   private readonly FEED_HARD_REFRESH_MS = this.resolveFeedHardRefreshMs();
@@ -347,11 +350,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private lastFeedHardRefreshAt = 0;
   /** Almeno un poll feed-version OK (evita reload al primo bootstrap dopo errore transitorio). */
   private feedVersionHadSuccess = false;
-  /** API feed-version non raggiungibile dopo un periodo OK → reload al ritorno (solo totem strict). */
+  /** API feed-version non raggiungibile dopo un periodo OK → remount feed al ritorno. */
   private feedVersionApiDown = false;
-  private lastFeedVersionRecoveryReloadAt = 0;
-  /** Anti-flap: max un reload recovery ogni 2 minuti. */
-  private readonly FEED_RECOVERY_RELOAD_COOLDOWN_MS = 120_000;
   private fullscreenSwipeStartX: number | null = null;
   private fullscreenSwipeStartY: number | null = null;
   private readonly FULLSCREEN_SWIPE_THRESHOLD_PX = 42;
@@ -359,9 +359,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private supportDelayTimer?: any;
   private supportAssistPromptShown = false;
   private readonly SUPPORT_BANNER_DELAY_MS = 6_000;
-
-  // Top dinamico (header + box meteo)
-  private unbindKiosk?: () => void;
 
   // Observer per i video del carosello
   private adVideoIO?: IntersectionObserver;
@@ -402,7 +399,15 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       });
 
     this.updateDate();
-    this.dateInterval = setInterval(() => this.updateDate(), 60_000);
+    this.zone.runOutsideAngular(() => {
+      this.dateInterval = setInterval(() => {
+        const next = this.formatKioskDate();
+        if (next === this.currentDate) return;
+        this.zone.run(() => {
+          this.currentDate = next;
+        });
+      }, 60_000);
+    });
     this.fetchWeather();
     this.loadIdlePosterRuntimeConfig();
     /** Carosello poster e strip promo sono indipendenti: due GET paralleli quando l’API è attiva. */
@@ -447,14 +452,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       }
     });
 
-    // Misura top dinamico (header + box meteo) → scrive --kiosk-ui-top
-    this.unbindKiosk = bindKioskUiTopAuto({
-      headerSelector: "ion-header",
-      weatherBoxSelector: ".info-kiosk",
-      cssVarName: "--kiosk-ui-top",
-      log: false,
-    });
-
     this.scheduleIdlePosterMode();
   }
 
@@ -482,7 +479,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.clearSupportTimers();
     this.supportAssistPromptShown = false;
     this.supportBannerVisible = false;
-    this.unbindKiosk?.();
     this.creditsDockNavSub?.unsubscribe();
     this.clearIdlePosterTimers();
     this.stopFeedVersionPolling();
@@ -495,12 +491,16 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // ========= DATA / METEO (orologio in app-kiosk-live-clock, OnPush) =========
-  private updateDate(): void {
-    this.currentDate = new Date().toLocaleDateString("it-IT", {
+  private formatKioskDate(): string {
+    return new Date().toLocaleDateString("it-IT", {
       weekday: "long",
       day: "numeric",
       month: "long",
     });
+  }
+
+  private updateDate(): void {
+    this.currentDate = this.formatKioskDate();
   }
 
   fetchWeather() {
@@ -602,7 +602,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
    * Ordine backend concordato: **GET /banners** come sorgente primaria (stesso feed di `homePosters` in GET /home),
    * poi GET /home, /home-posters, lista businesses, infine JSON locale.
    */
-  private loadBannerCarousel(): void {
+  private loadBannerCarousel(silent = false): void {
     if (!environment.useKioskPublicApi) {
       kioskDevLog(
         "📁 [Tutorial] useKioskPublicApi=false — poster home da data.json (solo listingTier premium)"
@@ -610,93 +610,75 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       this.loadFallbackBannersJson();
       return;
     }
-    this.kioskApi.getBanners().subscribe({
+    this.kioskApi.getBanners({ silent }).subscribe({
       next: (raw) => {
         const mapped = this.buildAdsFromBannerPayload(raw);
         const ready = this.dedupeAndSortPosters(mapped);
         if (ready.length) {
-          this.ads = ready;
-          kioskDevLog(
-            "✅ [Tutorial] Poster home da GET /api/public-kiosk/banners —",
-            this.ads.length,
-            "attività"
-          );
-          this.afterBannerAdsLoaded();
+          this.commitBannerAds(ready, "GET /api/public-kiosk/banners");
           return;
         }
         kioskDevLog(
           "📎 [Tutorial] GET /banners vuoto — fallback GET /api/public-kiosk/home (homePosters/banners)"
         );
-        this.loadHomeFallbackSequence();
+        this.loadHomeFallbackSequence(silent);
       },
       error: () => {
         kioskDevWarn(
           "⚠️ [Tutorial] GET /banners KO — fallback GET /api/public-kiosk/home"
         );
-        this.loadHomeFallbackSequence();
+        this.loadHomeFallbackSequence(silent);
       },
     });
   }
 
   /** Dopo `/banners` vuoto o errore: stesso elenco poster dentro GET `/home`, poi catena leggera. */
-  private loadHomeFallbackSequence(): void {
-    this.kioskApi.getHome().subscribe({
+  private loadHomeFallbackSequence(silent = false): void {
+    this.kioskApi.getHome({ silent }).subscribe({
       next: (raw) => {
         const mapped = this.buildAdsFromBannerDtos(
           this.kioskApi.unwrapHomePosters(raw)
         );
         const ready = this.dedupeAndSortPosters(mapped);
         if (ready.length) {
-          this.ads = ready;
-          kioskDevLog(
-            "✅ [Tutorial] Poster home da GET /api/public-kiosk/home —",
-            this.ads.length,
-            "attività"
-          );
-          this.afterBannerAdsLoaded();
+          this.commitBannerAds(ready, "GET /api/public-kiosk/home");
           return;
         }
         kioskDevLog(
           "📎 [Tutorial] Nessun poster eleggibile in /home — provo GET /api/public-kiosk/home-posters"
         );
-        this.loadHomePostersFromApi();
+        this.loadHomePostersFromApi(silent);
       },
       error: () => {
         kioskDevWarn(
           "⚠️ [Tutorial] GET home KO — provo GET /api/public-kiosk/home-posters"
         );
-        this.loadHomePostersFromApi();
+        this.loadHomePostersFromApi(silent);
       },
     });
   }
 
   /** Endpoint dedicato stesso payload dei poster (evita parsing di wrapper diversi). */
-  private loadHomePostersFromApi(): void {
-    this.kioskApi.getHomePosters().subscribe({
+  private loadHomePostersFromApi(silent = false): void {
+    this.kioskApi.getHomePosters({ silent }).subscribe({
       next: (raw) => {
         const items = this.kioskApi.unwrapHomePostersItems(raw);
         const mapped = this.buildAdsFromBannerDtos(items);
         const ready = this.dedupeAndSortPosters(mapped);
         if (ready.length) {
-          this.ads = ready;
-          kioskDevLog(
-            "✅ [Tutorial] Poster home da GET /api/public-kiosk/home-posters —",
-            ready.length,
-            "attività"
-          );
-          this.afterBannerAdsLoaded();
+          this.commitBannerAds(ready, "GET /api/public-kiosk/home-posters");
           return;
         }
         kioskDevWarn(
           "⚠️ [Tutorial] home-posters vuoto — provo GET /api/public-kiosk/businesses"
         );
-        this.tryLoadPostersFromBusinesses();
+        this.tryLoadPostersFromBusinesses(silent);
       },
       error: () => {
         kioskDevWarn(
           "⚠️ [Tutorial] GET home-posters KO — provo lista attività"
         );
-        this.tryLoadPostersFromBusinesses();
+        this.tryLoadPostersFromBusinesses(silent);
       },
     });
   }
@@ -705,28 +687,31 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
    * Banner orizzontali promozionali: feed separato; non sostituisce mai i poster 4:5.
    * Se l’API fallisce, la home resta utilizzabile senza strip promo.
    */
-  private loadPromoStrip(): void {
+  private loadPromoStrip(silent = false): void {
     if (!environment.useKioskPublicApi) {
       this.promoAds = [];
+      this.promoFingerprint = "";
       this.stopPromoStripAuto();
       return;
     }
-    this.kioskApi.getPromoBanners().subscribe({
+    this.kioskApi.getPromoBanners({ silent }).subscribe({
       next: (raw) => {
-        this.promoAds = this.buildPromoAdsFromPayload(raw);
-        this.bumpAssetCacheVersion();
+        const next = this.buildPromoAdsFromPayload(raw);
+        const keepIdx = this.promoAds.length ? this.promoStripActiveIndex : 0;
+        if (!this.commitPromoAds(next)) return;
         kioskDevLog(
           "🖼️✅ [Tutorial] Promo banner orizzontali caricati —",
           this.promoAds.length,
           "elementi"
         );
-        this.schedulePromoStripLayoutRefresh();
+        this.schedulePromoStripLayoutRefresh(keepIdx);
       },
       error: () => {
         kioskDevWarn(
           "⚠️ [Tutorial] GET promo-banners KO — strip promo disattivata (home ok)"
         );
         this.promoAds = [];
+        this.promoFingerprint = "";
         this.stopPromoStripAuto();
       },
     });
@@ -736,9 +721,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     if (!environment.useKioskPublicApi) return;
     this.stopFeedVersionPolling();
     this.checkFeedVersionAndRefresh(true);
-    this.feedVersionPollTimer = setInterval(() => {
-      this.checkFeedVersionAndRefresh(false);
-    }, this.FEED_VERSION_POLL_MS);
+    this.zone.runOutsideAngular(() => {
+      this.feedVersionPollTimer = setInterval(() => {
+        this.checkFeedVersionAndRefresh(false);
+      }, this.FEED_VERSION_POLL_MS);
+    });
   }
 
   private stopFeedVersionPolling(): void {
@@ -749,90 +736,105 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.feedVersionInFlight = false;
   }
 
-  private checkFeedVersionAndRefresh(bootstrap: boolean): void {
-    if (this.feedVersionInFlight) return;
-    this.feedVersionInFlight = true;
-    this.kioskApi
-      .getFeedVersion()
-      .pipe(take(1))
-      .subscribe({
-        next: (raw) => {
-          this.feedVersionInFlight = false;
-          const obj = (raw as Record<string, unknown> | null) ?? null;
-          const version = String(
-            (obj?.version as string | undefined) ??
-              ((obj?.data as Record<string, unknown> | undefined)?.version as string | undefined) ??
-              ""
-          ).trim();
-          if (!version) return;
-          if (this.feedVersionApiDown && this.feedVersionHadSuccess) {
-            this.feedVersionApiDown = false;
-            this.maybeReloadAfterFeedVersionRecovery();
-          }
-          this.feedVersionHadSuccess = true;
-          if (!this.lastFeedVersion) {
-            this.lastFeedVersion = version;
-            this.lastFeedHardRefreshAt = Date.now();
-            if (bootstrap) {
-              kioskDevLog("🛰️ [Tutorial] Feed version bootstrap:", version.slice(0, 18));
-            }
-            if (this.adsHavePosterPlaceholder()) {
-              this.refreshPublicFeeds("placeholder-retry");
-            }
-            return;
-          }
-          if (version === this.lastFeedVersion) {
-            const now = Date.now();
-            if (this.adsHavePosterPlaceholder() && now - this.lastFeedHardRefreshAt >= 15_000) {
-              this.refreshPublicFeeds("placeholder-retry");
-              return;
-            }
-            if (now - this.lastFeedHardRefreshAt >= this.FEED_HARD_REFRESH_MS) {
-              this.refreshPublicFeeds("hard-refresh");
-            }
-            return;
-          }
-          const prev = this.lastFeedVersion;
-          this.lastFeedVersion = version;
-          kioskDevLog(
-            "🔄 [Tutorial] Feed version changed — refresh poster/promo",
-            `${prev.slice(0, 8)} -> ${version.slice(0, 8)}`
-          );
-          this.refreshPublicFeeds("version-change");
-        },
-        error: () => {
-          this.feedVersionInFlight = false;
-          if (this.feedVersionHadSuccess) {
-            this.feedVersionApiDown = true;
-            kioskDevWarn(
-              "⚠️ [Tutorial] feed-version KO — al ritorno OK reload pagina (totem)"
-            );
-          }
-        },
-      });
+  /** Stesso path di `KioskApiService`: relativo se `apiBaseUrl` vuoto (proxy localhost e LAN). */
+  private feedVersionUrl(): string {
+    const path = "/api/public-kiosk/feed-version";
+    const b = String((environment as { apiBaseUrl?: string }).apiBaseUrl || "").replace(/\/$/, "");
+    return b ? `${b}${path}` : path;
   }
 
   /**
-   * Dopo outage API: remount poster (dev + totem). Solo totem fa reload pagina
-   * (il placeholder grigio restava bloccato se feed-version non cambiava).
+   * Poll con `fetch` fuori da Zone/HttpClient: XHR Angular rientrava in zona
+   * ogni 12s e ridisegnava tutta la home (flicker GPU anche a feed invariato).
    */
-  private maybeReloadAfterFeedVersionRecovery(): void {
-    kioskDevLog("🧩 [Tutorial] Recovery API — remount poster home");
-    this.refreshPublicFeeds("api-recovery");
-    if (!this.isTotemKiosk) return;
-    const now = Date.now();
-    if (
-      now - this.lastFeedVersionRecoveryReloadAt <
-      this.FEED_RECOVERY_RELOAD_COOLDOWN_MS
-    ) {
-      kioskDevLog(
-        "🧩 [Tutorial] Recovery feed-version OK — reload pagina saltato (cooldown)"
-      );
+  private checkFeedVersionAndRefresh(bootstrap: boolean): void {
+    if (this.feedVersionInFlight) return;
+    this.feedVersionInFlight = true;
+    const url = this.feedVersionUrl();
+    const run = async () => {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 8000);
+        const res = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+        clearTimeout(t);
+        if (res.status === 404) {
+          this.onFeedVersionPayload({ ok: false, version: "" }, bootstrap);
+          return;
+        }
+        if (!res.ok) throw new Error(String(res.status));
+        const raw = (await res.json()) as Record<string, unknown>;
+        this.onFeedVersionPayload(raw, bootstrap);
+      } catch {
+        if (this.feedVersionHadSuccess) {
+          this.feedVersionApiDown = true;
+        }
+      } finally {
+        this.feedVersionInFlight = false;
+      }
+    };
+    this.zone.runOutsideAngular(() => {
+      void run();
+    });
+  }
+
+  private onFeedVersionPayload(raw: Record<string, unknown> | null, bootstrap: boolean): void {
+    const obj = raw ?? null;
+    const version = String(
+      (obj?.version as string | undefined) ??
+        ((obj?.data as Record<string, unknown> | undefined)?.version as string | undefined) ??
+        ""
+    ).trim();
+    if (!version) return;
+    if (this.feedVersionApiDown && this.feedVersionHadSuccess) {
+      this.feedVersionApiDown = false;
+      this.maybeReloadAfterFeedVersionRecovery();
+    }
+    this.feedVersionHadSuccess = true;
+    if (!this.lastFeedVersion) {
+      this.lastFeedVersion = version;
+      this.lastFeedHardRefreshAt = Date.now();
+      if (bootstrap) {
+        kioskDevLog("🛰️ [Tutorial] Feed version bootstrap:", version.slice(0, 18));
+      }
+      if (this.adsHavePosterPlaceholder()) {
+        this.runFeedRefresh("placeholder-retry");
+      }
       return;
     }
-    this.lastFeedVersionRecoveryReloadAt = now;
-    kioskDevLog("🔄 [Tutorial] API feed-version tornata OK — reload pagina");
-    window.location.reload();
+    if (version === this.lastFeedVersion) {
+      const now = Date.now();
+      if (this.adsHavePosterPlaceholder() && now - this.lastFeedHardRefreshAt >= 15_000) {
+        this.runFeedRefresh("placeholder-retry");
+        return;
+      }
+      if (now - this.lastFeedHardRefreshAt >= this.FEED_HARD_REFRESH_MS) {
+        this.runFeedRefresh("hard-refresh");
+      }
+      return;
+    }
+    const prev = this.lastFeedVersion;
+    this.lastFeedVersion = version;
+    kioskDevLog(
+      "🔄 [Tutorial] Feed version changed — refresh poster/promo",
+      `${prev.slice(0, 8)} -> ${version.slice(0, 8)}`
+    );
+    this.runFeedRefresh("version-change");
+  }
+
+  /**
+   * Dopo outage API: solo remount feed. Niente `location.reload` (flash intero totem).
+   * I placeholder restano coperti dal retry periodico `adsHavePosterPlaceholder`.
+   */
+  private maybeReloadAfterFeedVersionRecovery(): void {
+    kioskDevLog("🧩 [Tutorial] Recovery API — remount poster home (no reload pagina)");
+    this.runFeedRefresh("api-recovery");
+  }
+
+  /** Poll fuori zona: rientra in Angular solo se c’è un refresh reale (niente CD ogni 12s). */
+  private runFeedRefresh(
+    reason: "version-change" | "hard-refresh" | "placeholder-retry" | "api-recovery"
+  ): void {
+    this.zone.run(() => this.refreshPublicFeeds(reason));
   }
 
   private refreshPublicFeeds(
@@ -840,9 +842,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   ): void {
     this.lastFeedHardRefreshAt = Date.now();
     kioskDevLog("🧩 [Tutorial] Refresh feed pubblici:", reason);
-    this.bumpAssetCacheVersion();
-    this.loadBannerCarousel();
-    this.loadPromoStrip();
+    this.loadBannerCarousel(true);
+    this.loadPromoStrip(true);
   }
 
   private isPosterPlaceholderSrc(src: string | null | undefined): boolean {
@@ -1220,7 +1221,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   private loadIdlePosterRuntimeConfig(): void {
     if (!(environment as Record<string, unknown>)["useKioskPublicApi"]) return;
-    this.kioskApi.getHome().pipe(take(1)).subscribe({
+    this.kioskApi.getHome({ silent: true }).pipe(take(1)).subscribe({
       next: (raw) => {
         const cfg = this.kioskApi.unwrapIdleFullscreenConfig(raw);
         this.idlePosterEnabled = cfg.enabled;
@@ -1326,19 +1327,13 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** Seconda chance: costruisce 1 poster per ogni business (cover → logo → avatar). */
-  private tryLoadPostersFromBusinesses(): void {
-    this.kioskApi.getBusinesses().subscribe({
+  private tryLoadPostersFromBusinesses(silent = false): void {
+    this.kioskApi.getBusinesses(undefined, { silent }).subscribe({
       next: (raw) => {
         const built = this.buildAdsFromBusinessesPayload(raw);
         const ready = this.dedupeAndSortPosters(built);
         if (ready.length) {
-          this.ads = ready;
-          kioskDevLog(
-            "✅ [Tutorial] Poster home da GET /api/public-kiosk/businesses —",
-            this.ads.length,
-            "attività"
-          );
-          this.afterBannerAdsLoaded();
+          this.commitBannerAds(ready, "GET /api/public-kiosk/businesses");
           return;
         }
         kioskDevWarn("⚠️ [Tutorial] Anche businesses vuoto — fallback JSON locale");
@@ -1365,26 +1360,20 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
           const ready = this.dedupeAndSortPosters(
             built.length ? built : this.minimalBannerFallback()
           );
-          this.ads = ready;
-          if (!built.length) {
-            kioskDevWarn(
-              "⚠️ [Tutorial] Nessun speaker premium in data.json — poster minimo o carosello vuoto dopo dedup"
-            );
-          } else {
-            kioskDevLog(
-              "📁 [Tutorial] Poster home da data.json (solo premium) —",
-              ready.length,
-              "attività"
-            );
-          }
-          this.afterBannerAdsLoaded();
+          this.commitBannerAds(
+            ready,
+            built.length
+              ? "data.json (solo premium)"
+              : "poster minimo / data.json vuoto",
+            !built.length
+          );
         },
         error: () => {
-          this.ads = this.dedupeAndSortPosters(this.minimalBannerFallback());
-          kioskDevWarn(
-            "⚠️ [Tutorial] data.json non caricato — poster minimo con slug di esempio"
+          this.commitBannerAds(
+            this.dedupeAndSortPosters(this.minimalBannerFallback()),
+            "data.json KO — poster minimo",
+            true
           );
-          this.afterBannerAdsLoaded();
         },
       });
   }
@@ -1741,12 +1730,88 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     return normalizeKioskBusinessSlugCandidate(String(cand || "").trim()) || "";
   }
 
-  /** Dopo aver impostato `ads`: riallinea indici video e avvia carosello */
-  private afterBannerAdsLoaded(): void {
-    const resumeIdleFullscreen = this.idlePosterMode && !!this.idleSaverItem;
-    if (!resumeIdleFullscreen) {
-      this.bumpAssetCacheVersion();
+  /** Chiave stabile per *ngFor: evita destroy/recreate delle <img> (flicker GPU). */
+  trackAdItem(_index: number, ad: AdItem): string | number {
+    if (ad.mediaId != null && Number.isFinite(Number(ad.mediaId)) && Number(ad.mediaId) > 0) {
+      return `media:${ad.mediaId}`;
     }
+    return `src:${String(ad.src || "").split("?")[0]}`;
+  }
+
+  trackPromoItem(_index: number, p: PromoAdItem): string {
+    return `${String(p.src || "").split("?")[0]}|${p.activitySlug || ""}`;
+  }
+
+  private adsFeedFingerprint(items: AdItem[]): string {
+    return items
+      .map((a) =>
+        [
+          a.mediaId ?? "",
+          a.kind,
+          String(a.src || ""),
+          a.activitySlug || "",
+          a.businessName || "",
+          a.title || "",
+          a.subtitle || "",
+        ].join("|")
+      )
+      .join("\n");
+  }
+
+  private promoFeedFingerprint(items: PromoAdItem[]): string {
+    return items
+      .map((p) => `${String(p.src || "")}|${p.title || ""}|${p.activitySlug || ""}`)
+      .join("\n");
+  }
+
+  /**
+   * Applica il carosello solo se il feed è cambiato: niente remount, niente cache-bust, niente goToAd.
+   */
+  private commitBannerAds(ready: AdItem[], source: string, warnEmpty = false): void {
+    const sig = this.adsFeedFingerprint(ready);
+    if (sig === this.adsFingerprint && this.ads.length === ready.length) {
+      kioskDevLog("🧩 [Tutorial] Poster invariati — skip remount", source);
+      return;
+    }
+    const prev = this.ads[this.adsIndex];
+    this.adsFingerprint = sig;
+    this.ads = ready;
+    if (warnEmpty) {
+      kioskDevWarn("⚠️ [Tutorial] Poster fallback —", source, ready.length, "slide");
+    } else {
+      kioskDevLog("✅ [Tutorial] Poster home da", source, "—", ready.length, "attività");
+    }
+    this.afterBannerAdsLoaded({
+      mediaId: prev?.mediaId,
+      src: prev?.src,
+      activitySlug: prev?.activitySlug,
+    });
+  }
+
+  private commitPromoAds(next: PromoAdItem[]): boolean {
+    const sig = this.promoFeedFingerprint(next);
+    if (sig === this.promoFingerprint && this.promoAds.length === next.length) {
+      kioskDevLog("🧩 [Tutorial] Promo invariate — skip remount");
+      return false;
+    }
+    this.promoFingerprint = sig;
+    this.promoAds = next;
+    return true;
+  }
+
+  /**
+   * Dopo aver impostato `ads`: riallinea indici video e avvia carosello.
+   * Niente cache-bust: il poll remonta e un `v=` nuovo ricarica tutte le <img>.
+   * Dopo il primo paint: tiene la slide corrente (media id) e riallinea solo lo scroll.
+   */
+  private afterBannerAdsLoaded(prev?: {
+    mediaId?: number;
+    src?: string;
+    activitySlug?: string;
+  }): void {
+    const resumeIdleFullscreen = this.idlePosterMode && !!this.idleSaverItem;
+    const isFirstPaint = !this.adsHadFirstPaint;
+    this.adsHadFirstPaint = true;
     this.rebuildVideoAdIndexes();
     setTimeout(() => {
       if (!this.ads.length) return;
@@ -1758,17 +1823,58 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       if (this.posterFullscreenOpen) {
         this.syncPosterFullscreenFromAds();
       }
-      this.goToAd(this.adsIndex, "auto");
-      this.startAdsCarousel();
+      if (isFirstPaint) {
+        this.goToAd(this.adsIndex, "auto");
+        this.startAdsCarousel();
+      } else {
+        this.syncAdsTrackToIndex(this.findAdIndexAfterFeed(prev));
+        if (!this.adsTimer) this.startAdsCarousel();
+      }
       this.bindAdVideoObserver();
       if (this.forceIdlePosterOnNextAdsLoad) {
         this.forceIdlePosterOnNextAdsLoad = false;
         this.enterIdlePosterMode();
       } else if (!this.idlePosterMode) {
-        // Poster API lenta: il timer avviato in ngAfterViewInit può scadere a ads=[] — riprogramma.
         this.scheduleIdlePosterMode();
       }
     }, 0);
+  }
+
+  /** Slide corrente dopo un feed nuovo: media id → src → slug → clamp. */
+  private findAdIndexAfterFeed(prev?: {
+    mediaId?: number;
+    src?: string;
+    activitySlug?: string;
+  }): number {
+    if (!this.ads.length) return 0;
+    if (prev?.mediaId != null && Number(prev.mediaId) > 0) {
+      const byId = this.ads.findIndex((a) => Number(a.mediaId) === Number(prev.mediaId));
+      if (byId >= 0) return byId;
+    }
+    const prevBase = String(prev?.src || "").split("?")[0];
+    if (prevBase) {
+      const bySrc = this.ads.findIndex((a) => a.src.split("?")[0] === prevBase);
+      if (bySrc >= 0) return bySrc;
+    }
+    const slug = normalizeKioskBusinessSlugCandidate(prev?.activitySlug);
+    if (slug) {
+      const bySlug = this.ads.findIndex(
+        (a) => normalizeKioskBusinessSlugCandidate(a.activitySlug) === slug
+      );
+      if (bySlug >= 0) return bySlug;
+    }
+    return Math.max(0, Math.min(this.adsIndex, this.ads.length - 1));
+  }
+
+  /** Allinea scrollLeft all’indice senza restart video (niente flicker su remount). */
+  private syncAdsTrackToIndex(i: number): void {
+    if (!this.ads.length) return;
+    this.adsIndex = Math.max(0, Math.min(i, this.ads.length - 1));
+    const track = this.adsTrack?.nativeElement;
+    if (!track) return;
+    const x = this.adsIndex * track.clientWidth;
+    if (Math.abs(track.scrollLeft - x) < 4) return;
+    track.scrollTo({ left: x, behavior: "auto" });
   }
 
   /**
@@ -1830,17 +1936,20 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     return raw.startsWith("/") ? raw : `/${raw}`;
   }
 
-  /** Appende query `v` alle immagini per evitare cache stale su URL invariata. */
+  /**
+   * URL immagine stabile: tiene il `?v=` del BE, toglie un secondo `v=` di sessione
+   * (bundle vecchi / doppio cache-bust). Asset statici: version app, non Date.now().
+   */
   assetUrl(url: string | null | undefined): string {
     const raw = String(url || "").trim();
     if (!raw) return "";
     if (/^(data:|blob:)/i.test(raw)) return raw;
-    const sep = raw.includes("?") ? "&" : "?";
-    return `${raw}${sep}v=${this.assetCacheVersion}`;
-  }
-
-  private bumpAssetCacheVersion(): void {
-    this.assetCacheVersion = Date.now();
+    const stripped = raw.replace(/([?&]v=[^&]*)(?:&v=\d{10,})+/i, "$1");
+    if (/[?&]v=/.test(stripped)) return stripped;
+    const ver = String(this.appVersion || "").trim();
+    if (!ver) return stripped;
+    const sep = stripped.includes("?") ? "&" : "?";
+    return `${stripped}${sep}v=${encodeURIComponent(ver)}`;
   }
 
   stopAdsCarousel() {
@@ -1854,16 +1963,18 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
    * Dopo GET promo: il `#promoStrip` è dentro *ngIf — serve un ciclo di change detection + layout
    * prima di scroll/timer (altrimenti ViewChild e offsetWidth sono inconsistenti).
    */
-  private schedulePromoStripLayoutRefresh(): void {
+  private schedulePromoStripLayoutRefresh(resumeIndex = 0): void {
     this.stopPromoStripAuto();
-    this.promoAutoIndex = 0;
-    this.promoStripActiveIndex = 0;
+    const max = Math.max(0, (this.promoAds?.length || 1) - 1);
+    const idx = Math.max(0, Math.min(resumeIndex, max));
+    this.promoAutoIndex = idx;
+    this.promoStripActiveIndex = idx;
     this.cdr.detectChanges();
     queueMicrotask(() => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           if (!this.promoAds?.length) return;
-          this.scrollPromoToIndex(0, "auto");
+          this.scrollPromoToIndex(idx, "auto");
           this.startPromoStripAuto();
         });
       });

@@ -1,8 +1,9 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
+import { KIOSK_HTTP_SILENT } from '../core/kiosk-http-context';
 import { environment } from '../../environments/environment';
 import type {
   KioskBannerDto,
@@ -11,6 +12,8 @@ import type {
   KioskIdleFullscreenConfig,
 } from '../interfaces/kiosk-api.interfaces';
 import { kioskDevLog, kioskDevWarn } from '../utils/kiosk-dev-console';
+
+export type KioskHttpOpts = { silent?: boolean };
 
 export type KioskPremiumLeadBody = {
   name: string;
@@ -45,6 +48,17 @@ export class KioskApiService {
     return b ? `${b}${p}` : p;
   }
 
+  /** GET di background: niente overlay spinner (evita flickering totem). */
+  private silentHttpOpts(opts?: KioskHttpOpts, params?: HttpParams): {
+    context?: HttpContext;
+    params?: HttpParams;
+  } {
+    const out: { context?: HttpContext; params?: HttpParams } = {};
+    if (params) out.params = params;
+    if (opts?.silent) out.context = new HttpContext().set(KIOSK_HTTP_SILENT, true);
+    return out;
+  }
+
   /**
    * Risolve URL di asset eventualmente relativi al backend (es. /uploads/...).
    */
@@ -52,7 +66,20 @@ export class KioskApiService {
     if (path == null || path === '') return '';
     const p = String(path).trim();
     if (/^http:\/\//i.test(p)) {
-      if (/^http:\/\/127\.0\.0\.1:3000\/uploads\/kiosk-business\//i.test(p)) return p;
+      /**
+       * URL assoluti scritti dal portal su BE locale (`publicFileUrl`).
+       * Tenerli su 127.0.0.1:3000 rompe il totem se il BE non è su quella porta
+       * (prodproxy) o se si apre da 192.168.x (l’img punta al device, non al PC).
+       * Si riduce a path relativo e si applica lo stesso qualify di `/uploads`.
+       */
+      if (/^http:\/\/(?:127\.0\.0\.1|localhost):3000\//i.test(p)) {
+        try {
+          const u = new URL(p);
+          return this.qualifySameOriginOrApi(`${u.pathname}${u.search}`);
+        } catch {
+          /* fall through */
+        }
+      }
       if (/pizzerialalanterna\.it/i.test(p)) return p.replace(/^http:\/\//i, 'https://');
       try {
         const u = new URL(p);
@@ -105,9 +132,9 @@ export class KioskApiService {
     return false;
   }
 
-  getHome(): Observable<unknown> {
+  getHome(opts?: KioskHttpOpts): Observable<unknown> {
     kioskDevLog('🧭 [KioskAPI] GET /api/public-kiosk/home …');
-    return this.http.get(this.url('/api/public-kiosk/home')).pipe(
+    return this.http.get(this.url('/api/public-kiosk/home'), this.silentHttpOpts(opts)).pipe(
       catchError((err) => {
         kioskDevWarn('⚠️ [KioskAPI] GET home fallita —', err?.message || err);
         return throwError(() => err);
@@ -143,19 +170,22 @@ export class KioskApiService {
     );
   }
 
-  getBusinesses(params?: { limit?: number; offset?: number; q?: string; category?: string }): Observable<unknown> {
+  getBusinesses(
+    params?: { limit?: number; offset?: number; q?: string; category?: string },
+    opts?: KioskHttpOpts,
+  ): Observable<unknown> {
     let hp = new HttpParams();
     if (params?.limit != null) hp = hp.set('limit', String(params.limit));
     if (params?.offset != null) hp = hp.set('offset', String(params.offset));
     if (params?.q) hp = hp.set('q', params.q);
     if (params?.category) hp = hp.set('category', params.category);
     kioskDevLog('🧭 [KioskAPI] GET /api/public-kiosk/businesses …');
-    return this.http.get(this.url('/api/public-kiosk/businesses'), { params: hp }).pipe(
+    return this.http.get(this.url('/api/public-kiosk/businesses'), this.silentHttpOpts(opts, hp)).pipe(
       catchError((err) => {
         // Compat produzione: alcuni deploy legacy espongono ancora /api/public-kiosk-businesses.
         if (err?.status === 404) {
           kioskDevWarn('↩️ [KioskAPI] fallback GET /api/public-kiosk-businesses …');
-          return this.http.get(this.url('/api/public-kiosk-businesses'), { params: hp });
+          return this.http.get(this.url('/api/public-kiosk-businesses'), this.silentHttpOpts(opts, hp));
         }
         kioskDevWarn('⚠️ [KioskAPI] GET businesses fallita —', err?.message || err);
         return throwError(() => err);
@@ -183,9 +213,9 @@ export class KioskApiService {
    * Feed principale poster home **verticali** (4:5) — stesso payload di `/home-posters` e chiave `banners` in GET `/home`.
    * Il totem deve usare questo endpoint come sorgente primaria per il carosello poster.
    */
-  getBanners(): Observable<unknown> {
+  getBanners(opts?: KioskHttpOpts): Observable<unknown> {
     kioskDevLog('🧭 [KioskAPI] GET /api/public-kiosk/banners …');
-    return this.http.get(this.url('/api/public-kiosk/banners?limit=120')).pipe(
+    return this.http.get(this.url('/api/public-kiosk/banners?limit=120'), this.silentHttpOpts(opts)).pipe(
       catchError((err) => {
         kioskDevWarn('⚠️ [KioskAPI] GET banners fallita —', err?.message || err);
         return throwError(() => err);
@@ -197,9 +227,9 @@ export class KioskApiService {
    * Banner promozionali **orizzontali** (tabella `kiosk_banners`) — separati dai poster home verticali.
    * Non vanno mescolati al carosello 4:5: solo striscia secondaria / CTA interna.
    */
-  getPromoBanners(): Observable<unknown> {
+  getPromoBanners(opts?: KioskHttpOpts): Observable<unknown> {
     kioskDevLog('🧭 [KioskAPI] GET /api/public-kiosk/promo-banners …');
-    return this.http.get(this.url('/api/public-kiosk/promo-banners')).pipe(
+    return this.http.get(this.url('/api/public-kiosk/promo-banners'), this.silentHttpOpts(opts)).pipe(
       catchError((err) => {
         kioskDevWarn('⚠️ [KioskAPI] GET promo-banners fallita —', err?.message || err);
         return throwError(() => err);
@@ -208,9 +238,9 @@ export class KioskApiService {
   }
 
   /** Stesso elenco della chiave `homePosters` in GET /home (client leggeri / fallback). */
-  getHomePosters(): Observable<unknown> {
+  getHomePosters(opts?: KioskHttpOpts): Observable<unknown> {
     kioskDevLog('🧭 [KioskAPI] GET /api/public-kiosk/home-posters …');
-    return this.http.get(this.url('/api/public-kiosk/home-posters?limit=120')).pipe(
+    return this.http.get(this.url('/api/public-kiosk/home-posters?limit=120'), this.silentHttpOpts(opts)).pipe(
       catchError((err) => {
         kioskDevWarn('⚠️ [KioskAPI] GET home-posters fallita —', err?.message || err);
         return throwError(() => err);
@@ -220,7 +250,7 @@ export class KioskApiService {
 
   /** Versione leggera feed home (poster + promo) per polling efficiente. */
   getFeedVersion(): Observable<unknown> {
-    return this.http.get(this.url('/api/public-kiosk/feed-version')).pipe(
+    return this.http.get(this.url('/api/public-kiosk/feed-version'), this.silentHttpOpts({ silent: true })).pipe(
       catchError((err) => {
         /**
          * Compat legacy: alcuni deploy non espongono ancora `/feed-version`.

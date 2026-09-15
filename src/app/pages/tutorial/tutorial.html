@@ -96,7 +96,7 @@
             >
               <figure
                 class="ads-item poster-card"
-                *ngFor="let ad of ads; let i = index"
+                *ngFor="let ad of ads; let i = index; trackBy: trackAdItem"
                 (click)="onAdClick(ad, $event)"
                 (keydown.enter)="onAdClick(ad, $event)"
                 role="button"
@@ -110,7 +110,7 @@
                     (error)="onPosterImageError(i)"
                     alt="Poster attività"
                     loading="eager"
-                    decoding="sync"
+                    decoding="async"
                     draggable="false"
                   />
                 </div>
@@ -164,7 +164,7 @@
 
             <div class="ads-dots ads-dots--elevated ads-dots--lux" *ngIf="ads.length > 1" role="tablist" aria-label="Indicatori poster">
               <span
-                *ngFor="let _ of ads; let i = index"
+                *ngFor="let _ of ads; let i = index; trackBy: trackAdItem"
                 class="dot"
                 [class.active]="i === adsIndex"
                 (click)="goToAd(i)"
@@ -211,7 +211,7 @@
             >
               <button
                 type="button"
-                *ngFor="let p of promoAds"
+                *ngFor="let p of promoAds; trackBy: trackPromoItem"
                 class="kiosk-promo-card"
                 (click)="onPromoClick(p, $event)"
                 role="listitem"
@@ -233,7 +233,7 @@
               aria-label="Indicatori messaggi in evidenza"
             >
               <span
-                *ngFor="let _ of promoAds; let pi = index"
+                *ngFor="let _ of promoAds; let pi = index; trackBy: trackPromoItem"
                 class="dot"
                 [class.active]="pi === promoStripActiveIndex"
                 (click)="goToPromoStripIndex(pi)"
@@ -357,6 +357,7 @@
             class="promo-fullscreen-img"
             [src]="assetUrl(promoFullscreenItem.src)"
             [alt]="promoFullscreenItem.title || promoFullscreenItem.businessName || 'Banner'"
+            decoding="async"
             draggable="false"
           />
         </div>
@@ -441,6 +442,7 @@
           class="kiosk-idle-saver__img"
           [src]="assetUrl(idleItem.src)"
           [alt]="idleItem.title || idleItem.businessName || 'Poster attività'"
+          decoding="async"
           draggable="false"
         />
       }
@@ -495,6 +497,7 @@
               class="promo-fullscreen-img"
               [src]="assetUrl(posterFullscreenItem.src)"
               [alt]="posterFullscreenItem.title || posterFullscreenItem.businessName || 'Poster attività'"
+              decoding="async"
               draggable="false"
             />
           }

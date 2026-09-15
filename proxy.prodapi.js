@@ -18,6 +18,7 @@ const http = require('http');
 const https = require('https');
 const os = require('os');
 const path = require('path');
+const { PassThrough } = require('stream');
 
 const PLESK = String(process.env.KIOSK_PROXY_PLESK || 'https://api.pizzerialalanterna.it').replace(/\/$/, '');
 const LOCAL = String(process.env.KIOSK_PROXY_LOCAL || 'http://127.0.0.1:3000').replace(/\/$/, '');
@@ -176,11 +177,17 @@ function fetchAndPipe(url, res, cacheRel) {
       };
       if (up.headers['content-length']) headers['Content-Length'] = up.headers['content-length'];
       res.writeHead(200, headers);
-      cacheStreamOnDisk(up, cacheRel);
       up.on('error', () => endResponse(res, done, true));
       res.on('close', () => done(true));
       res.on('finish', () => done(true));
-      up.pipe(res);
+      if (cacheRel) {
+        const tee = new PassThrough();
+        cacheStreamOnDisk(tee, cacheRel);
+        tee.pipe(res);
+        up.pipe(tee);
+      } else {
+        up.pipe(res);
+      }
     });
     r.on('error', () => done(false));
     r.on('timeout', () => {
