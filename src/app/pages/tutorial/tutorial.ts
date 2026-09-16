@@ -223,6 +223,9 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private promoFingerprint = "";
   /** Primo paint carosello: overlay/cache-bust ok. I poll successivi non devono toccare le src. */
   private adsHadFirstPaint = false;
+  /** Scroll automatico in corso: non interpretare `scroll` come gesto utente (evita pause + CD storm). */
+  private adsProgrammaticScroll = false;
+  private adsTrackScrollEl?: HTMLDivElement;
 
   /** Avanzamento automatico poster (immagini); i video non-click-to-play bloccano il tick fino a fine clip. */
   private readonly ADS_DURATION_MS = 10_000;
@@ -314,22 +317,28 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   // ===== FINE MODIFICA =====
 
   // Primo gesto: ora sblocca anche il video del carosello
+  private firstGestureDone = false;
   private firstGestureHandlerAll = () => {
-    // ===== INIZIO MODIFICA =====
-    // ✅ memorizzo che l’utente ha fatto un gesto: ora l’audio può essere “consentito”
-    // ma lo abilitiamo SOLO quando l’utente lo chiede (adsAudioWanted).
-    this.adsAudioUnlocked = true;
-    if (this.isTotemKiosk) this.adsAudioWanted = true;
+    this.onTutorialInteraction();
+    if (this.firstGestureDone) return;
+    this.firstGestureDone = true;
+    this.zone.run(() => {
+      // ===== INIZIO MODIFICA =====
+      // ✅ memorizzo che l’utente ha fatto un gesto: ora l’audio può essere “consentito”
+      // ma lo abilitiamo SOLO quando l’utente lo chiede (adsAudioWanted).
+      this.adsAudioUnlocked = true;
+      if (this.isTotemKiosk) this.adsAudioWanted = true;
 
-    if (this.isCurrentAdVideo && this.adsAudioWanted) {
-      void this.tryUnmuteAd(this.adsIndex);
-    } else {
-      this.adsShowUnmuteBtn = this.isCurrentAdVideo && this.adsMuted && this.adsAudioWanted;
-    }
-    // ===== FINE MODIFICA =====
+      if (this.isCurrentAdVideo && this.adsAudioWanted) {
+        void this.tryUnmuteAd(this.adsIndex);
+      } else {
+        this.adsShowUnmuteBtn = this.isCurrentAdVideo && this.adsMuted && this.adsAudioWanted;
+      }
+      // ===== FINE MODIFICA =====
 
-    if (!this.isClickToPlayVideo(this.adsIndex)) this.ensureAdVideoPlaying(this.adsIndex);
-    this.forceUnlockAudio(); // per la slide video principale se attiva
+      if (!this.isClickToPlayVideo(this.adsIndex)) this.ensureAdVideoPlaying(this.adsIndex);
+      this.forceUnlockAudio(); // per la slide video principale se attiva
+    });
   };
 
   // Assistenza home (banner sopra tab bar + modal QR)
@@ -435,14 +444,18 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     // Observer sui video del carosello
     this.bindAdVideoObserver();
     this.adVideoEls.changes.subscribe(() => this.bindAdVideoObserver());
+    this.bindAdsTrackScroll();
 
     // Sblocco su qualsiasi gesto (tap/tasto) — utile su alcuni Android/iOS
-    window.addEventListener("pointerdown", this.firstGestureHandlerAll, {
-      capture: true,
-      passive: true,
-    });
-    window.addEventListener("keydown", this.firstGestureHandlerAll, {
-      capture: true,
+    // Fuori zona: i pointer fantasma Windows non devono ridisegnare tutta la home.
+    this.zone.runOutsideAngular(() => {
+      window.addEventListener("pointerdown", this.firstGestureHandlerAll, {
+        capture: true,
+        passive: true,
+      });
+      window.addEventListener("keydown", this.firstGestureHandlerAll, {
+        capture: true,
+      });
     });
 
     document.addEventListener("visibilitychange", () => {
@@ -483,6 +496,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.creditsDockNavSub?.unsubscribe();
     this.clearIdlePosterTimers();
     this.stopFeedVersionPolling();
+    this.unbindAdsTrackScroll();
   }
 
   private syncCreditsDockTabsLayout(): void {
@@ -1749,7 +1763,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
         [
           a.mediaId ?? "",
           a.kind,
-          String(a.src || ""),
+          String(a.src || "").split("?")[0],
           a.activitySlug || "",
           a.businessName || "",
           a.title || "",
@@ -1761,8 +1775,21 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
 
   private promoFeedFingerprint(items: PromoAdItem[]): string {
     return items
-      .map((p) => `${String(p.src || "")}|${p.title || ""}|${p.activitySlug || ""}`)
+      .map((p) => `${String(p.src || "").split("?")[0]}|${p.title || ""}|${p.activitySlug || ""}`)
       .join("\n");
+  }
+
+  /** Stessa identità slide (id/path): si aggiornano i testi senza sostituire l’array. */
+  private sameAdsIdentity(a: AdItem[], b: AdItem[]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every((x, i) => {
+      const y = b[i];
+      if (!y || x.kind !== y.kind) return false;
+      if (x.mediaId != null && y.mediaId != null && Number(x.mediaId) > 0) {
+        return Number(x.mediaId) === Number(y.mediaId);
+      }
+      return String(x.src || "").split("?")[0] === String(y.src || "").split("?")[0];
+    });
   }
 
   /**
@@ -1772,6 +1799,29 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     const sig = this.adsFeedFingerprint(ready);
     if (sig === this.adsFingerprint && this.ads.length === ready.length) {
       kioskDevLog("🧩 [Tutorial] Poster invariati — skip remount", source);
+      return;
+    }
+    if (this.ads.length && this.sameAdsIdentity(this.ads, ready)) {
+      for (let i = 0; i < ready.length; i++) {
+        const cur = this.ads[i];
+        const next = ready[i];
+        const curBase = String(cur.src || "").split("?")[0];
+        const nextBase = String(next.src || "").split("?")[0];
+        cur.businessName = next.businessName;
+        cur.title = next.title;
+        cur.subtitle = next.subtitle;
+        cur.activitySlug = next.activitySlug;
+        cur.uploadedBy = next.uploadedBy;
+        cur.poster = next.poster;
+        cur.fallbackSrc = next.fallbackSrc;
+        cur.altSrc = next.altSrc;
+        if (curBase !== nextBase) {
+          cur.src = next.src;
+          cur.mediaId = next.mediaId;
+        }
+      }
+      this.adsFingerprint = sig;
+      kioskDevLog("🧩 [Tutorial] Poster patch in-place — no remount", source);
       return;
     }
     const prev = this.ads[this.adsIndex];
@@ -1832,6 +1882,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
         if (!this.adsTimer) this.startAdsCarousel();
       }
       this.bindAdVideoObserver();
+      this.bindAdsTrackScroll();
       if (this.forceIdlePosterOnNextAdsLoad) {
         this.forceIdlePosterOnNextAdsLoad = false;
         this.enterIdlePosterMode();
@@ -1920,13 +1971,15 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   startAdsCarousel() {
     if (!this.ads.length) return;
     this.stopAdsCarousel();
-    this.adsTimer = setInterval(() => {
-      if (this.adsUserPause) return;
-      const current = this.ads[this.adsIndex];
-      if (current?.kind === "video" && !this.isClickToPlayVideo(this.adsIndex)) return;
-      const next = (this.adsIndex + 1) % this.ads.length;
-      this.goToAd(next);
-    }, this.ADS_DURATION_MS);
+    this.zone.runOutsideAngular(() => {
+      this.adsTimer = setInterval(() => {
+        if (this.adsUserPause) return;
+        const current = this.ads[this.adsIndex];
+        if (current?.kind === "video" && !this.isClickToPlayVideo(this.adsIndex)) return;
+        const next = (this.adsIndex + 1) % this.ads.length;
+        this.zone.run(() => this.goToAd(next, "auto"));
+      }, this.ADS_DURATION_MS);
+    });
   }
 
   /** URL stabile per video saver idle (no cache-bust → evita reload/flicker mid-playback). */
@@ -1990,7 +2043,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       if (this.promoFullscreenOpen) return;
       if (Date.now() < this.promoStripPauseUntil) return;
       this.promoAutoIndex = (this.promoAutoIndex + 1) % this.promoAds.length;
-      this.scrollPromoToIndex(this.promoAutoIndex, "smooth");
+      this.scrollPromoToIndex(this.promoAutoIndex, "auto");
     }, this.ADS_DURATION_MS);
   }
 
@@ -2360,7 +2413,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  goToAd(i: number, behavior: ScrollBehavior = "smooth") {
+  goToAd(i: number, behavior: ScrollBehavior = "auto") {
     if (!this.ads.length) return;
     const prevIndex = this.adsIndex;
     const prev = this.ads[prevIndex];
@@ -2374,7 +2427,11 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     const track = this.adsTrack?.nativeElement;
     if (!track) return;
     const x = this.adsIndex * track.clientWidth;
-    track.scrollTo({ left: x, behavior });
+    this.adsProgrammaticScroll = true;
+    track.scrollTo({ left: x, behavior: "auto" });
+    requestAnimationFrame(() => {
+      this.adsProgrammaticScroll = false;
+    });
 
     const current = this.ads[this.adsIndex];
     this.pauseAllAdVideos(false);
@@ -2400,44 +2457,68 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.preloadAdjacentPosters();
   }
 
-  onAdsScroll() {
+  /** Gesto utente sul carosello: solo allora si mette in pausa l’auto-advance. */
+  onAdsTrackPointerDown(ev: Event): void {
+    ev.stopPropagation();
+  }
+
+  private bindAdsTrackScroll(): void {
+    const el = this.adsTrack?.nativeElement;
+    if (!el || this.adsTrackScrollEl === el) return;
+    this.unbindAdsTrackScroll();
+    this.adsTrackScrollEl = el;
+    this.zone.runOutsideAngular(() => {
+      el.addEventListener("scroll", this.onAdsTrackScrollNative, { passive: true });
+    });
+  }
+
+  private unbindAdsTrackScroll(): void {
+    if (!this.adsTrackScrollEl) return;
+    this.adsTrackScrollEl.removeEventListener("scroll", this.onAdsTrackScrollNative);
+    this.adsTrackScrollEl = undefined;
+  }
+
+  private onAdsTrackScrollNative = (): void => {
+    if (this.adsProgrammaticScroll) return;
     const track = this.adsTrack?.nativeElement;
     if (!track || !this.ads.length) return;
     const w = track.clientWidth || 1;
     const idx = Math.round(track.scrollLeft / w);
-    if (idx !== this.adsIndex) {
-      const prevIndex = this.adsIndex;
-      const prev = this.ads[prevIndex];
-      if (prev?.kind === "video") this.leaveVideoAd(prevIndex);
-      if (this.isClickToPlayVideo(prevIndex)) {
-        this.clearAdsPlayBtnTimer();
-        this.adsShowPlayBtn = false;
-      }
+    if (idx === this.adsIndex) return;
+    this.zone.run(() => this.applyAdsIndexFromUserScroll(idx));
+  };
 
-      this.adsIndex = idx;
-      this.pauseAllAdVideos(false);
-
-      const current = this.ads[this.adsIndex];
-      if (current?.kind === "video") {
-        if (this.isClickToPlayVideo(this.adsIndex)) {
-          this.clearAdsPlayBtnTimer();
-          this.adsShowPlayBtn = true;
-          this.adsPlayBtnHideTimer = setTimeout(() => {
-            this.adsShowPlayBtn = false;
-          }, 5_000);
-          this.startAdsCarousel();
-        } else {
-          this.enterVideoAd(this.adsIndex);
-        }
-      } else {
-        this.startAdsCarousel();
-      }
-
-      this.syncAdVideos();
-      this.adsShowUnmuteBtn = this.isCurrentAdVideo && this.adsMuted && this.adsAudioWanted;
-      this.preloadAdjacentPosters();
+  private applyAdsIndexFromUserScroll(idx: number): void {
+    const prevIndex = this.adsIndex;
+    const prev = this.ads[prevIndex];
+    if (prev?.kind === "video") this.leaveVideoAd(prevIndex);
+    if (this.isClickToPlayVideo(prevIndex)) {
+      this.clearAdsPlayBtnTimer();
+      this.adsShowPlayBtn = false;
     }
 
+    this.adsIndex = Math.max(0, Math.min(idx, this.ads.length - 1));
+    this.pauseAllAdVideos(false);
+
+    const current = this.ads[this.adsIndex];
+    if (current?.kind === "video") {
+      if (this.isClickToPlayVideo(this.adsIndex)) {
+        this.clearAdsPlayBtnTimer();
+        this.adsShowPlayBtn = true;
+        this.adsPlayBtnHideTimer = setTimeout(() => {
+          this.adsShowPlayBtn = false;
+        }, 5_000);
+        this.startAdsCarousel();
+      } else {
+        this.enterVideoAd(this.adsIndex);
+      }
+    } else {
+      this.startAdsCarousel();
+    }
+
+    this.syncAdVideos();
+    this.adsShowUnmuteBtn = this.isCurrentAdVideo && this.adsMuted && this.adsAudioWanted;
+    this.preloadAdjacentPosters();
     this.pauseAdsCarousel();
     clearTimeout(this.adsScrollDebounce);
     this.adsScrollDebounce = setTimeout(() => this.resumeAdsCarousel(), 2_500);
@@ -2484,7 +2565,6 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       ad.kind = "image";
       ad.src = fallback;
       ad.poster = undefined;
-      this.ads = [...this.ads];
       this.rebuildVideoAdIndexes();
       this.startAdsCarousel();
       return;
@@ -2630,11 +2710,13 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.kioskApi.isLikelyVideoAssetUrl(ad.src)) return;
     const raw = String(ad.src || "").trim();
     const uploadsPath = this.kioskUploadsPathFromSrc(raw) || this.kioskUploadsPathFromSrc(ad.altSrc || "");
+    const applySrc = (next: string) => {
+      ad.src = next;
+    };
     if (!ad.retriedDirectUpload && /media-file/i.test(raw) && uploadsPath) {
       kioskDevWarn("⚠️ [Tutorial] media-file KO — ritento path /uploads diretto", uploadsPath);
       ad.retriedDirectUpload = true;
-      ad.src = this.kioskApi.resolveAssetUrl(uploadsPath) || uploadsPath;
-      this.ads = [...this.ads];
+      applySrc(this.kioskApi.resolveAssetUrl(uploadsPath) || uploadsPath);
       return;
     }
     if (!ad.retriedMediaFile && uploadsPath) {
@@ -2642,31 +2724,34 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
       kioskDevWarn("⚠️ [Tutorial] /uploads KO — ritento media-file", rel);
       ad.retriedMediaFile = true;
       const mf = this.mediaFileFallbackFromSrc(uploadsPath);
-      ad.src = this.kioskApi.resolveAssetUrl(mf) || mf;
-      this.ads = [...this.ads];
+      applySrc(this.kioskApi.resolveAssetUrl(mf) || mf);
       return;
     }
     const alt = String(ad.altSrc || "").trim();
     if (alt && alt !== raw && !this.isPosterPlaceholderSrc(alt)) {
       kioskDevWarn("⚠️ [Tutorial] Poster KO — ritento altSrc", alt);
       ad.altSrc = undefined;
-      ad.src = alt;
-      this.ads = [...this.ads];
+      applySrc(alt);
       return;
     }
     kioskDevWarn("⚠️ [Tutorial] Poster non caricato — uso placeholder kiosk (retry al prossimo poll):", ad.src);
-    ad.src = this.POSTER_PLACEHOLDER;
-    this.ads = [...this.ads];
+    applySrc(this.POSTER_PLACEHOLDER);
   }
 
-  /** Pre-carica leggero la slide successiva per scroll più fluido (solo immagini). */
+  /** Pre-decodifica prev/next così il cambio slide non dipinge un frame bianco. */
   private preloadAdjacentPosters(): void {
     if (this.ads.length < 2) return;
-    const next = (this.adsIndex + 1) % this.ads.length;
-    const src = this.ads[next]?.src;
-    if (!src || src.endsWith(".svg")) return;
-    const img = new Image();
-    img.src = src;
+    const idxs = [
+      (this.adsIndex + 1) % this.ads.length,
+      (this.adsIndex - 1 + this.ads.length) % this.ads.length,
+    ];
+    for (const i of idxs) {
+      const src = this.ads[i]?.src;
+      if (!src || src.endsWith(".svg") || this.ads[i]?.kind !== "image") continue;
+      const img = new Image();
+      img.decoding = "sync";
+      img.src = this.assetUrl(src);
+    }
   }
 
   // ========= SLIDE 3: VIDEO PRINCIPALE =========
@@ -2783,11 +2868,12 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     this.ioFirst = new IntersectionObserver(
       ([entry]) => {
         const active = entry.isIntersecting && entry.intersectionRatio > 0.6;
+        if (active === this.isFirstSlideActive) return;
         this.isFirstSlideActive = active;
         if (active) this.startSupportTimers();
-        else this.clearSupportTimers();
+        else if (!this.supportAssistPromptShown) this.clearSupportTimers();
       },
-      { threshold: [0, 0.6, 1] }
+      { threshold: [0.6] }
     );
     this.ioFirst.observe(this.firstSlide.nativeElement);
   }
@@ -2882,11 +2968,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  @HostListener("click", ["$event"])
-  @HostListener("pointerdown", ["$event"])
-  @HostListener("touchstart", ["$event"])
-  @HostListener("document:keydown", ["$event"])
-  onTutorialHostTap(_event: Event): void {
+  @HostListener("document:keydown")
+  onTutorialHostTap(): void {
     this.onTutorialInteraction();
   }
 }

@@ -5,9 +5,11 @@ import { finalize } from 'rxjs/operators';
 import { KioskLoadingService } from '../providers/kiosk-loading.service';
 import { KIOSK_HTTP_SILENT } from './kiosk-http-context';
 
-/** Overlay spinner solo su chiamate “foreground” (primo load, POST). */
-function isBackgroundKioskRequest(url: string, silent: boolean): boolean {
+/** Overlay spinner solo su POST/PUT/PATCH (GET home/poll non devono coprire il totem). */
+function isBackgroundKioskRequest(url: string, silent: boolean, method: string): boolean {
   if (silent) return true;
+  const m = String(method || 'GET').toUpperCase();
+  if (m === 'GET' || m === 'HEAD') return true;
   const path = url.split('?')[0].toLowerCase();
   return (
     path.includes('/api/public-kiosk/feed-version') ||
@@ -19,7 +21,7 @@ export const kioskLoadingInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.includes('/api/public-kiosk')) {
     return next(req);
   }
-  if (isBackgroundKioskRequest(req.url, req.context.get(KIOSK_HTTP_SILENT))) {
+  if (isBackgroundKioskRequest(req.url, req.context.get(KIOSK_HTTP_SILENT), req.method)) {
     return next(req);
   }
   const kioskLoading = inject(KioskLoadingService);

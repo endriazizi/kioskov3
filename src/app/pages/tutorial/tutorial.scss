@@ -2548,7 +2548,32 @@ ion-content.kiosk { scrollbar-width: none !important; -ms-overflow-style: none !
 /* Home fit-screen: nessuno scroll manuale (resta scroll solo nella pagina dettaglio attività) */
 ion-content.kiosk.kiosk--fit-screen .slide-container {
   overflow: hidden !important;
+  scroll-snap-type: none !important;
   touch-action: manipulation;
+}
+
+/* Slide extra (info/video) non partecipano allo snap: un resize poster le faceva entrare in vista (flash bianco). */
+ion-content.kiosk.kiosk--fit-screen .slide-container > .slide:not(.slide-ads) {
+  display: none !important;
+}
+
+ion-content.kiosk.kiosk--fit-screen .ads-track {
+  scroll-behavior: auto;
+  overscroll-behavior: none;
+  contain: layout paint;
+}
+
+ion-content.kiosk.kiosk--fit-screen .poster-frame {
+  min-height: min(22vh, 260px);
+  background-color: #ffffff;
+}
+
+ion-content.kiosk.kiosk--fit-screen .ads-dots.ads-dots--lux .dot.active::after {
+  animation: none;
+}
+
+ion-content.kiosk.kiosk--fit-screen .poster-hint__icon {
+  animation: none;
 }
 
 ion-content.kiosk.kiosk--fit-screen .kiosk-promo-strip {

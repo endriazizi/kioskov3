@@ -90,8 +90,7 @@
             <div
               #adsTrack
               class="ads-track"
-              (scroll)="onAdsScroll()"
-              (pointerdown)="$event.stopPropagation()"
+              (pointerdown)="onAdsTrackPointerDown($event)"
               (touchstart)="$event.stopPropagation()"
             >
               <figure
@@ -110,7 +109,7 @@
                     (error)="onPosterImageError(i)"
                     alt="Poster attività"
                     loading="eager"
-                    decoding="async"
+                    decoding="sync"
                     draggable="false"
                   />
                 </div>
