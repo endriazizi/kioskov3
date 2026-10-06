@@ -33,8 +33,12 @@ import {
   IonRouterOutlet,
   IonSpinner,
   IonSplitPane,
+  ActionSheetController,
+  AlertController,
   MenuController,
+  ModalController,
   Platform,
+  PopoverController,
   ToastController,
 } from "@ionic/angular/standalone";
 import {
@@ -99,6 +103,10 @@ export class AppComponent implements OnInit, OnDestroy {
   private swUpdate = inject(SwUpdate);
   private toastCtrl = inject(ToastController);
   private menu = inject(MenuController);
+  private modalCtrl = inject(ModalController);
+  private popoverCtrl = inject(PopoverController);
+  private alertCtrl = inject(AlertController);
+  private actionSheetCtrl = inject(ActionSheetController);
   private platform = inject(Platform);
   readonly kioskLoading = inject(KioskLoadingService);
   private kioskApi = inject(KioskApiService);
@@ -188,13 +196,30 @@ export class AppComponent implements OnInit, OnDestroy {
       if (this.isOnTutorial()) return;
 
       kioskDevLog("⏳ Timeout di inattività, torno alla Home Page");
-      void this.router
-        .navigate(["/app/tabs/home"], {
-          replaceUrl: true,
-          queryParams: { idleFs: "1" },
-        })
-        .catch(() => {});
+      void this.closeOverlaysForIdle()
+        .then(() =>
+          this.router.navigate(["/app/tabs/home"], {
+            replaceUrl: true,
+            queryParams: { idleFs: "1" },
+          })
+        )
+        .catch(() => {})
+        // Settings admin modificati a runtime: valgono dal prossimo ciclo senza reload.
+        .then(() => this.loadKioskIdleRuntimeConfig());
     }, this.inactivityTimeoutMs);
+  }
+
+  /** Modal/popover/alert/menu restano sopra la Home dopo il redirect: vanno chiusi prima. */
+  private async closeOverlaysForIdle(): Promise<void> {
+    const ctrls = [this.modalCtrl, this.popoverCtrl, this.alertCtrl, this.actionSheetCtrl];
+    for (const ctrl of ctrls) {
+      for (let i = 0; i < 5; i++) {
+        const top = await ctrl.getTop().catch(() => undefined);
+        if (!top) break;
+        await top.dismiss(undefined, "kiosk-idle").catch(() => false);
+      }
+    }
+    await this.menu.close().catch(() => false);
   }
 
   private isOnTutorial(): boolean {

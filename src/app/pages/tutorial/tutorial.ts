@@ -236,6 +236,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   private idlePosterRotationMs = 10_000;
   private idlePosterMode = false;
   private forceIdlePosterOnNextAdsLoad = false;
+  /** False quando Ionic tiene la pagina in cache nascosta (altro tab/route): niente timer idle. */
+  private viewActive = true;
   private idlePosterTimer?: ReturnType<typeof setTimeout>;
   /** Timeout rotazione poster idle (solo immagini; i video usano evento `ended`). */
   private idlePosterRotateTimer?: ReturnType<typeof setTimeout>;
@@ -467,6 +469,38 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     });
 
     this.scheduleIdlePosterMode();
+  }
+
+  /**
+   * Ionic riusa la pagina in cache (ngOnInit non riparte): qui si gestisce il rientro
+   * da redirect inattività (`?idleFs=1`) e si riarma il timer idle.
+   */
+  ionViewDidEnter() {
+    this.viewActive = true;
+    const idleFs = this.router.parseUrl(this.router.url).queryParamMap.get("idleFs") === "1";
+    if (idleFs && !this.forceIdlePosterOnNextAdsLoad) {
+      // Prima rimuove il param: la NavigationEnd chiude l'idle, quindi si entra dopo.
+      void this.router
+        .navigate([], {
+          relativeTo: this.route,
+          replaceUrl: true,
+          queryParamsHandling: "merge",
+          queryParams: { idleFs: null },
+        })
+        .catch(() => {})
+        .then(() => {
+          if (this.ads.length) this.enterIdlePosterMode();
+          else this.forceIdlePosterOnNextAdsLoad = true;
+        });
+      return;
+    }
+    if (!this.idlePosterMode) this.scheduleIdlePosterMode();
+  }
+
+  ionViewWillLeave() {
+    this.viewActive = false;
+    if (this.idlePosterMode) this.exitIdlePosterMode();
+    else this.clearIdlePosterTimers();
   }
 
   ngOnDestroy() {
@@ -859,6 +893,8 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
     kioskDevLog("🧩 [Tutorial] Refresh feed pubblici:", reason);
     this.loadBannerCarousel(true);
     this.loadPromoStrip(true);
+    // Settings inattività modificati da admin: applicati senza reload del totem.
+    if (reason === "hard-refresh") this.loadIdlePosterRuntimeConfig();
   }
 
   private isPosterPlaceholderSrc(src: string | null | undefined): boolean {
@@ -1106,7 +1142,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private scheduleIdlePosterMode(): void {
-    if (!this.idlePosterEnabled) return;
+    if (!this.idlePosterEnabled || !this.viewActive) return;
     this.clearIdlePosterTimers();
     this.idlePosterTimer = setTimeout(() => this.enterIdlePosterMode(), this.idlePosterTimeoutMs);
   }
@@ -1217,7 +1253,7 @@ export class TutorialPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private enterIdlePosterMode(): void {
-    if (!this.idlePosterEnabled) return;
+    if (!this.idlePosterEnabled || !this.viewActive) return;
     if (this.idlePosterMode || !this.ads.length) return;
     const firstPosterIndex = this.firstImageAdIndex(this.adsIndex);
     if (firstPosterIndex < 0) return;
