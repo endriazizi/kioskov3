@@ -48,9 +48,11 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if not defined TOTEM_CHROME_KICK set "TOTEM_CHROME_KICK=1"
+rem Never terminate the kiosk browser automatically on HTTP outages: Windows desktop could become visible.
+rem The dev-server watchdog restores HTTP availability while Chrome stays fullscreen.
+if not defined TOTEM_CHROME_KICK set "TOTEM_CHROME_KICK=0"
 if "%TOTEM_CHROME_KICK%"=="1" (
-  echo [Totem] Watchdog Chrome kick - chiude Chrome se :%TOTEM_PORT% non risponde HTTP
+  echo [WARN] Legacy Chrome kick explicitly enabled: temporary desktop exposure is possible
   start "TotemChromeKick" powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%watch-totem-chrome-kick.ps1" -Port %TOTEM_PORT%
 )
 
