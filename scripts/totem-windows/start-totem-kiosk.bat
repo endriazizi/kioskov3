@@ -55,8 +55,12 @@ if "%TOTEM_CHROME_KICK%"=="1" (
 )
 
 :watchdog
-call "%SCRIPT_DIR%03-start-chrome-kiosk.bat"
-echo.
-echo [Totem] Chrome chiuso - riavvio tra 3 secondi (watchdog). CTRL+C per fermare.
-timeout /t 3 /nobreak >nul
+rem Launch Chrome only when no totem browser process is running.
+rem "start" is asynchronous: do NOT relaunch every three seconds.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$m='ENEATotemChrome'; $p=Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'chrome.exe' -and $_.CommandLine -like ('*'+$m+'*') }; if ($p) { exit 0 } else { exit 1 }" >nul 2>&1
+if errorlevel 1 (
+  call "%SCRIPT_DIR%03-start-chrome-kiosk.bat"
+  if errorlevel 1 echo [WARN] Chrome kiosk launch failed; retry in 5 seconds.
+)
+timeout /t 5 /nobreak >nul
 goto watchdog
