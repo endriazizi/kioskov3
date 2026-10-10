@@ -57,7 +57,7 @@ if "%TOTEM_CHROME_KICK%"=="1" (
 :watchdog
 rem Launch Chrome only when no totem browser process is running.
 rem "start" is asynchronous: do NOT relaunch every three seconds.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$m='ENEATotemChrome'; $p=Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" | Where-Object { $_.CommandLine -like ('*'+$m+'*') }; if ($p) { exit 0 } else { exit 1 }" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$m='ENEATotemChrome'; $p=Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'chrome.exe' -and $_.CommandLine -like ('*'+$m+'*') }; if ($p) { exit 0 } else { exit 1 }" >nul 2>&1
 if errorlevel 1 (
   call "%SCRIPT_DIR%03-start-chrome-kiosk.bat"
   if errorlevel 1 echo [WARN] Chrome kiosk launch failed; retry in 5 seconds.
