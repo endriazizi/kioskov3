@@ -12,6 +12,7 @@ export class KioskLocalHealthService implements OnDestroy {
   private inFlight = false;
   private consecutiveFailures = 0;
   private lastReloadAt = 0;
+  private recovering = false;
 
   start(): void {
     this.stop();
@@ -75,7 +76,10 @@ export class KioskLocalHealthService implements OnDestroy {
       });
       clearTimeout(t);
       if (res.ok || (res.status >= 300 && res.status < 500)) {
+        const wasRecovering = this.recovering;
+        this.recovering = false;
         this.consecutiveFailures = 0;
+        if (wasRecovering) this.reloadAfterRecovery();
         return;
       }
       this.registerFailure('status');
@@ -92,16 +96,15 @@ export class KioskLocalHealthService implements OnDestroy {
       `⚠️ [Totem] Health localhost KO (${kind}) — fallimenti consecutivi:`,
       this.consecutiveFailures
     );
-    if (this.consecutiveFailures < 2) return;
+    if (this.consecutiveFailures >= 2) this.recovering = true;
+  }
+
+  private reloadAfterRecovery(): void {
     const now = Date.now();
     const cooldown = this.resolveReloadCooldownMs();
-    if (now - this.lastReloadAt < cooldown) {
-      kioskDevLog('🧩 [Totem] Reload health saltato (cooldown)');
-      return;
-    }
+    if (now - this.lastReloadAt < cooldown) return;
     this.lastReloadAt = now;
-    this.consecutiveFailures = 0;
-    kioskDevLog('🔄 [Totem] localhost non risponde — reload pagina');
+    kioskDevLog('🔄 [Totem] localhost di nuovo disponibile — ripristino pagina');
     window.location.reload();
   }
 }
