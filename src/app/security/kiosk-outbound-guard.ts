@@ -20,6 +20,7 @@ interface GuardState {
   clickHandler: (ev: MouseEvent) => void;
   auxClickHandler: (ev: MouseEvent) => void;
   submitHandler: (ev: Event) => void;
+  contextMenuHandler: (ev: MouseEvent) => void;
 }
 
 function locationPrototype(): Location {
@@ -223,6 +224,12 @@ function installKioskOutboundGuardCore(
     root.querySelectorAll('a[href], form[action]').forEach((el) => hardenLinkLikeElement(el));
   };
 
+  const contextMenuHandler = (ev: MouseEvent) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+  };
+
+  document.addEventListener('contextmenu', contextMenuHandler, true);
   document.addEventListener('click', clickHandler, true);
   document.addEventListener('auxclick', auxClickHandler, true);
   document.addEventListener('submit', submitHandler, true);
@@ -330,6 +337,7 @@ function installKioskOutboundGuardCore(
     clickHandler,
     auxClickHandler,
     submitHandler,
+    contextMenuHandler,
   };
 
   void loadCapacitorBrowserPatchIntoState(state, whitelist, blockToast);
@@ -338,6 +346,7 @@ function installKioskOutboundGuardCore(
 export function uninstallKioskOutboundGuard(): void {
   if (!state) return;
 
+  document.removeEventListener('contextmenu', state.contextMenuHandler, true);
   document.removeEventListener('click', state.clickHandler, true);
   document.removeEventListener('auxclick', state.auxClickHandler, true);
   document.removeEventListener('submit', state.submitHandler, true);
