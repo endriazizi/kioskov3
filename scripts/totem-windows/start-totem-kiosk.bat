@@ -8,6 +8,8 @@ set "REPO_KIOSK=%SCRIPT_DIR%..\.."
 
 if not defined TOTEM_URL set "TOTEM_URL=http://127.0.0.1:8200/tutorial"
 if not defined TOTEM_PORT set "TOTEM_PORT=8200"
+if not defined TOTEM_CHROME_DATA set "TOTEM_CHROME_DATA=%LOCALAPPDATA%\ENEATotemChrome"
+set "TOTEM_MUTEX_NAME=Global\ENEATotemWatchdog"
 
 echo ==========================================================
 echo  ENEA Totem - Chrome kiosk (kioskov3 / totemProdProxy)
@@ -59,7 +61,7 @@ if "%TOTEM_CHROME_KICK%"=="1" (
 :watchdog
 rem Launch Chrome only when no totem browser process is running.
 rem "start" is asynchronous: do NOT relaunch every three seconds.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$m='ENEATotemChrome'; $p=Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'chrome.exe' -and $_.CommandLine -like ('*'+$m+'*') }; if ($p) { exit 0 } else { exit 1 }" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$m=$env:TOTEM_CHROME_DATA; $p=Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" | Where-Object { $_.CommandLine -like ('*--user-data-dir*'+$m+'*') }; if ($p) { exit 0 } else { exit 1 }" >nul 2>&1
 if errorlevel 1 (
   call "%SCRIPT_DIR%03-start-chrome-kiosk.bat"
   if errorlevel 1 echo [WARN] Chrome kiosk launch failed; retry in 5 seconds.
