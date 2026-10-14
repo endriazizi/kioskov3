@@ -47,6 +47,14 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { 'content-type': { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.svg': 'image/svg+xml' }[ext] || 'application/octet-stream' });
   fs.createReadStream(f).pipe(res);
 });
+// Opzionale: ENEA_BE=<cartella enea-be> monta il vero canale socket del backend su questo server di prova.
+let kioskPublic = null;
+if (process.env.ENEA_BE) {
+  const beRequire = createRequire(path.join(path.resolve(process.env.ENEA_BE), 'package.json'));
+  const { Server } = beRequire('socket.io');
+  kioskPublic = beRequire('./src/sockets/kiosk-public.js');
+  kioskPublic.mount(new Server(server));
+}
 await new Promise((r) => server.listen(8299, r));
 
 const results = [];
@@ -138,6 +146,25 @@ for (const [design, vw, vh] of [['A', 1366, 768], ['B', 1920, 1080], ['B', 1080,
   await page.waitForTimeout(6500);
   check('idle: poi schermata di benvenuto', (await page.locator('.v2-attract').count()) === 1);
   await page.screenshot({ path: OUT + '/attract.png' });
+  await ctx.close();
+}
+// Realtime: l'admin approva e il totem aggiorna senza polling né eventi del browser
+if (kioskPublic) {
+  const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  const page = await ctx.newPage();
+  await page.goto('http://localhost:8299/v2/attivita?design=A');
+  await page.waitForSelector('.v2-card');
+  await page.waitForSelector('.v2-chip.live', { timeout: 8000 }).catch(() => {});
+  check('realtime: chip In diretta', (await page.locator('.v2-chip.live').count()) === 1);
+  const before = await page.locator('.v2-card').count();
+  const saved = businesses;
+  businesses = [...saved, { id: 5, slug: 'pizzeria-live', name: 'Pizzeria Live', category: 'Alimentari' }];
+  const t0 = Date.now();
+  kioskPublic.notifyCatalogChanged('admin:businesses');
+  await page.waitForFunction((n) => document.querySelectorAll('.v2-card').length === n + 1, before, { timeout: 8000 }).catch(() => {});
+  const ms = Date.now() - t0;
+  check('realtime: nuova attività via socket', (await page.locator('.v2-card').count()) === before + 1, `${ms} ms`);
+  businesses = saved;
   await ctx.close();
 }
 await browser.close();

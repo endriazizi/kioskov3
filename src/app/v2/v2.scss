@@ -81,6 +81,7 @@
   font-size: 0.8em; padding: 0.3em 0.8em; border-radius: 99em;
   background: var(--v2-surface-2); color: var(--v2-muted);
   &.off { background: #7a2a14; color: #fff; }
+  &.live::before { content: ''; display: inline-block; width: 0.5em; height: 0.5em; margin-right: 0.4em; border-radius: 50%; background: #2fb36b; vertical-align: 0.05em; }
 }
 .v2-clock { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 1.2em; }
 

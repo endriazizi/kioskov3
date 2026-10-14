@@ -66,6 +66,8 @@ export class V2CatalogStore implements OnDestroy {
   private catalogTimer?: ReturnType<typeof setInterval>;
   private feedVersion = '';
   private inFlight = false;
+  /** Un avviso arrivato durante un caricamento in corso: si ricarica di nuovo appena finisce. */
+  private rerun: string | null = null;
   private readonly onOnline = () => void this.refresh('online');
   private readonly onVisible = () => {
     if (document.visibilityState === 'visible') void this.refresh('visible');
@@ -112,7 +114,10 @@ export class V2CatalogStore implements OnDestroy {
 
   /** Ricarica attività, eventi, categorie e poster. In caso di errore tiene i dati precedenti. */
   async refresh(reason: string): Promise<void> {
-    if (this.inFlight) return;
+    if (this.inFlight) {
+      this.rerun = reason;
+      return;
+    }
     this.inFlight = true;
     try {
       const [bizRaw, evRaw, catRaw, posters] = await Promise.all([
@@ -147,6 +152,9 @@ export class V2CatalogStore implements OnDestroy {
       });
     } finally {
       this.inFlight = false;
+      const again = this.rerun;
+      this.rerun = null;
+      if (again) void this.refresh(again);
     }
   }
 

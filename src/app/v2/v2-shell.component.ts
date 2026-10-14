@@ -17,6 +17,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { V2CatalogStore } from './v2-catalog.store';
 import { V2IdleService } from './v2-idle.service';
+import { V2RealtimeService } from './v2-realtime.service';
 import { V2UiState } from './v2-ui.state';
 import { V2KeyboardComponent } from './v2-keyboard.component';
 import { V2IconComponent } from './v2-icon.component';
@@ -34,6 +35,8 @@ import { V2IconComponent } from './v2-icon.component';
         <div class="v2-status">
           @if (store.stale()) {
             <span class="v2-chip off">Offline · dati delle {{ syncLabel() }}</span>
+          } @else if (realtime.live()) {
+            <span class="v2-chip live">In diretta · {{ syncLabel() }}</span>
           } @else if (store.lastSyncAt()) {
             <span class="v2-chip">Aggiornato {{ syncLabel() }}</span>
           }
@@ -72,6 +75,7 @@ export class V2ShellComponent implements OnInit, OnDestroy {
   readonly store = inject(V2CatalogStore);
   readonly ui = inject(V2UiState);
   private readonly idle = inject(V2IdleService);
+  readonly realtime = inject(V2RealtimeService);
   private readonly router = inject(Router);
   private readonly menu = inject(MenuController);
   private readonly zone = inject(NgZone);
@@ -112,6 +116,7 @@ export class V2ShellComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     void this.menu.enable(false, 'main-menu');
     this.store.start();
+    this.realtime.start();
     this.idle.start();
     this.zone.runOutsideAngular(() => {
       this.clockTimer = setInterval(() => {
@@ -129,6 +134,7 @@ export class V2ShellComponent implements OnInit, OnDestroy {
     clearInterval(this.clockTimer);
     window.removeEventListener('resize', this.onResize);
     this.idle.stop();
+    this.realtime.stop();
     this.store.stop();
     void this.menu.enable(true, 'main-menu');
   }
