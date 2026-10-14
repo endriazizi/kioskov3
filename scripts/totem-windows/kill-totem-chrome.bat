@@ -11,7 +11,7 @@ if "%TOTEM_KILL_ALL_CHROME%"=="1" (
 )
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$m='ENEATotemChrome'; Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" | Where-Object { $_.CommandLine -like ('*'+$m+'*') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+  "$m=$env:TOTEM_CHROME_DATA; Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" | Where-Object { $_.CommandLine -like ('*--user-data-dir*'+$m+'*') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }" >nul 2>&1
 
 if exist "%TOTEM_CHROME_DATA%\SingletonLock" del /f /q "%TOTEM_CHROME_DATA%\SingletonLock" >nul 2>&1
 if exist "%TOTEM_CHROME_DATA%\SingletonCookie" del /f /q "%TOTEM_CHROME_DATA%\SingletonCookie" >nul 2>&1
