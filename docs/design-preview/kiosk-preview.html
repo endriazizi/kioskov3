@@ -1,0 +1,791 @@
+<title>Totem ENEA Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: barra comandi in alto, a sinistra lo schermo del totem in scala reale (risoluzione vera, poi ridotto),
+   a destra il simulatore titolare → admin → backend → totem. Su telefono il simulatore va sotto.
+   Token derivati dal design system ENEA (enea-fe PR #21: IBM Plex, blu staff, terra Lanterna). */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #fafbfc;
+  --border: #e2e5ea;
+  --text: #15181e;
+  --text-2: #3b4250;
+  --muted: #5b6270;
+  --primary: #1f5fd1;
+  --primary-soft: #edf3fd;
+  --terra: #9a3f24;
+  --terra-soft: #fbf1ec;
+  --ok: #17804a; --ok-soft: #e3f3ea;
+  --warn: #8a4b00; --warn-soft: #fff1d6;
+  --bad: #a12626; --bad-soft: #fff5f5;
+  --log-bg: #15181e; --log-fg: #d5dae1; --log-dim: #8b93a1; --log-ok: #6fd39b; --log-ev: #8fb6ff; --log-warn: #f3c56b;
+  --font: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-cond: 'IBM Plex Sans Condensed', 'IBM Plex Sans', 'Arial Narrow', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  --radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0f13; --surface: #15181e; --surface-2: #1c2028; --border: #333a46;
+    --text: #eef0f3; --text-2: #c3c9d3; --muted: #9aa2b0;
+    --primary: #7aa5f0; --primary-soft: #1a2740; --terra: #e59a7c; --terra-soft: #2c1d17;
+    --ok: #6fd39b; --ok-soft: #12291d; --warn: #f3c56b; --warn-soft: #2d2410; --bad: #ff8f8f; --bad-soft: #2e1515;
+    --log-bg: #0a0b0e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d0f13; --surface: #15181e; --surface-2: #1c2028; --border: #333a46;
+  --text: #eef0f3; --text-2: #c3c9d3; --muted: #9aa2b0;
+  --primary: #7aa5f0; --primary-soft: #1a2740; --terra: #e59a7c; --terra-soft: #2c1d17;
+  --ok: #6fd39b; --ok-soft: #12291d; --warn: #f3c56b; --warn-soft: #2d2410; --bad: #ff8f8f; --bad-soft: #2e1515;
+  --log-bg: #0a0b0e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.45; }
+.wrap { padding-inline: 16px; padding-block: 12px 32px; max-width: 1600px; margin: 0 auto; display: grid; gap: 14px; }
+h1 { font-family: var(--font-cond); font-size: 22px; margin: 0; letter-spacing: .01em; text-wrap: balance; }
+.lede { margin: 2px 0 0; color: var(--text-2); max-width: 70ch; }
+.topbar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end; justify-content: space-between; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.ctl { display: grid; gap: 3px; }
+.ctl > span { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 2px; gap: 2px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; color: var(--text-2); font: 500 13px var(--font); padding: 7px 12px; border-radius: 8px; cursor: pointer; min-height: 34px; }
+.seg button[aria-pressed="true"] { background: var(--primary); color: #fff; }
+.seg button:focus-visible, .btn:focus-visible, .totem button:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+.screen-col { display: grid; gap: 8px; min-width: 0; }
+.bezel { background: #0b0c0f; border-radius: 18px; padding: 10px; box-shadow: 0 16px 40px rgb(16 24 40 / 18%); }
+.viewport { position: relative; overflow: hidden; border-radius: 8px; background: #000; margin: 0 auto; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 12px var(--font-mono); color: var(--text-2); }
+.meta b { color: var(--text); font-weight: 500; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); vertical-align: middle; margin-right: 4px; }
+.dot.off { background: var(--bad); }
+.dot.poll { background: var(--warn); }
+
+/* ---------- Simulatore ---------- */
+.sim { display: grid; gap: 12px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.card h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.who { font: 600 11px var(--font); text-transform: uppercase; letter-spacing: .05em; padding: 2px 8px; border-radius: 99px; }
+.who.owner { background: var(--terra-soft); color: var(--terra); }
+.who.admin { background: var(--primary-soft); color: var(--primary); }
+.who.net { background: var(--warn-soft); color: var(--warn); }
+label.f { display: grid; gap: 4px; font-size: 12px; color: var(--text-2); }
+.f input, .f select, .f textarea { font: 14px var(--font); padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); width: 100%; }
+.f textarea { resize: vertical; min-height: 54px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { font: 600 13px var(--font); border-radius: 8px; padding: 8px 12px; min-height: 36px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+.btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn.ok { background: var(--ok); border-color: var(--ok); color: #fff; }
+.btn.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, var(--border)); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.queue { display: grid; gap: 8px; }
+.qi { border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: grid; gap: 6px; background: var(--surface-2); }
+.qi .t { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.qi .t b { font-size: 14px; }
+.pill { font: 600 11px var(--font); padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+.pill.pending { background: var(--warn-soft); color: var(--warn); }
+.pill.published { background: var(--ok-soft); color: var(--ok); }
+.pill.suspended, .pill.rejected { background: var(--bad-soft); color: var(--bad); }
+.pill.changes { background: var(--primary-soft); color: var(--primary); }
+.pill.draft { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+.note { font-size: 12px; color: var(--muted); }
+.log { background: var(--log-bg); color: var(--log-fg); font: 11.5px/1.5 var(--font-mono); border-radius: 10px; padding: 10px; height: 260px; overflow: auto; }
+.log div { white-space: pre-wrap; word-break: break-word; }
+.log .d { color: var(--log-dim); }
+.log .ok { color: var(--log-ok); }
+.log .ev { color: var(--log-ev); }
+.log .w { color: var(--log-warn); }
+input[type=range] { width: 100%; }
+
+/* ---------- Totem (dimensioni in em: la base deriva dalla risoluzione reale) ---------- */
+.totem { position: absolute; top: 0; left: 0; transform-origin: 0 0; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; font-family: var(--font); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.totem button { font: inherit; color: inherit; cursor: pointer; }
+.totem * { overscroll-behavior: contain; }
+/* palette dei due design: valori fissi, il totem non segue il tema del visitatore */
+.totem[data-design="A"] { --k-bg: #0e1116; --k-panel: #171b22; --k-panel-2: #20262f; --k-line: #2c333e; --k-text: #f3f4f6; --k-text-2: #b9c0cb; --k-accent: #f08a5d; --k-accent-ink: #1b0d07; --k-ok: #6fd39b; --k-warn: #f3c56b; background: var(--k-bg); color: var(--k-text); }
+.totem[data-design="B"] { --k-bg: #f4f5f7; --k-panel: #ffffff; --k-panel-2: #eef0f3; --k-line: #d5dae1; --k-text: #15181e; --k-text-2: #3b4250; --k-accent: #1f5fd1; --k-accent-ink: #ffffff; --k-ok: #17804a; --k-warn: #8a4b00; background: var(--k-bg); color: var(--k-text); }
+.k-head { display: flex; align-items: center; justify-content: space-between; gap: 1em; padding: .55em 1.1em; border-bottom: 1px solid var(--k-line); min-height: 3.2em; }
+.k-brand { display: flex; align-items: center; gap: .6em; font-weight: 700; font-size: 1em; }
+.k-brand i { width: 1.6em; height: 1.6em; border-radius: .4em; background: var(--k-accent); display: inline-block; box-shadow: inset 0 0 0 .22em color-mix(in srgb, var(--k-bg) 35%, transparent); }
+.k-brand small { font-weight: 500; color: var(--k-text-2); font-size: .8em; }
+.k-status { display: flex; align-items: center; gap: 1.1em; font-size: .85em; color: var(--k-text-2); font-variant-numeric: tabular-nums; }
+.k-status .clock { font-size: 1.35em; font-weight: 600; color: var(--k-text); }
+.k-chip { display: inline-flex; align-items: center; gap: .4em; padding: .25em .7em; border-radius: 99em; border: 1px solid var(--k-line); font-size: .85em; }
+.k-chip::before { content: ""; width: .55em; height: .55em; border-radius: 50%; background: var(--k-ok); }
+.k-chip.poll::before { background: var(--k-warn); }
+.k-chip.off::before { background: #e5484d; }
+.k-main { position: relative; min-height: 0; overflow: hidden; }
+.k-scroll { height: 100%; overflow-y: auto; overflow-x: hidden; padding: 1em 1.1em 1.4em; scrollbar-width: thin; }
+.k-dock { display: flex; gap: .6em; padding: .6em 1.1em; border-top: 1px solid var(--k-line); background: var(--k-panel); }
+.k-dock button { flex: 1; min-height: 2.9em; border-radius: .7em; border: 1px solid var(--k-line); background: var(--k-panel-2); display: inline-flex; align-items: center; justify-content: center; gap: .5em; font-weight: 600; font-size: .95em; }
+.k-dock button[aria-current="page"] { background: var(--k-accent); color: var(--k-accent-ink); border-color: var(--k-accent); }
+.k-dock button.home { flex: 1.25; }
+.k-dock svg { width: 1.2em; height: 1.2em; }
+.k-h2 { font-size: 1.35em; margin: 0 0 .6em; font-weight: 700; }
+.k-sub { color: var(--k-text-2); font-size: .9em; }
+.k-chips { display: flex; gap: .5em; flex-wrap: wrap; margin-bottom: .9em; }
+.k-chips button { min-height: 2.5em; padding: 0 1.1em; border-radius: 99em; border: 1px solid var(--k-line); background: var(--k-panel); font-weight: 600; font-size: .9em; }
+.k-chips button[aria-pressed="true"] { background: var(--k-accent); color: var(--k-accent-ink); border-color: var(--k-accent); }
+.k-toast { position: absolute; left: 50%; bottom: 1em; transform: translateX(-50%); background: var(--k-text); color: var(--k-bg); padding: .7em 1.2em; border-radius: .8em; font-weight: 600; font-size: .9em; box-shadow: 0 .6em 1.6em rgb(0 0 0 / 30%); animation: toastIn .35s ease-out; z-index: 20; max-width: 90%; text-align: center; }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, .6em); } }
+.is-new { animation: glow 2.4s ease-out 1; }
+@keyframes glow { 0% { box-shadow: 0 0 0 .25em var(--k-accent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.badge-new { display: inline-block; background: var(--k-accent); color: var(--k-accent-ink); font-size: .7em; font-weight: 700; padding: .15em .55em; border-radius: .4em; letter-spacing: .04em; text-transform: uppercase; vertical-align: middle; margin-left: .4em; }
+
+/* Poster generato (niente immagini esterne: gradient + tipografia) */
+.poster { position: relative; border-radius: 1em; overflow: hidden; color: #fff; background: linear-gradient(135deg, hsl(var(--h) 62% 34%), hsl(calc(var(--h) + 38) 70% 18%)); }
+.poster::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, rgb(255 255 255 / 6%) 0 .2em, transparent .2em 2.4em); }
+.poster::after { content: ""; position: absolute; right: -12%; top: -20%; width: 70%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, hsl(calc(var(--h) + 20) 80% 60% / 55%), transparent 65%); }
+.poster > * { position: relative; z-index: 1; }
+.mono { width: 2.6em; height: 2.6em; border-radius: .7em; display: grid; place-items: center; font-weight: 700; color: #fff; background: linear-gradient(135deg, hsl(var(--h) 62% 40%), hsl(calc(var(--h) + 38) 70% 24%)); flex: none; font-size: 1em; }
+
+/* ---- Design A: signage ---- */
+.A-home { display: grid; gap: 1em; height: 100%; grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+.portrait .A-home { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.4fr) auto auto; }
+.A-hero { grid-row: 1; border: 0; padding: 0; text-align: left; display: grid; align-content: end; padding: 1.6em; min-height: 0; }
+.A-hero .kicker { font: 600 .85em var(--font); text-transform: uppercase; letter-spacing: .12em; opacity: .85; }
+.A-hero .name { font-family: var(--font-cond); font-weight: 700; font-size: 3.6em; line-height: .95; margin: .15em 0 .2em; text-wrap: balance; }
+.A-hero .tag { font-size: 1.15em; max-width: 30ch; opacity: .92; }
+.A-hero .cta { margin-top: 1em; display: inline-flex; align-items: center; gap: .5em; background: rgb(255 255 255 / 92%); color: #111; font-weight: 700; padding: .55em 1em; border-radius: 99em; width: fit-content; font-size: .95em; }
+.A-dots { position: absolute; right: 1.4em; bottom: 1.4em; display: flex; gap: .4em; }
+.A-dots i { width: .6em; height: .6em; border-radius: 50%; background: rgb(255 255 255 / 40%); }
+.A-dots i.on { background: #fff; width: 1.6em; border-radius: 99em; }
+.A-side { display: grid; gap: .8em; align-content: start; min-height: 0; overflow: hidden; }
+.A-panel { background: var(--k-panel); border: 1px solid var(--k-line); border-radius: 1em; padding: 1em; display: grid; gap: .55em; }
+.A-panel h3 { margin: 0; font-size: .8em; text-transform: uppercase; letter-spacing: .1em; color: var(--k-text-2); }
+.A-ev { display: grid; grid-template-columns: 3em minmax(0, 1fr); gap: .7em; align-items: center; border: 0; background: transparent; text-align: left; padding: .25em 0; min-height: 2.75em; }
+.A-ev .date { text-align: center; border-radius: .5em; background: var(--k-panel-2); padding: .25em 0; font-weight: 700; line-height: 1.05; }
+.A-ev .date small { display: block; font-size: .65em; text-transform: uppercase; color: var(--k-accent); letter-spacing: .06em; }
+.A-ev b { display: block; font-size: .95em; }
+.A-ev span { font-size: .8em; color: var(--k-text-2); }
+.A-cats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .7em; }
+.portrait .A-cats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.A-cats button { min-height: 3.6em; border-radius: .9em; border: 1px solid var(--k-line); background: var(--k-panel); font-weight: 700; display: grid; align-content: center; justify-items: start; padding: .5em .9em; gap: .1em; text-align: left; }
+.A-cats button small { font-weight: 500; color: var(--k-text-2); font-size: .75em; }
+.A-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13em, 1fr)); gap: .9em; }
+.A-tile { border: 0; padding: 0; text-align: left; aspect-ratio: 4 / 5; display: grid; align-content: end; }
+.A-tile .in { padding: 1em; display: grid; gap: .2em; background: linear-gradient(transparent, rgb(0 0 0 / 55%)); }
+.A-tile b { font-family: var(--font-cond); font-size: 1.45em; line-height: 1.05; }
+.A-tile span { font-size: .8em; opacity: .9; }
+
+/* ---- Design B: directory ---- */
+.B-home { display: grid; gap: 1.1em; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: start; }
+.portrait .B-home { grid-template-columns: minmax(0, 1fr); }
+.B-ask { grid-column: 1 / -1; display: grid; gap: .5em; }
+.B-ask h2 { margin: 0; font-size: 1.9em; font-weight: 700; letter-spacing: -.01em; }
+.B-search { display: flex; align-items: center; gap: .7em; min-height: 3.2em; border: 2px solid var(--k-line); background: var(--k-panel); border-radius: .9em; padding: 0 1em; font-size: 1.05em; color: var(--k-text-2); width: 100%; text-align: left; }
+.B-search.active { border-color: var(--k-accent); color: var(--k-text); }
+.B-search svg { width: 1.3em; height: 1.3em; flex: none; }
+.B-cats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7em; }
+.portrait .B-cats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.B-cats button { min-height: 4.2em; border-radius: .9em; border: 1px solid var(--k-line); background: var(--k-panel); display: grid; align-content: center; justify-items: start; gap: .15em; padding: .6em .9em; text-align: left; font-weight: 700; }
+.B-cats button small { font-weight: 500; color: var(--k-text-2); font-size: .78em; }
+.B-feat { display: grid; gap: .6em; align-content: start; }
+.B-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .8em; align-items: center; background: var(--k-panel); border: 1px solid var(--k-line); border-radius: .9em; padding: .7em .9em; min-height: 4em; text-align: left; width: 100%; }
+.B-row b { display: block; font-size: 1em; }
+.B-row span { font-size: .8em; color: var(--k-text-2); }
+.B-row .mono { color: #fff; font-size: 1em; }
+.B-row .open { font-size: .78em; font-weight: 700; color: var(--k-ok); white-space: nowrap; }
+.B-list { display: grid; gap: .6em; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.portrait .B-list { grid-template-columns: minmax(0, 1fr); }
+.kbd { position: absolute; left: 0; right: 0; bottom: 0; background: var(--k-panel-2); border-top: 1px solid var(--k-line); padding: .6em; display: grid; gap: .45em; z-index: 15; }
+.kbd .r { display: flex; gap: .45em; justify-content: center; }
+.kbd button { min-width: 2.6em; min-height: 2.6em; border-radius: .5em; border: 1px solid var(--k-line); background: var(--k-panel); font-weight: 600; }
+.kbd button.wide { min-width: 7em; }
+
+/* Dettaglio */
+.D { display: grid; gap: 1em; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); height: 100%; }
+.portrait .D { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; height: auto; }
+.D-art { display: grid; align-content: end; padding: 1.4em; min-height: 12em; }
+.D-art .name { font-family: var(--font-cond); font-size: 3em; font-weight: 700; line-height: .95; text-wrap: balance; }
+.D-info { display: grid; gap: .8em; align-content: start; }
+.D-back { display: flex; gap: .6em; }
+.D-back button { min-height: 2.8em; padding: 0 1.1em; border-radius: .7em; border: 1px solid var(--k-line); background: var(--k-panel); font-weight: 600; }
+.D-info p { margin: 0; font-size: 1em; line-height: 1.5; color: var(--k-text-2); max-width: 46ch; }
+.D-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .35em .9em; font-size: .9em; background: var(--k-panel); border: 1px solid var(--k-line); border-radius: .9em; padding: .9em; }
+.D-kv dt { color: var(--k-text-2); }
+.D-kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.qr { display: flex; gap: .9em; align-items: center; background: var(--k-panel); border: 1px solid var(--k-line); border-radius: .9em; padding: .8em; }
+.qr .q { width: 5.2em; height: 5.2em; display: grid; grid-template-columns: repeat(11, 1fr); background: #fff; padding: .3em; border-radius: .3em; flex: none; }
+.qr .q i { background: #111; }
+.qr .q i.w { background: #fff; }
+.qr small { color: var(--k-text-2); font-size: .8em; display: block; }
+.gone { position: absolute; inset: 0; background: color-mix(in srgb, var(--k-bg) 88%, transparent); display: grid; place-items: center; z-index: 18; animation: toastIn .3s ease-out; }
+.gone > div { background: var(--k-panel); border: 1px solid var(--k-line); border-radius: 1em; padding: 1.6em; max-width: 26em; display: grid; gap: .8em; text-align: center; }
+.gone b { font-size: 1.3em; }
+.gone button { min-height: 2.9em; border-radius: .7em; border: 0; background: var(--k-accent); color: var(--k-accent-ink); font-weight: 700; }
+.idlebar { position: absolute; left: 0; top: 0; height: .22em; background: var(--k-accent); opacity: .7; z-index: 5; transition: width 1s linear; }
+.attract { position: absolute; inset: 0; z-index: 19; display: grid; place-items: center; text-align: center; border: 0; padding: 2em; }
+.attract .big { font-family: var(--font-cond); font-weight: 700; font-size: 4em; line-height: 1; }
+.attract .hint { margin-top: .6em; font-size: 1.3em; opacity: .9; animation: pulse 2.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .45; } }
+.Ev { display: grid; gap: .6em; }
+.Ev-row { display: grid; grid-template-columns: 4.2em minmax(0, 1fr); gap: 1em; align-items: center; background: var(--k-panel); border: 1px solid var(--k-line); border-radius: .9em; padding: .7em .9em; }
+.Ev-row .date { text-align: center; font-weight: 700; font-size: 1.3em; line-height: 1.05; }
+.Ev-row .date small { display: block; font-size: .5em; text-transform: uppercase; letter-spacing: .08em; color: var(--k-accent); }
+.empty { padding: 2em; text-align: center; color: var(--k-text-2); border: 1px dashed var(--k-line); border-radius: 1em; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <h1>Totem ENEA, anteprima A e B</h1>
+      <p class="lede">Dati di esempio. Registra un'attività, approvala come amministratore e guarda il totem aggiornarsi senza ricaricare la pagina. Tocca lo schermo del totem come faresti sul touchscreen.</p>
+    </div>
+    <div class="controls">
+      <div class="ctl"><span>Proposta</span>
+        <div class="seg" id="segDesign"><button data-v="A" aria-pressed="true">A · Digital signage</button><button data-v="B" aria-pressed="false">B · Directory</button></div>
+      </div>
+      <div class="ctl"><span>Schermo (risoluzione reale)</span>
+        <div class="seg" id="segScreen">
+          <button data-v="1366x768" aria-pressed="false">1366×768</button>
+          <button data-v="1920x1080" aria-pressed="true">1920×1080</button>
+          <button data-v="1280x1024" aria-pressed="false">1280×1024</button>
+          <button data-v="1080x1920" aria-pressed="false">1080×1920 verticale</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <section class="screen-col" aria-label="Schermo del totem">
+      <div class="bezel"><div class="viewport" id="viewport"><div class="totem" id="totem" data-design="A"></div></div></div>
+      <div class="meta">
+        <span>Caricamenti pagina: <b id="mLoads">1</b></span>
+        <span>Pagina aperta alle <b id="mBoot">--:--:--</b></span>
+        <span>Catalogo sul totem: <b id="mVer">v12</b></span>
+        <span>Eventi applicati: <b id="mEv">0</b></span>
+        <span>Duplicati scartati: <b id="mDup">0</b></span>
+        <span><i class="dot" id="mDot"></i><b id="mSock">Socket connesso</b></span>
+      </div>
+    </section>
+
+    <aside class="sim" aria-label="Simulatore del flusso">
+      <div class="card">
+        <h2>1 · Titolare <span class="who owner">Business Portal</span></h2>
+        <label class="f" for="fName">Nome attività<input id="fName" value="Forno Sabatini"></label>
+        <div class="row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label class="f" for="fCat">Categoria<select id="fCat"></select></label>
+          <label class="f" for="fHours">Orari<input id="fHours" value="7:00–13:30, 16:30–19:30"></label>
+        </div>
+        <label class="f" for="fDesc">Descrizione breve<textarea id="fDesc">Pane a lievitazione naturale, pizza al taglio e dolci della tradizione maceratese.</textarea></label>
+        <div class="row"><button class="btn primary" id="bSubmit">Registra e invia per revisione</button></div>
+        <div class="note" id="ownerState">Stato visto dal titolare: nessuna richiesta.</div>
+      </div>
+
+      <div class="card">
+        <h2>2 · Amministratore <span class="who admin">Moderazione</span></h2>
+        <div class="queue" id="queue"></div>
+      </div>
+
+      <div class="card">
+        <h2>3 · Rete e inattività <span class="who net">Prove</span></h2>
+        <div class="row">
+          <button class="btn" id="bSock">Scollega Socket.IO</button>
+          <button class="btn" id="bBackend">Spegni backend</button>
+        </div>
+        <label class="f" for="rIdle">Ritorno alla Home dopo <b id="idleVal">30 s</b> senza tocchi
+          <input type="range" id="rIdle" min="10" max="120" step="5" value="30">
+        </label>
+        <div class="note">Con il socket scollegato il totem controlla la versione del catalogo ogni 6 s in questa demo (60 s proposti in produzione). Alla riconnessione recupera gli eventi persi dalla versione che conosce.</div>
+      </div>
+
+      <div class="card">
+        <h2>Backend e totem <span class="note" style="text-transform:none;letter-spacing:0">log simulato</span></h2>
+        <div class="log" id="log" aria-live="polite"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pad = (n) => String(n).padStart(2, '0');
+  const hhmmss = (d = new Date()) => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+  // Prova che la pagina non si ricarica: contatore caricamenti nella sessione del browser.
+  let loads = 1;
+  try { loads = Number(sessionStorage.getItem('totemPreviewLoads') || 0) + 1; sessionStorage.setItem('totemPreviewLoads', String(loads)); } catch {}
+  $('#mLoads').textContent = loads;
+  $('#mBoot').textContent = hhmmss();
+
+  const CATS = [
+    { id: 'ristoranti', label: 'Ristoranti e pizzerie' },
+    { id: 'bar', label: 'Bar e gelaterie' },
+    { id: 'negozi', label: 'Negozi' },
+    { id: 'panifici', label: 'Panifici e pasticcerie' },
+    { id: 'servizi', label: 'Servizi' },
+    { id: 'turismo', label: 'Turismo e cultura' },
+  ];
+  $('#fCat').innerHTML = CATS.map((c) => `<option value="${c.id}"${c.id === 'panifici' ? ' selected' : ''}>${esc(c.label)}</option>`).join('');
+
+  // ------------------------------------------------------------------ Backend simulato
+  // Stati persistiti (enum attuale kiosk_businesses.status) + changes_requested proposto.
+  const LABEL = { draft: 'Bozza', pending: 'In revisione', published: 'Pubblicata', changes: 'Modifiche richieste', rejected: 'Rifiutata', suspended: 'Sospesa' };
+  const DBSTATUS = { draft: 'draft', pending: 'pending_review', published: 'approved', changes: 'changes_requested', rejected: 'rejected', suspended: 'suspended' };
+  const ALLOWED = {
+    draft: ['pending'],
+    pending: ['published', 'changes', 'rejected'],
+    changes: ['pending'],
+    rejected: ['pending'],
+    published: ['suspended'],
+    suspended: ['published'],
+  };
+  const server = {
+    online: true,
+    version: 12,
+    nextEventId: 13,
+    businesses: [
+      { id: 1, slug: 'pizzeria-la-lanterna', name: 'Pizzeria La Lanterna', cat: 'ristoranti', h: 12, short: 'Pizza in pala e cucina del territorio', desc: 'Impasti a lunga maturazione, forno a legna e una sala per famiglie e gruppi.', hours: '19:00–23:30', phone: '0737 000 101', addr: 'Corso Italia 12', web: 'pizzerialalanterna.it', status: 'published', featured: true },
+      { id: 2, slug: 'gelateria-centrale', name: 'Bar Gelateria Centrale', cat: 'bar', h: 330, short: 'Gelato artigianale dal 1968', desc: 'Gelato mantecato ogni mattina, colazioni e aperitivi in piazza.', hours: '7:00–24:00', phone: '0737 000 102', addr: 'Piazza Dante 3', web: '', status: 'published', featured: true },
+      { id: 3, slug: 'ludwig-strasse', name: 'Ludwig Strasse', cat: 'ristoranti', h: 28, short: 'Birreria e cucina bavarese', desc: 'Birre alla spina, stinco al forno e musica dal vivo il venerdì.', hours: '18:30–1:00', phone: '0737 000 103', addr: 'Via Roma 40', web: '', status: 'published', featured: false },
+      { id: 4, slug: 'tabaccheria-cerqueti', name: 'Tabaccheria Cerqueti', cat: 'servizi', h: 200, short: 'Valori bollati, ricariche, giornali', desc: 'Pagamenti, ricariche telefoniche e quotidiani locali.', hours: '6:30–20:00', phone: '0737 000 104', addr: 'Via Marconi 8', web: '', status: 'published', featured: false },
+      { id: 5, slug: 'bar-eclissi', name: "Bar L'Eclissi", cat: 'bar', h: 265, short: 'Colazioni e aperitivi', desc: 'Cornetti caldi, centrifughe e tagliere per l\'aperitivo.', hours: '6:00–21:00', phone: '0737 000 105', addr: 'Viale Europa 2', web: '', status: 'published', featured: true },
+      { id: 6, slug: 'castello-lanciano', name: 'Castello di Lanciano', cat: 'turismo', h: 45, short: 'Visite guidate nel weekend', desc: 'Residenza storica con parco e museo. Prenotazione consigliata.', hours: 'Sab–Dom 10:00–18:00', phone: '0737 000 106', addr: 'Località Lanciano', web: '', status: 'published', featured: false },
+      { id: 7, slug: 'emporio-verde', name: 'Emporio Verde', cat: 'negozi', h: 150, short: 'Prodotti sfusi e km zero', desc: 'Legumi, farine e detersivi alla spina.', hours: '9:00–13:00, 16:00–19:30', phone: '0737 000 107', addr: 'Via Garibaldi 21', web: '', status: 'pending', featured: false },
+    ],
+    events: [
+      { d: 18, m: 'ott', t: 'Mercato contadino', where: 'Piazza Dante', time: '8:00–13:00' },
+      { d: 24, m: 'ott', t: 'Castagnata in piazza', where: 'Piazza della Repubblica', time: 'dalle 16:00' },
+      { d: 1, m: 'nov', t: 'Concerto della banda', where: 'Teatro comunale', time: '21:00' },
+      { d: 9, m: 'nov', t: 'Visita guidata al castello', where: 'Castello di Lanciano', time: '10:30' },
+    ],
+    eventLog: [],
+  };
+  // Proiezione pubblica: solo campi pubblici delle attività pubblicate (niente email, account, note interne).
+  function publicProjection() {
+    return server.businesses.filter((b) => b.status === 'published').map(({ id, slug, name, cat, h, short, desc, hours, phone, addr, web, featured }) => ({ id, slug, name, cat, h, short, desc, hours, phone, addr, web, featured }));
+  }
+
+  const logEl = $('#log');
+  function log(cls, text) {
+    const line = document.createElement('div');
+    line.className = cls;
+    line.textContent = `${hhmmss()}  ${text}`;
+    logEl.appendChild(line);
+    while (logEl.childElementCount > 220) logEl.firstElementChild.remove();
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // Transizione autorizzata: validazione → transazione → commit → evento (solo dopo il commit).
+  function transition(id, to, actor, reason) {
+    const b = server.businesses.find((x) => x.id === id);
+    if (!b) return;
+    if (!server.online) { log('w', `${actor === 'admin' ? 'PUT /api/kiosk-admin' : 'POST /api/business-portal'} → errore rete, backend spento`); return; }
+    if (!(ALLOWED[b.status] || []).includes(to)) { log('w', `409 transizione non valida ${DBSTATUS[b.status]} → ${DBSTATUS[to]}`); return; }
+    const from = b.status;
+    const wasPublic = from === 'published';
+    const isPublic = to === 'published';
+    log('d', actor === 'admin'
+      ? `PUT /api/kiosk-admin/businesses/${id}/status {"status":"${DBSTATUS[to]}"} · ruolo admin verificato lato server`
+      : `POST /api/business-portal/submit-for-review · proprietario kba:${id} verificato`);
+    log('d', `BEGIN · UPDATE kiosk_businesses SET status='${DBSTATUS[to]}' WHERE id=${id} AND status='${DBSTATUS[from]}'`);
+    log('d', `INSERT kiosk_audit (${actor}, ${DBSTATUS[from]} → ${DBSTATUS[to]}${reason ? ', motivo' : ''})`);
+    const mail = { pending: 'richiesta ricevuta', published: from === 'suspended' ? 'riattivazione' : 'approvazione', changes: 'modifiche richieste', rejected: 'rifiuto', suspended: 'sospensione' }[to];
+    if (mail) log('d', `INSERT email_outbox (template: ${mail}, chiave idempotenza biz-${id}-${to}-${server.version + 1})`);
+    b.status = to;
+    if (reason) b.reason = reason;
+    const touchesCatalog = wasPublic || isPublic;
+    if (touchesCatalog) {
+      server.version += 1;
+      log('d', `UPDATE kiosk_catalog_version SET v=${server.version}`);
+    }
+    log('ok', 'COMMIT');
+    if (mail) setTimeout(() => log('d', `outbox worker → SMTP: email "${mail}" inviata (fuori dalla transazione)`), 900);
+    if (touchesCatalog) {
+      const ev = { id: `e-${server.nextEventId++}`, v: server.version, type: 'kiosk:catalog-changed', reason: isPublic ? (from === 'suspended' ? 'business-reactivated' : 'business-published') : 'business-unpublished' };
+      server.eventLog.push(ev);
+      setTimeout(() => emit(ev), 250);
+    }
+    renderSim();
+  }
+
+  // ------------------------------------------------------------------ Trasporto realtime
+  const net = { socketUp: true, pollTimer: null, hbTimer: null, lastHb: Date.now() };
+  function emit(ev) {
+    log('ev', `io.to('kiosk:public').emit('${ev.type}', {"v":${ev.v},"id":"${ev.id}","reason":"${ev.reason}"})`);
+    if (!net.socketUp) { log('w', 'totem scollegato: evento non consegnato, verrà recuperato'); return; }
+    setTimeout(() => totem.onEvent(ev, 'socket'), 120);
+  }
+  function setSocket(up) {
+    net.socketUp = up;
+    $('#bSock').textContent = up ? 'Scollega Socket.IO' : 'Ricollega Socket.IO';
+    if (up) {
+      stopPolling();
+      log('ok', `socket riconnesso · totem invia {"since":${totem.version}}`);
+      // Recupero eventi persi: il server rimanda gli eventi dopo la versione nota; l'ultimo può arrivare doppio.
+      const missed = server.eventLog.filter((e) => e.v > totem.version);
+      const replay = server.eventLog.slice(-1);
+      setTimeout(() => {
+        if (!server.online) { log('w', 'backend spento: il totem resta sull\'ultimo catalogo valido'); return; }
+        missed.forEach((e) => totem.onEvent(e, 'recupero'));
+        replay.forEach((e) => totem.onEvent(e, 'recupero'));
+        if (!missed.length) log('d', 'nessun evento perso');
+      }, 300);
+    } else {
+      log('w', 'socket disconnesso · fallback: controllo versione catalogo ogni 6 s');
+      startPolling();
+    }
+    updateMeta();
+  }
+  function startPolling() {
+    stopPolling();
+    net.pollTimer = setInterval(() => {
+      if (!server.online) { log('w', 'GET /api/public-kiosk/catalog-version → rete non raggiungibile'); totem.markStale(); return; }
+      log('d', `GET /api/public-kiosk/catalog-version → {"v":${server.version}}`);
+      if (server.version > totem.version) totem.refetch('polling');
+    }, 6000);
+  }
+  function stopPolling() { if (net.pollTimer) clearInterval(net.pollTimer); net.pollTimer = null; }
+  // Heartbeat Socket.IO (ping/pong): qui solo per mostrare che la connessione è viva.
+  net.hbTimer = setInterval(() => { if (net.socketUp && server.online) net.lastHb = Date.now(); updateMeta(); }, 5000);
+
+  // ------------------------------------------------------------------ Totem
+  const totem = {
+    el: $('#totem'),
+    design: 'A',
+    W: 1920, H: 1080,
+    catalog: publicProjection(),
+    version: server.version,
+    seen: new Set(),
+    applied: 0,
+    dups: 0,
+    view: 'home',
+    detailId: null,
+    cat: null,
+    query: '',
+    kbd: false,
+    heroIdx: 0,
+    newAt: new Map(),
+    goneNotice: null,
+    toast: null,
+    stale: false,
+    lastSync: new Date(),
+    attract: false,
+
+    onEvent(ev, via) {
+      if (this.seen.has(ev.id)) { this.dups++; log('d', `totem: evento ${ev.id} già applicato, ignorato (${via})`); updateMeta(); return; }
+      this.seen.add(ev.id);
+      if (ev.v <= this.version) { log('d', `totem: ${ev.id} v${ev.v} non più recente di v${this.version}`); updateMeta(); return; }
+      log('ev', `totem riceve ${ev.type} v${ev.v} via ${via}`);
+      this.refetch(via);
+    },
+    refetch(via) {
+      if (!server.online) { this.markStale(); return; }
+      log('d', `GET /api/public-kiosk/catalog?since=${this.version} → 200 (solo dati pubblici)`);
+      const next = publicProjection();
+      const prevIds = new Set(this.catalog.map((b) => b.id));
+      const nextIds = new Set(next.map((b) => b.id));
+      const added = next.filter((b) => !prevIds.has(b.id));
+      const removed = this.catalog.filter((b) => !nextIds.has(b.id));
+      this.catalog = next;
+      this.version = server.version;
+      this.applied++;
+      this.stale = false;
+      this.lastSync = new Date();
+      added.forEach((b) => this.newAt.set(b.id, Date.now()));
+      log('ok', `totem aggiornato a v${this.version}: +${added.length} −${removed.length} · nessun reload`);
+      // Il visitatore sta leggendo una scheda revocata: avviso chiaro, poi rientro all'elenco.
+      if (this.view === 'detail' && removed.some((b) => b.id === this.detailId)) {
+        this.goneNotice = removed.find((b) => b.id === this.detailId).name;
+      } else if (added.length && this.view !== 'detail') {
+        this.showToast(`Nuova attività: ${added.map((b) => b.name).join(', ')}`);
+      }
+      this.render();
+      updateMeta();
+    },
+    markStale() { if (!this.stale) { this.stale = true; this.render(); } updateMeta(); },
+    showToast(text) { this.toast = text; clearTimeout(this._tt); this._tt = setTimeout(() => { this.toast = null; this.render(); }, 4200); },
+    go(view, extra = {}) {
+      this.view = view;
+      this.kbd = false;
+      Object.assign(this, extra);
+      this.render(true);
+    },
+    pub(id) { return this.catalog.find((b) => b.id === id); },
+    filtered() {
+      const q = this.query.trim().toLowerCase();
+      return this.catalog.filter((b) => (!this.cat || b.cat === this.cat) && (!q || `${b.name} ${b.short}`.toLowerCase().includes(q)));
+    },
+    render(resetScroll) {
+      const scroller = this.el.querySelector('.k-scroll');
+      const keep = scroller && !resetScroll ? scroller.scrollTop : 0;
+      this.el.dataset.design = this.design;
+      this.el.classList.toggle('portrait', this.H > this.W);
+      this.el.innerHTML = `${head()}<main class="k-main">${this.view === 'home' && this.design === 'A' ? `<div class="k-scroll" style="overflow:hidden">${homeA()}</div>` : `<div class="k-scroll">${body()}</div>`}${this.kbd ? keyboard() : ''}${this.goneNotice ? gone() : ''}${this.toast ? `<div class="k-toast" role="status">${esc(this.toast)}</div>` : ''}${this.attract ? attract() : ''}<div class="idlebar" id="idlebar"></div></main>${dock()}`;
+      const sc = this.el.querySelector('.k-scroll');
+      if (sc && keep) sc.scrollTop = keep;
+    },
+  };
+
+  const ICON = {
+    home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
+    list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+    cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  };
+  const catLabel = (id) => (CATS.find((c) => c.id === id) || {}).label || id;
+  const initials = (n) => n.replace(/[^A-Za-zÀ-ÿ ]/g, '').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const isNew = (b) => (totem.newAt.get(b.id) || 0) > Date.now() - 30000;
+  const glow = (b) => ((totem.newAt.get(b.id) || 0) > Date.now() - 3000 ? 'is-new' : '');
+
+  function head() {
+    const t = new Date();
+    const chip = !server.online || totem.stale
+      ? `<span class="k-chip off">Offline · dati delle ${pad(totem.lastSync.getHours())}:${pad(totem.lastSync.getMinutes())}</span>`
+      : net.socketUp ? '<span class="k-chip">Aggiornato</span>' : '<span class="k-chip poll">Aggiornamento periodico</span>';
+    return `<header class="k-head"><div class="k-brand"><i></i><span>Castelraimondo <small>Info Point</small></span></div><div class="k-status">${chip}<span>14° sereno</span><span class="clock">${pad(t.getHours())}:${pad(t.getMinutes())}</span></div></header>`;
+  }
+  function dock() {
+    const item = (v, label, icon, cls = '') => `<button class="${cls}" data-go="${v}" ${totem.view === v || (v === 'list' && totem.view === 'detail') ? 'aria-current="page"' : ''}>${icon}<span>${label}</span></button>`;
+    return `<nav class="k-dock" aria-label="Navigazione totem">${item('home', 'Home', ICON.home, 'home')}${item('list', 'Attività', ICON.list)}${item('events', 'Eventi', ICON.cal)}${totem.design === 'B' ? item('search', 'Cerca', ICON.search) : ''}</nav>`;
+  }
+  function homeA() {
+    const feats = totem.catalog.filter((b) => b.featured || isNew(b));
+    const list = feats.length ? feats : totem.catalog;
+    const b = list[totem.heroIdx % Math.max(1, list.length)];
+    const hero = b ? `<button class="poster A-hero ${glow(b)}" style="--h:${b.h}" data-open="${b.id}">
+        <span class="kicker">${esc(catLabel(b.cat))}${isNew(b) ? '<span class="badge-new">Nuova</span>' : ''}</span>
+        <span class="name">${esc(b.name)}</span><span class="tag">${esc(b.short)}</span>
+        <span class="cta">Tocca per aprire la scheda</span>
+        <span class="A-dots">${list.map((_, i) => `<i class="${i === totem.heroIdx % list.length ? 'on' : ''}"></i>`).join('')}</span></button>` : '<div class="empty">Nessuna attività pubblicata</div>';
+    const ev = server.events.slice(0, 3).map((e) => `<button class="A-ev" data-go="events"><span class="date">${e.d}<small>${e.m}</small></span><span><b>${esc(e.t)}</b><span>${esc(e.where)} · ${esc(e.time)}</span></span></button>`).join('');
+    const cats = CATS.map((c) => `<button data-cat="${c.id}">${esc(c.label)}<small>${totem.catalog.filter((b) => b.cat === c.id).length} attività</small></button>`).join('');
+    return `<div class="A-home">${hero}<div class="A-side"><section class="A-panel"><h3>Prossimi eventi</h3>${ev}</section><section class="A-panel"><h3>In paese adesso</h3><div class="k-sub">${totem.catalog.length} attività sul totem</div></section></div><div class="A-cats">${cats}</div></div>`;
+  }
+  function homeB() {
+    const cats = CATS.map((c) => `<button data-cat="${c.id}">${esc(c.label)}<small>${totem.catalog.filter((b) => b.cat === c.id).length} attività</small></button>`).join('');
+    const feats = totem.catalog.filter((b) => b.featured || isNew(b)).slice(0, 4);
+    return `<div class="B-home"><div class="B-ask"><h2>Cosa cerchi a Castelraimondo?</h2><button class="B-search" data-go="search">${ICON.search}<span>Cerca un'attività, un servizio, un evento</span></button></div>
+      <section><h3 class="k-h2" style="font-size:1em">Categorie</h3><div class="B-cats">${cats}</div></section>
+      <section class="B-feat"><h3 class="k-h2" style="font-size:1em;margin:0">In evidenza</h3>${feats.map(rowB).join('')}</section></div>`;
+  }
+  function rowB(b) {
+    return `<button class="B-row ${glow(b)}" data-open="${b.id}"><span class="mono" style="--h:${b.h}">${esc(initials(b.name))}</span><span><b>${esc(b.name)}${isNew(b) ? '<span class="badge-new">Nuova</span>' : ''}</b><span>${esc(catLabel(b.cat))} · ${esc(b.short)}</span></span><span class="open">${esc(b.hours.split(',')[0])}</span></button>`;
+  }
+  function tileA(b) {
+    return `<button class="poster A-tile ${glow(b)}" style="--h:${b.h}" data-open="${b.id}"><span class="in"><b>${esc(b.name)}${isNew(b) ? '<span class="badge-new">Nuova</span>' : ''}</b><span>${esc(catLabel(b.cat))}</span></span></button>`;
+  }
+  function list() {
+    const items = totem.filtered();
+    const chips = `<div class="k-chips"><button data-cat="" aria-pressed="${!totem.cat}">Tutte</button>${CATS.map((c) => `<button data-cat="${c.id}" aria-pressed="${totem.cat === c.id}">${esc(c.label)}</button>`).join('')}</div>`;
+    const title = totem.query ? `Risultati per “${esc(totem.query)}”` : totem.cat ? esc(catLabel(totem.cat)) : 'Tutte le attività';
+    const grid = items.length
+      ? (totem.design === 'A' ? `<div class="A-grid">${items.map(tileA).join('')}</div>` : `<div class="B-list">${items.map(rowB).join('')}</div>`)
+      : '<div class="empty">Nessuna attività in questa categoria. Tocca “Tutte” per vedere l\'elenco completo.</div>';
+    return `<h2 class="k-h2">${title}</h2>${chips}${grid}`;
+  }
+  function qr(seed) {
+    let x = seed * 9301 + 49297; const cells = [];
+    for (let i = 0; i < 121; i++) {
+      const r = Math.floor(i / 11), c = i % 11;
+      const finder = (r < 3 && c < 3) || (r < 3 && c > 7) || (r > 7 && c < 3);
+      x = (x * 9301 + 49297) % 233280;
+      cells.push(`<i class="${finder ? ((r % 2 === 1 && (c % 4 === 1 || c % 4 === 9 % 4)) ? 'w' : '') : (x / 233280 > 0.5 ? '' : 'w')}"></i>`);
+    }
+    return cells.join('');
+  }
+  function detail() {
+    const b = totem.pub(totem.detailId) || totem.lastDetail;
+    if (!b) return '<div class="empty">Scheda non disponibile.</div>';
+    totem.lastDetail = b;
+    const web = b.web ? `<div class="qr"><div class="q" aria-hidden="true">${qr(b.id)}</div><div><b>${esc(b.web)}</b><small>QR di esempio. Inquadralo con il telefono: il totem non apre siti esterni.</small></div></div>` : '';
+    return `<div class="D"><div class="poster D-art" style="--h:${b.h}"><span class="kicker" style="font-size:.85em;text-transform:uppercase;letter-spacing:.12em;opacity:.85">${esc(catLabel(b.cat))}</span><span class="name">${esc(b.name)}</span></div>
+      <div class="D-info"><div class="D-back"><button data-go="list">Torna all'elenco</button></div><p>${esc(b.desc)}</p>
+      <dl class="D-kv"><dt>Orari</dt><dd>${esc(b.hours)}</dd><dt>Indirizzo</dt><dd>${esc(b.addr)}</dd><dt>Telefono</dt><dd>${esc(b.phone)}</dd></dl>${web}</div></div>`;
+  }
+  function events() {
+    return `<h2 class="k-h2">Eventi in programma</h2><div class="Ev">${server.events.map((e) => `<div class="Ev-row"><div class="date">${e.d}<small>${e.m}</small></div><div><b>${esc(e.t)}</b><div class="k-sub">${esc(e.where)} · ${esc(e.time)}</div></div></div>`).join('')}</div>`;
+  }
+  function search() {
+    return `<div style="display:grid;gap:.8em"><button class="B-search active" data-kbd="1">${ICON.search}<span>${esc(totem.query) || 'Scrivi con la tastiera qui sotto'}</span></button>${totem.query ? `<div class="B-list">${totem.filtered().map(rowB).join('') || '<div class="empty">Nessun risultato. Prova con un\'altra parola.</div>'}</div>` : '<div class="k-sub">Esempi: pizza, gelato, castello</div>'}</div>`;
+  }
+  function body() {
+    if (totem.view === 'home') return homeB();
+    if (totem.view === 'list') return list();
+    if (totem.view === 'detail') return detail();
+    if (totem.view === 'events') return events();
+    if (totem.view === 'search') return search();
+    return '';
+  }
+  function keyboard() {
+    const rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+    return `<div class="kbd" role="group" aria-label="Tastiera">${rows.map((r) => `<div class="r">${[...r].map((k) => `<button data-key="${k}">${k}</button>`).join('')}</div>`).join('')}<div class="r"><button class="wide" data-key="BACK">Cancella</button><button class="wide" data-key=" ">Spazio</button><button class="wide" data-key="OK">Chiudi</button></div></div>`;
+  }
+  function gone() {
+    return `<div class="gone" role="alertdialog" aria-label="Scheda non più disponibile"><div><b>Questa scheda non è più disponibile</b><span class="k-sub">${esc(totem.goneNotice)} è stata rimossa dal totem. Ti riportiamo all'elenco delle attività.</span><button data-gone="1">Vai all'elenco</button></div></div>`;
+  }
+  function attract() {
+    const b = totem.catalog[totem.heroIdx % Math.max(1, totem.catalog.length)];
+    return `<button class="poster attract" style="--h:${b ? b.h : 210}" data-attract="1"><span><span class="big">Benvenuti a Castelraimondo</span><span class="hint">Tocca lo schermo per iniziare</span></span></button>`;
+  }
+
+  // Un solo listener delegato sul totem: niente duplicati quando la vista cambia.
+  totem.el.addEventListener('click', (e) => {
+    const t = e.target.closest('button');
+    if (!t || !totem.el.contains(t)) return;
+    if (t.dataset.attract) { totem.attract = false; totem.render(); return; }
+    if (t.dataset.gone) { totem.goneNotice = null; totem.go('list', { detailId: null }); return; }
+    if (t.dataset.open) { totem.go('detail', { detailId: Number(t.dataset.open) }); return; }
+    if (t.dataset.cat !== undefined) { totem.go('list', { cat: t.dataset.cat || null, query: '' }); return; }
+    if (t.dataset.kbd) { totem.kbd = true; totem.render(); return; }
+    if (t.dataset.key) {
+      const k = t.dataset.key;
+      if (k === 'OK') totem.kbd = false;
+      else if (k === 'BACK') totem.query = totem.query.slice(0, -1);
+      else totem.query = (totem.query + k).toLowerCase().slice(0, 30);
+      totem.render();
+      return;
+    }
+    if (t.dataset.go) {
+      const v = t.dataset.go;
+      if (v === 'search') { totem.go('search', { kbd: true, cat: null }); totem.kbd = true; totem.render(); return; }
+      totem.go(v, v === 'home' ? { cat: null, query: '', detailId: null } : v === 'list' ? { detailId: null } : {});
+    }
+  });
+
+  // ------------------------------------------------------------------ Inattività (un timer, un listener)
+  let idleMs = 30000;
+  let lastInput = Date.now();
+  const bump = () => { lastInput = Date.now(); };
+  totem.el.addEventListener('pointerdown', bump, { passive: true });
+  setInterval(() => {
+    const left = idleMs - (Date.now() - lastInput);
+    const bar = document.getElementById('idlebar');
+    const idleState = totem.view === 'home' && !totem.kbd && !totem.goneNotice && !totem.query;
+    if (bar) bar.style.width = idleState || totem.attract ? '0%' : `${Math.max(0, (left / idleMs) * 100)}%`;
+    if (left > 0) return;
+    if (totem.attract) return;
+    if (!idleState) {
+      log('d', 'inattività: chiudo schede e tastiera, cancello la ricerca, torno alla Home');
+      totem.goneNotice = null;
+      totem.go('home', { cat: null, query: '', detailId: null, kbd: false });
+      lastInput = Date.now();
+      return;
+    }
+    totem.attract = true;
+    totem.render();
+  }, 1000);
+  // Rotazione poster in Home (design A), solo quando nessuno sta interagendo da qualche secondo.
+  setInterval(() => {
+    if (totem.view === 'home' && !totem.attract && Date.now() - lastInput > 6000) { totem.heroIdx++; totem.render(); }
+  }, 7000);
+  setInterval(() => { if (totem.attract) { totem.heroIdx++; totem.render(); } }, 5000);
+
+  // ------------------------------------------------------------------ Scala dello schermo
+  const viewport = $('#viewport');
+  function fit() {
+    const avail = viewport.parentElement.clientWidth - 0;
+    const maxH = Math.max(320, window.innerHeight * 0.72);
+    const s = Math.min(avail / totem.W, maxH / totem.H, 1);
+    viewport.style.width = `${Math.floor(totem.W * s)}px`;
+    viewport.style.height = `${Math.floor(totem.H * s)}px`;
+    totem.el.style.width = `${totem.W}px`;
+    totem.el.style.height = `${totem.H}px`;
+    totem.el.style.transform = `scale(${s})`;
+    // La base tipografica dipende dalla risoluzione reale (lato corto), non dalla diagonale.
+    // In verticale il visitatore è più vicino e lo spazio in altezza abbonda: base più grande.
+    totem.el.style.fontSize = `${Math.round((Math.min(totem.W, totem.H) / 1080) * (totem.H > totem.W ? 32 : 26))}px`;
+  }
+  window.addEventListener('resize', fit);
+
+  // ------------------------------------------------------------------ Pannello simulatore
+  function renderSim() {
+    const q = $('#queue');
+    const rows = server.businesses.filter((b) => b.status !== 'draft').sort((a, b) => (a.status === 'pending' ? -1 : 0) - (b.status === 'pending' ? -1 : 0));
+    q.innerHTML = rows.slice(0, 9).map((b) => {
+      const acts = {
+        pending: `<button class="btn ok" data-tr="${b.id}:published">Approva</button><button class="btn" data-tr="${b.id}:changes">Richiedi modifiche</button><button class="btn bad" data-tr="${b.id}:rejected">Rifiuta</button>`,
+        published: `<button class="btn bad" data-tr="${b.id}:suspended">Sospendi</button>`,
+        suspended: `<button class="btn" data-tr="${b.id}:published">Riattiva</button>`,
+        changes: '<span class="note">In attesa del titolare</span>',
+        rejected: '<span class="note">Il titolare può chiedere una nuova revisione</span>',
+      }[b.status] || '';
+      return `<div class="qi"><div class="t"><b>${esc(b.name)}</b><span class="pill ${b.status}">${LABEL[b.status]}</span></div><div class="row">${acts}</div></div>`;
+    }).join('');
+    const mine = server.businesses.find((b) => b.slug === 'forno-sabatini' || b.mine);
+    $('#ownerState').textContent = mine
+      ? `Stato visto dal titolare: ${LABEL[mine.status]}${mine.status === 'changes' ? ' · motivo: "Aggiungi una foto del locale e gli orari della domenica."' : mine.status === 'rejected' ? ' · motivo: "Categoria non ammessa sul totem comunale."' : ''}`
+      : 'Stato visto dal titolare: nessuna richiesta.';
+    const bSubmit = $('#bSubmit');
+    bSubmit.disabled = !!mine && !['changes', 'rejected'].includes(mine.status);
+    bSubmit.textContent = mine && ['changes', 'rejected'].includes(mine.status) ? 'Invia di nuovo per revisione' : 'Registra e invia per revisione';
+  }
+  $('#queue').addEventListener('click', (e) => {
+    const t = e.target.closest('[data-tr]');
+    if (!t) return;
+    const [id, to] = t.dataset.tr.split(':');
+    const reason = to === 'changes' ? 'Aggiungi una foto del locale e gli orari della domenica.' : to === 'rejected' ? 'Categoria non ammessa sul totem comunale.' : to === 'suspended' ? 'Segnalazione da verificare' : '';
+    transition(Number(id), to, 'admin', reason);
+  });
+  $('#bSubmit').addEventListener('click', () => {
+    if (!server.online) { log('w', 'POST /api/business-auth/register → errore rete, backend spento'); return; }
+    let mine = server.businesses.find((b) => b.mine);
+    if (!mine) {
+      const name = ($('#fName').value || 'Nuova attività').trim().slice(0, 60);
+      const id = server.businesses.length + 1;
+      mine = { id, slug: 'forno-sabatini', mine: true, name, cat: $('#fCat').value, h: 18 + id * 37 % 300, short: ($('#fDesc').value || '').trim().slice(0, 80), desc: ($('#fDesc').value || '').trim(), hours: $('#fHours').value || '', phone: '0737 000 1' + pad(id), addr: 'Via Sabatini 5', web: 'fornosabatini.example', status: 'draft', featured: true };
+      server.businesses.push(mine);
+      log('d', 'POST /api/business-auth/register → 201 · account in attesa di verifica email');
+      log('d', 'INSERT email_outbox (template: verifica email)');
+      log('ok', 'titolare verifica l\'email e accede al Business Portal');
+    }
+    transition(mine.id, 'pending', 'business');
+  });
+  $('#bSock').addEventListener('click', () => setSocket(!net.socketUp));
+  $('#bBackend').addEventListener('click', () => {
+    server.online = !server.online;
+    $('#bBackend').textContent = server.online ? 'Spegni backend' : 'Riaccendi backend';
+    if (server.online) {
+      log('ok', 'backend di nuovo raggiungibile');
+      if (server.version > totem.version) totem.refetch('ripresa');
+      else { totem.stale = false; totem.lastSync = new Date(); totem.render(); }
+    } else {
+      log('w', 'backend spento: il totem mostra l\'ultimo catalogo valido e segnala l\'ora dei dati');
+      totem.markStale();
+    }
+    updateMeta();
+  });
+  $('#rIdle').addEventListener('input', (e) => { idleMs = Number(e.target.value) * 1000; $('#idleVal').textContent = `${e.target.value} s`; lastInput = Date.now(); });
+
+  function seg(id, cb) {
+    $(id).addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      $(id).querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      cb(b.dataset.v);
+    });
+  }
+  seg('#segDesign', (v) => { totem.design = v; totem.kbd = false; if (totem.view === 'search' && v === 'A') totem.view = 'list'; totem.render(true); });
+  seg('#segScreen', (v) => { const [w, h] = v.split('x').map(Number); totem.W = w; totem.H = h; fit(); totem.render(); });
+
+  function updateMeta() {
+    $('#mVer').textContent = `v${totem.version}`;
+    $('#mEv').textContent = totem.applied;
+    $('#mDup').textContent = totem.dups;
+    const dot = $('#mDot');
+    dot.className = 'dot' + (!server.online ? ' off' : net.socketUp ? '' : ' poll');
+    $('#mSock').textContent = !server.online ? 'Backend non raggiungibile' : net.socketUp ? `Socket connesso · heartbeat ${Math.round((Date.now() - net.lastHb) / 1000)} s fa` : 'Socket scollegato · polling';
+  }
+
+  log('d', `totem avviato · catalogo v${server.version} · un solo listener di inattività e un solo socket`);
+  log('d', "io.connect(..., { auth: { kiosk: 'device-token' } }) → join 'kiosk:public'");
+  renderSim();
+  fit();
+  totem.render();
+  updateMeta();
+  setInterval(() => { if (!totem.attract) { const c = totem.el.querySelector('.clock'); if (c) { const t = new Date(); c.textContent = `${pad(t.getHours())}:${pad(t.getMinutes())}`; } } }, 15000);
+})();
+</script>

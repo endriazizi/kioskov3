@@ -29,6 +29,11 @@ export const routes: Routes = [
       import('./pages/signup/signup').then(m => m.SignupPage),
   },
   {
+    // Totem v2 in parallelo: stesse API pubbliche, l'app attuale resta invariata.
+    path: 'v2',
+    loadChildren: () => import('./v2/v2.routes').then(m => m.V2_ROUTES),
+  },
+  {
     path: 'app',
     loadChildren: () =>
       import('./pages/tabs-page/routes').then(m => m.TABS_ROUTES),

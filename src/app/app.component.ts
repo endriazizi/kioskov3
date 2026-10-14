@@ -229,6 +229,8 @@ export class AppComponent implements OnInit, OnDestroy {
       "/" +
       (tree.root.children["primary"]?.segments.map((s) => s.path).join("/") ??
         "");
+    // /v2 ha il proprio timer di inattività (V2IdleService): qui non deve reindirizzare.
+    if (current === "/v2" || current.startsWith("/v2/")) return true;
     return current === "/tutorial" || current === "/app/tabs/home";
   }
 

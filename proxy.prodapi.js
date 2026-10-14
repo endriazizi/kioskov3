@@ -243,4 +243,12 @@ module.exports = {
     changeOrigin: true,
     logLevel: 'warn',
   },
+  // Avvisi realtime del catalogo (kiosk:catalog-changed): stesso backend delle API.
+  '/socket.io': {
+    target: PLESK,
+    secure: true,
+    changeOrigin: true,
+    ws: true,
+    logLevel: 'warn',
+  },
 };
